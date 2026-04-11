@@ -72,6 +72,11 @@ export interface RoutePage {
   steps: RoutePageStep[];
 }
 
+async function persistSnapshot(snapshot: Snapshot): Promise<void> {
+  await mkdir(dirname(SNAPSHOT_PATH), { recursive: true });
+  await writeFile(SNAPSHOT_PATH, JSON.stringify(snapshot));
+}
+
 async function loadOrBuildSnapshot(): Promise<Snapshot> {
   try {
     const content = await readFile(SNAPSHOT_PATH, 'utf8');
@@ -83,12 +88,16 @@ async function loadOrBuildSnapshot(): Promise<Snapshot> {
       return snapshot;
     }
     console.log('Source hash changed, recompiling…');
-    return compile(sourceText, hash);
+    const rebuilt = compile(sourceText, hash);
+    await persistSnapshot(rebuilt);
+    return rebuilt;
   } catch {
     console.log('No snapshot found, compiling…');
     const sourceText = await readFile(SOURCE_PATH, 'utf8');
     const hash = `sha256:${createHash('sha256').update(sourceText).digest('hex')}`;
-    return compile(sourceText, hash);
+    const fresh = compile(sourceText, hash);
+    await persistSnapshot(fresh);
+    return fresh;
   }
 }
 
