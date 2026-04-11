@@ -603,6 +603,7 @@ function getScript(): string {
   let searchIndex = [];
   let routesData = [];
   let patternCache = {};
+  let activePatternRequest = 0;
 
   async function fetchJson(url) {
     const r = await fetch(url);
@@ -707,15 +708,18 @@ function getScript(): string {
 
   // --- Pattern page ---
   async function loadPattern(id) {
+    var requestId = ++activePatternRequest;
     try {
       var safeId = id.replace(/[^A-Za-z0-9._-]/g, '_');
       if (!patternCache[safeId]) {
         patternCache[safeId] = await fetchJson('data/patterns/' + encodeURIComponent(safeId) + '.json');
       }
+      if (requestId !== activePatternRequest) return;
       var p = patternCache[safeId];
       renderPatternPage(p);
       highlightActive(id);
     } catch(e) {
+      if (requestId !== activePatternRequest) return;
       if (e && e.status === 404) {
         document.getElementById('main-content').innerHTML =
           '<div class="welcome"><h1>Not Found</h1><p>Pattern "' + esc(id) + '" was not found.</p></div>';

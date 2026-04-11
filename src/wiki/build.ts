@@ -218,6 +218,17 @@ function buildPatternPage(
   const sections: PatternSection[] = [];
 
   if (indexNode) {
+    const indexAnchor =
+      snapshot.anchorMap[indexNode.anchorId || indexNode.id];
+    if (indexAnchor && indexAnchor.text.trim()) {
+      let html = renderMarkdownToHtml(indexAnchor.text);
+      html = autoLinkPatternIds(html, knownIds);
+      sections.push({
+        heading: 'Content',
+        role: indexNode.metadata?.role ?? 'other',
+        html,
+      });
+    }
     collectDescendantSections(
       indexNode,
       snapshot.indexMap,
@@ -229,7 +240,8 @@ function buildPatternPage(
 
   // If no sections from index, try the anchor directly
   if (sections.length === 0) {
-    const anchor = snapshot.anchorMap[patternId];
+    const anchorId = indexNode?.anchorId || indexNode?.id || patternId;
+    const anchor = snapshot.anchorMap[anchorId];
     if (anchor && anchor.text.trim()) {
       let html = renderMarkdownToHtml(anchor.text);
       html = autoLinkPatternIds(html, knownIds);
