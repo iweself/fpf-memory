@@ -20,7 +20,9 @@
 
 ## Validation
 
-- [ ] `bun run lint && bun run check && bun run test` passes locally
+- [ ] `bun run lint` passes locally
+- [ ] `bun run check` passes locally
+- [ ] `bun run test` passes locally
 - [ ] No new warnings introduced
 - [ ] `bun run build` succeeds (if runtime/server code touched)
 - [ ] `bun run docs:build` succeeds (if docs touched)

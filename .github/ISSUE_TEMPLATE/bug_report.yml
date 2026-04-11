@@ -65,7 +65,7 @@ body:
     id: logs
     attributes:
       label: Error output / logs
-      description: Paste relevant errors/logs only, and redact secrets/tokens/PII before submitting.
+      description: Paste relevant errors/logs (e.g. from .runtime/logs/mastra.log or ai-traces.jsonl) and redact secrets/tokens/PII before submitting.
       render: shell
     validations:
       required: false
