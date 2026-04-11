@@ -7,6 +7,10 @@ import {
   scoreRouteQuery,
   selectBestAnchors,
 } from './compiler.js';
+import {
+  buildDocsProjection,
+  resolveDocTarget,
+} from '../docs/projection.js';
 import { type RetrievalSessionState } from './session-cache.js';
 import {
   extractIds,
@@ -28,6 +32,7 @@ import type {
   InspectResult,
   LocalAnswerSynthesizer,
   QueryResult,
+  ReadDocResult,
   RelationEdge,
   RetrievalHop,
   SectionRole,
@@ -421,6 +426,94 @@ export class QueryEngine {
       node,
       anchors,
       neighbors,
+      docRef: resolveDocTarget(this.snapshot, node.id)?.docRef,
+      snapshot: {
+        sourceHash: this.snapshot.sourceHash,
+        builtAt: this.snapshot.builtAt,
+      },
+    };
+  }
+
+  readDoc(
+    selector: string,
+    kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
+  ): ReadDocResult {
+    const resolvedNodeId = this.resolveSelector(selector, kind);
+    if (!resolvedNodeId) {
+      return {
+        selector,
+        resolvedAs: 'not_found',
+        status: 'not_found',
+        snapshot: {
+          sourceHash: this.snapshot.sourceHash,
+          builtAt: this.snapshot.builtAt,
+        },
+      };
+    }
+
+    const resolvedNode = this.snapshot.compiledNodes[resolvedNodeId];
+    if (!resolvedNode) {
+      return {
+        selector,
+        resolvedAs: 'not_found',
+        status: 'not_found',
+        snapshot: {
+          sourceHash: this.snapshot.sourceHash,
+          builtAt: this.snapshot.builtAt,
+        },
+      };
+    }
+
+    const docTarget = resolveDocTarget(this.snapshot, resolvedNodeId);
+    if (!docTarget) {
+      return {
+        selector,
+        resolvedAs:
+          resolvedNode.kind === 'route'
+            ? 'route'
+            : resolvedNode.kind === 'lexeme'
+              ? 'lexeme'
+              : 'id',
+        status: 'not_found',
+        snapshot: {
+          sourceHash: this.snapshot.sourceHash,
+          builtAt: this.snapshot.builtAt,
+        },
+      };
+    }
+
+    const projection = buildDocsProjection(this.snapshot);
+    const page = projection.pagesByMarkdownPath[docTarget.docRef.markdownPath];
+    if (!page) {
+      return {
+        selector,
+        resolvedAs:
+          resolvedNode.kind === 'route'
+            ? 'route'
+            : resolvedNode.kind === 'lexeme'
+              ? 'lexeme'
+              : 'id',
+        status: 'not_found',
+        snapshot: {
+          sourceHash: this.snapshot.sourceHash,
+          builtAt: this.snapshot.builtAt,
+        },
+      };
+    }
+
+    return {
+      selector,
+      resolvedAs:
+        resolvedNode.kind === 'route'
+          ? 'route'
+          : resolvedNode.kind === 'lexeme'
+            ? 'lexeme'
+            : 'id',
+      status: 'ok',
+      nodeId: docTarget.nodeId,
+      title: docTarget.title,
+      docRef: docTarget.docRef,
+      markdown: page.markdown,
       snapshot: {
         sourceHash: this.snapshot.sourceHash,
         builtAt: this.snapshot.builtAt,
@@ -1292,42 +1385,94 @@ export class QueryEngine {
     selector: string,
     kind: 'auto' | 'id' | 'route' | 'lexeme',
   ): string | undefined {
+    const normalizedSelector = normalizeForLookup(selector);
+
     if (kind === 'id' || kind === 'auto') {
       if (this.snapshot.compiledNodes[selector]) {
         return selector;
       }
-      const idMatch = this.snapshot.indexes.idIndex[normalizeForLookup(selector)]?.[0];
+      const idMatch = this.snapshot.indexes.idIndex[normalizedSelector]?.[0];
       if (idMatch) {
         return idMatch;
       }
     }
 
     if (kind === 'route' || kind === 'auto') {
-      const routeMatch = this.snapshot.indexes.routeNameIndex[normalizeForLookup(selector)]?.[0];
+      const routeMatch = this.snapshot.indexes.routeNameIndex[normalizedSelector]?.[0];
       if (routeMatch) {
         return routeMatch;
       }
     }
 
     if (kind === 'lexeme' || kind === 'auto') {
-      const lexemeMatch = this.snapshot.indexes.lexiconIndex[normalizeForLookup(selector)]?.[0];
+      const lexemeMatch = this.bestLexemeSelectorMatch(normalizedSelector);
       if (lexemeMatch) {
         return lexemeMatch;
       }
     }
 
     if (kind === 'auto') {
-      const aliasMatch = this.snapshot.indexes.aliasIndex[normalizeForLookup(selector)]?.[0];
+      const aliasMatch = this.snapshot.indexes.aliasIndex[normalizedSelector]?.[0];
       if (aliasMatch) {
         return aliasMatch;
       }
-      const titleMatch = this.snapshot.indexes.titleIndex[normalizeForLookup(selector)]?.[0];
+      const titleMatch = this.snapshot.indexes.titleIndex[normalizedSelector]?.[0];
       if (titleMatch) {
         return titleMatch;
       }
     }
 
     return undefined;
+  }
+
+  private bestLexemeSelectorMatch(normalizedSelector: string): string | undefined {
+    const candidates = this.snapshot.indexes.lexiconIndex[normalizedSelector] ?? [];
+    return candidates
+      .map((nodeId) => this.snapshot.compiledNodes[nodeId])
+      .filter((node): node is CompiledNode => Boolean(node) && node.kind === 'lexeme')
+      .map((node) => ({
+        nodeId: node.id,
+        score: this.scoreLexemeSelectorMatch(normalizedSelector, node),
+      }))
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+        return left.nodeId.localeCompare(right.nodeId);
+      })[0]?.nodeId;
+  }
+
+  private scoreLexemeSelectorMatch(normalizedSelector: string, node: CompiledNode): number {
+    if (node.kind !== 'lexeme') {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    const canonical = normalizeForLookup(node.title);
+    const details = node.details;
+    const aliases = 'aliases' in details ? details.aliases : [];
+    const symbolForms = 'symbolForms' in details ? details.symbolForms : [];
+    const normalizedKeys = 'normalizedKeys' in details ? details.normalizedKeys : [];
+
+    let score = 0;
+    if (canonical === normalizedSelector) {
+      score += 40;
+    }
+    if (normalizedKeys.includes(normalizedSelector)) {
+      score += 20;
+    }
+    if (symbolForms.some((value) => normalizeForLookup(value) === normalizedSelector)) {
+      score += 12;
+    }
+    if (aliases.some((value) => normalizeForLookup(value) === normalizedSelector)) {
+      score += 8;
+    }
+    if (canonical.includes(normalizedSelector)) {
+      score += 4;
+    }
+    if (symbolForms.some((value) => normalizeForLookup(value).includes(normalizedSelector))) {
+      score += 2;
+    }
+    return score;
   }
 
   private isAmbiguous(question: string, candidates: TraceCandidate[]): boolean {

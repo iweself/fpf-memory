@@ -11,6 +11,8 @@ It uses:
 ## Scope
 
 - Runtime source set: `FPF-spec.md` only
+- Canonical publishable markdown: `docs/generated/**`
+- Static docs build output: `doc_build/` (deterministic, ignored)
 - Validation/tuning corpus: outside the runtime path
 - No vector database
 - No remote indexing service
@@ -51,12 +53,16 @@ FPF_AI_TRACE_LOG_PATH=.runtime/logs/ai-traces.jsonl
 npm run check
 npm test
 npm run build
+npm run docs:generate
+npm run docs:build
+npm run docs:dev
 ./scripts/verify-runtime.sh
 npm run cli -- status
 npm run cli -- refresh
 npm run cli -- query --question "What is U.BoundedContext?" --mode verbose
 npm run cli -- query --question "How does it connect to role assignment?" --session s1
 npm run cli -- inspect --selector "A.1.1"
+npm run cli -- read-doc --selector "A.1.1"
 npm run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof --session s1
 npm run mcp
 ```
@@ -89,6 +95,14 @@ On each refresh trigger the runtime:
 9. answers with IDs, citations, constraints, relations, and snapshot metadata
 
 Artifacts are stored under `.runtime/fpf-index/`.
+
+## Docs surfaces
+
+- `FPF-spec.md`: authored source of truth
+- `docs/generated/**`: canonical generated markdown collection
+- `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
+
+The docs pipeline does not use an LLM step. `npm run docs:generate` writes the canonical markdown collection, and `npm run docs:build` builds the static viewer from that collection.
 
 ## Log Files
 

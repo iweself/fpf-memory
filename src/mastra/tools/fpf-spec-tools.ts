@@ -9,6 +9,11 @@ const relationEdgeSchema = z.object({
   to: z.string(),
 });
 
+const docRefSchema = z.object({
+  markdownPath: z.string(),
+  staticPath: z.string(),
+});
+
 const anchorSchema = z.object({
   id: z.string(),
   nodeId: z.string().optional(),
@@ -236,6 +241,21 @@ const inspectResultSchema = z.object({
       relation: z.string(),
     }),
   ),
+  docRef: docRefSchema.optional(),
+  snapshot: z.object({
+    sourceHash: z.string(),
+    builtAt: z.string(),
+  }),
+});
+
+const readDocResultSchema = z.object({
+  selector: z.string(),
+  resolvedAs: z.enum(['id', 'route', 'lexeme', 'not_found']),
+  status: z.enum(['ok', 'not_found']),
+  nodeId: z.string().optional(),
+  title: z.string().optional(),
+  docRef: docRefSchema.optional(),
+  markdown: z.string().optional(),
   snapshot: z.object({
     sourceHash: z.string(),
     builtAt: z.string(),
@@ -294,7 +314,7 @@ export const getFpfIndexStatusTool = createTool({
 export const inspectFpfNodeTool = createTool({
   id: 'inspect_fpf_node',
   description:
-    'Inspect one compiled FPF node by exact ID, route name, or lexeme and return anchors plus neighboring relations.',
+    'Inspect one compiled FPF node by exact ID, route name, or lexeme and return anchors, neighboring relations, plus stable doc references.',
   inputSchema: z.object({
     selector: z.string().min(1),
     kind: z
@@ -309,6 +329,26 @@ export const inspectFpfNodeTool = createTool({
   outputSchema: inspectResultSchema,
   execute: async ({ selector, kind, forceRefresh }) =>
     runtime.inspect(selector, kind ?? 'auto', forceRefresh ?? false),
+});
+
+export const readFpfDocTool = createTool({
+  id: 'read_fpf_doc',
+  description:
+    'Resolve one FPF selector to the canonical generated markdown page and return exact text plus stable markdown/static paths.',
+  inputSchema: z.object({
+    selector: z.string().min(1),
+    kind: z
+      .enum(['auto', 'id', 'route', 'lexeme'])
+      .optional()
+      .describe('How to interpret the selector before falling back to auto resolution.'),
+    forceRefresh: z
+      .boolean()
+      .optional()
+      .describe('Force a rebuild before reading the document.'),
+  }),
+  outputSchema: readDocResultSchema,
+  execute: async ({ selector, kind, forceRefresh }) =>
+    runtime.readDoc(selector, kind ?? 'auto', forceRefresh ?? false),
 });
 
 export const traceFpfPathTool = createTool({
@@ -341,5 +381,6 @@ export const fpfSpecRuntimeTools = {
   queryFpfSpecTool,
   getFpfIndexStatusTool,
   inspectFpfNodeTool,
+  readFpfDocTool,
   traceFpfPathTool,
 };

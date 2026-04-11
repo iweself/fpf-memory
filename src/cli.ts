@@ -24,6 +24,9 @@ try {
     case 'inspect':
       await runInspect(args.slice(1));
       break;
+    case 'read-doc':
+      await runReadDoc(args.slice(1));
+      break;
     case 'trace':
       await runTrace(args.slice(1));
       break;
@@ -70,6 +73,20 @@ async function runInspect(commandArgs: string[]): Promise<void> {
   await print(runtime.inspect(selector, kind, forceRefresh));
 }
 
+async function runReadDoc(commandArgs: string[]): Promise<void> {
+  const selector =
+    value(commandArgs, '--selector') ??
+    commandArgs.filter((argument) => !argument.startsWith('--')).join(' ').trim();
+  const kind = (value(commandArgs, '--kind') ?? 'auto') as 'auto' | 'id' | 'route' | 'lexeme';
+  const forceRefresh = flag(commandArgs, '--force');
+
+  if (!selector) {
+    throw new Error('read-doc requires --selector "<id|route|lexeme>" or trailing selector text.');
+  }
+
+  await print(runtime.readDoc(selector, kind, forceRefresh));
+}
+
 async function runTrace(commandArgs: string[]): Promise<void> {
   const mode = (value(commandArgs, '--mode') ?? 'compact') as AnswerMode;
   const forceRefresh = flag(commandArgs, '--force');
@@ -108,6 +125,7 @@ function printHelp(): void {
   npm run cli -- refresh [--force]
   npm run cli -- query --question "What is U.BoundedContext?" [--mode compact|verbose|proof] [--session s1] [--force]
   npm run cli -- inspect --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
+  npm run cli -- read-doc --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
   npm run cli -- trace --question "How do routes work?" [--mode compact|verbose|proof] [--session s1] [--force]
 `);
 }
