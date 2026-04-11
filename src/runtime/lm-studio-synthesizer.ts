@@ -1,3 +1,5 @@
+import { SpanType } from '@mastra/core/observability';
+
 import { withRuntimeSpan } from '../observability/runtime-observability.js';
 import type {
   AnswerSlice,
@@ -9,6 +11,10 @@ import type {
 import { createAiTraceRecorder } from './ai-trace-log.js';
 
 export type LmStudioApiStyle = 'responses' | 'lmstudio_chat';
+export type FetchLike = (
+  input: URL | RequestInfo,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export interface LmStudioSynthesizerOptions {
   baseUrl: string;
@@ -16,7 +22,7 @@ export interface LmStudioSynthesizerOptions {
   apiStyle?: LmStudioApiStyle;
   apiKey?: string;
   timeoutMs?: number;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchLike;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -28,7 +34,7 @@ export interface LmStudioHealthCheckOptions {
   systemPrompt?: string;
   input?: string;
   apiKey?: string;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchLike;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -99,7 +105,7 @@ type LmStudioChatOutputItem = NonNullable<LmStudioChatPayload['output']>[number]
 export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
   private readonly apiStyle: LmStudioApiStyle;
   private readonly endpoint: string;
-  private readonly fetchImpl: typeof fetch;
+  private readonly fetchImpl: FetchLike;
   private readonly timeoutMs: number;
 
   constructor(private readonly options: LmStudioSynthesizerOptions) {
@@ -151,7 +157,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
     const endpointInfo = describeEndpoint(this.endpoint);
     const spanResult = await withRuntimeSpan({
       env: this.options.env,
-      type: 'model_generation',
+      type: SpanType.MODEL_GENERATION,
       name: `local synthesis: ${this.options.model}`,
       input: {
         question: input.question,

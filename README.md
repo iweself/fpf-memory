@@ -6,15 +6,15 @@ It uses:
 
 - local deterministic parsing for exact FPF IDs, routes, relations, anchors, and answer envelopes
 - a vectorless index compiler that emits structural and graph artifacts directly from `FPF-spec.md`
-- a repo-owned raw stdio MCP server plus a Bun CLI as the integration surface
+- Mastra-owned MCP surfaces plus a Bun CLI as the integration surface
 
 ## Stack
 
 - Bun is the preferred local runtime and package manager.
-- Effect Schema owns repo-authored MCP contracts and validation.
-- The MCP boundary is a repo-owned raw JSON-RPC stdio server.
+- Zod owns repo-authored MCP contracts and validation.
+- Mastra owns the MCP, logging, and observability boundary.
+- Hono is the hosted server engine.
 - Rstest, Rslint, and Rspress are the preferred test, lint, and docs tools.
-- `zod` is not part of the dependency graph.
 
 ## Scope
 
@@ -75,9 +75,9 @@ If you want to force the LM Studio-native route instead, set:
 - `FPF_LOCAL_LLM_BASE_URL=http://localhost:1234`
 - `FPF_LOCAL_LLM_API_STYLE=lmstudio_chat`
 
-`FPF_MASTRA_LOG_PATH` is preserved for compatibility and writes runtime/MCP structured logs as JSON lines.
+`FPF_MASTRA_LOG_PATH` configures the Mastra-backed runtime/MCP logger and writes structured JSON logs.
 
-`FPF_MASTRA_OBSERVABILITY_*` is preserved for compatibility and writes runtime observability snapshots to a JSON file. That file includes manual `model_generation` events around the local LM Studio synthesis call.
+`FPF_MASTRA_OBSERVABILITY_*` configures the Mastra-backed observability snapshot file. That file includes `model_generation` spans around the local LM Studio synthesis call.
 
 `FPF_AI_TRACE_LOG_PATH` writes bounded LM Studio synthesis traces as JSON lines. This is the actual local model call path in this project, because the synthesizer uses a direct `fetch` to the LM Studio-compatible endpoint instead of a Mastra agent model wrapper.
 
@@ -90,6 +90,7 @@ bun run test
 bun run build
 bun run docs:build
 ./scripts/verify-runtime.sh
+bun run start
 bun run cli -- status
 bun run cli -- refresh
 bun run cli -- query --question "What is U.BoundedContext?" --mode verbose
@@ -109,6 +110,12 @@ Start the stdio MCP server:
 bun run mcp
 ```
 
+Start the hosted Mastra runtime on the Hono engine:
+
+```bash
+bun run start
+```
+
 Smoke-test the same runtime surface locally before wiring it into Codex:
 
 ```bash
@@ -121,7 +128,7 @@ bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext co
 bun run cli -- inspect --selector "A.1.1"
 ```
 
-Run the end-to-end verification script for the real CLI and MCP startup paths:
+Run the end-to-end verification script for the real CLI, MCP stdio, and hosted Hono startup paths:
 
 ```bash
 ./scripts/verify-runtime.sh
@@ -165,12 +172,14 @@ Call trace_fpf_path with:
 
 ## Runtime surfaces
 
-- `src/mcp/tool-contracts.ts`: Effect Schema contracts plus plain draft-07 JSON Schema emission
+- `src/mcp/tool-contracts.ts`: Zod-authored MCP input and output contracts
 - `src/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
-- `src/mcp/server.ts`: raw newline-delimited JSON-RPC stdio MCP server
+- `src/mcp/server.ts`: Mastra MCP server boundary for stdio transport
+- `src/mastra.ts`: Mastra runtime registration plus Hono server initialization
+- `src/server.ts`: hosted Hono bootstrap for Bun
 - `src/runtime/`: compiler, retrieval, trace, inspect, and synthesis logic
-- `src/logging/runtime-logger.ts`: structured runtime/MCP log writer
-- `src/observability/runtime-observability.ts`: repo-owned observability sink for local synthesis
+- `src/logging/runtime-logger.ts`: Mastra-backed structured runtime/MCP log writer
+- `src/observability/runtime-observability.ts`: Mastra-backed observability wrapper for local synthesis
 
 ## Docs surface
 
@@ -233,4 +242,5 @@ The script verifies:
 
 - the real `cli` path updates `.runtime/logs/mastra.log`
 - the real `mcp` stdio startup path writes a startup record to `.runtime/logs/mastra.log`
+- the real `start` path writes a hosted-runtime startup record to `.runtime/logs/mastra.log`
 - the LM Studio path updates `.runtime/logs/mastra-observability.json` and `.runtime/logs/ai-traces.jsonl` when `FPF_LOCAL_LLM_BASE_URL` and `FPF_LOCAL_LLM_MODEL` are set

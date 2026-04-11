@@ -5,13 +5,15 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
 import {
-  askFpfTool,
-  expandFpfCitationsTool,
-  getFpfIndexStatusTool,
-  queryFpfSpecTool,
+  renderAskFpfResult,
   resolveDefaultQueryMode,
-  traceFpfPathTool,
 } from '../src/mcp/tools.js';
+import {
+  askFpfInputSchema,
+  expandFpfCitationsInputSchema,
+  getFpfIndexStatusInputSchema,
+  queryFpfSpecInputSchema,
+} from '../src/mcp/tool-contracts.js';
 import { ARTIFACT_FILENAMES } from '../src/runtime/constants.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
@@ -105,7 +107,7 @@ describe('FpfRuntime', () => {
     globalThis.fetch = (async () => {
       fetchCalled = true;
       throw new Error('refresh should stay local');
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     try {
       const audit = await runtime.refresh();
@@ -307,21 +309,20 @@ describe('FpfRuntime', () => {
   });
 
   it('exports the batch citation expansion tool with a non-empty citation schema', async () => {
-    const empty = expandFpfCitationsTool.inputContract.validate({ citationIds: [] });
-    const valid = expandFpfCitationsTool.inputContract.validate({ citationIds: ['A.1.1:4.1'] });
-    const validWithRefresh = expandFpfCitationsTool.inputContract.validate({
+    const empty = expandFpfCitationsInputSchema.safeParse({ citationIds: [] });
+    const valid = expandFpfCitationsInputSchema.safeParse({ citationIds: ['A.1.1:4.1'] });
+    const validWithRefresh = expandFpfCitationsInputSchema.safeParse({
       citationIds: ['A.1.1:4.1'],
       forceRefresh: true,
     });
 
     expect(empty.success).toBe(false);
-    expect(valid).toEqual({ success: true, value: { citationIds: ['A.1.1:4.1'] } });
-    expect(validWithRefresh).toEqual({
-      success: true,
-      value: {
-        citationIds: ['A.1.1:4.1'],
-        forceRefresh: true,
-      },
+    expect(valid.success).toBe(true);
+    expect(valid.data).toEqual({ citationIds: ['A.1.1:4.1'] });
+    expect(validWithRefresh.success).toBe(true);
+    expect(validWithRefresh.data).toEqual({
+      citationIds: ['A.1.1:4.1'],
+      forceRefresh: true,
     });
   });
 
@@ -333,32 +334,26 @@ describe('FpfRuntime', () => {
       'verbose',
     );
 
-    const queryInput = queryFpfSpecTool.inputContract.validate({
+    const queryInput = queryFpfSpecInputSchema.safeParse({
       question: 'What is U.BoundedContext?',
     });
-    const askInput = askFpfTool.inputContract.validate({
+    const askInput = askFpfInputSchema.safeParse({
       question: 'What is U.BoundedContext?',
     });
 
-    expect(queryInput).toEqual({
-      success: true,
-      value: {
-        question: 'What is U.BoundedContext?',
-      },
+    expect(queryInput.success).toBe(true);
+    expect(queryInput.data).toEqual({
+      question: 'What is U.BoundedContext?',
     });
-    expect(askInput).toEqual({
-      success: true,
-      value: {
-        question: 'What is U.BoundedContext?',
-      },
+    expect(askInput.success).toBe(true);
+    expect(askInput.data).toEqual({
+      question: 'What is U.BoundedContext?',
     });
   });
 
   it('renders ask_fpf results as markdown with grounding sections', async () => {
-    const result = await askFpfTool.execute({
-      question: 'What is U.BoundedContext?',
-      forceRefresh: true,
-    });
+    const query = await runtime.query('What is U.BoundedContext?', 'verbose', true);
+    const result = renderAskFpfResult('What is U.BoundedContext?', query);
 
     expect(result.mode).toBe('verbose');
     expect(result.markdown).toContain('## Result');
@@ -369,32 +364,14 @@ describe('FpfRuntime', () => {
   });
 
   it('exports the status tool with an explicit object input schema', async () => {
-    expect(getFpfIndexStatusTool.inputContract.jsonSchema).toEqual({
-      $schema: 'http://json-schema.org/draft-07/schema#',
-      type: 'object',
-      properties: {},
-      additionalProperties: false,
-    });
+    const empty = getFpfIndexStatusInputSchema.safeParse({});
 
-    const empty = getFpfIndexStatusTool.inputContract.validate({});
-
-    expect(empty).toEqual({
-      success: true,
-      value: {},
-    });
-  });
-
-  it('exposes plain JSON Schema objects for MCP listing', async () => {
-    expect(expandFpfCitationsTool.inputContract.jsonSchema.type).toBe('object');
-    expect(getFpfIndexStatusTool.inputContract.jsonSchema.type).toBe('object');
-    expect(queryFpfSpecTool.inputContract.jsonSchema.type).toBe('object');
+    expect(empty.success).toBe(true);
+    expect(empty.data).toEqual({});
   });
 
   it('keeps trace mode default compact instead of inheriting the query default', async () => {
-    const trace = await traceFpfPathTool.execute({
-      question: 'What is U.BoundedContext?',
-      forceRefresh: true,
-    });
+    const trace = await runtime.trace('What is U.BoundedContext?', undefined, true);
     expect(trace.mode).toBe('compact');
   });
 

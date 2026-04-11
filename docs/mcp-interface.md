@@ -7,15 +7,17 @@ description: Spec-oriented interface contract for the fpf_memory stdio MCP serve
 
 This page documents the public MCP wire contract implemented by the `fpf_memory` server.
 
+Mastra and the upstream MCP SDK own the low-level protocol machinery. This repo owns the tool catalog, tool ids, tool descriptions, and tool input/output payloads.
+
 ## Transport
 
 - Transport: stdio
-- Message format: newline-delimited JSON-RPC 2.0 objects
+- Implementation owner: Mastra `MCPServer`
 - Entry point: `bun run mcp`
 - Server name: `fpf_memory`
 - Default protocol version: `2024-11-05`
 
-The server reads one JSON object per line from `stdin` and writes one JSON object per line to `stdout`.
+Hosted/server surfaces use the Mastra Hono adapter under `src/mastra.ts` and `src/server.ts`.
 
 ## Lifecycle
 
@@ -37,7 +39,12 @@ Request:
   "id": 1,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2024-11-05"
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "example-client",
+      "version": "1.0.0"
+    }
   }
 }
 ```
@@ -123,6 +130,9 @@ Response shape:
         "description": "Return an FPF answer in markdown with grounding metadata using the local vectorless runtime.",
         "inputSchema": {
           "type": "object"
+        },
+        "outputSchema": {
+          "type": "object"
         }
       }
     ]
@@ -134,8 +144,7 @@ Notes:
 
 - Tool names are canonical snake_case only.
 - `inputSchema` is always a plain JSON Schema object.
-- The current `tools/list` result advertises `name`, `description`, and `inputSchema`.
-- `outputSchema` is not currently advertised.
+- `outputSchema` is also advertised by the current Mastra MCP server for these tools.
 
 ## Tool calling
 
@@ -181,53 +190,11 @@ Successful tool responses use this envelope:
 }
 ```
 
-Tool-level validation or execution failures use:
-
-- a normal JSON-RPC `result`
-- `isError: true`
-- one text item in `content`
-- no JSON-RPC top-level `error`
-
-Example tool error envelope:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 5,
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "{\n  \"tool\": \"expand_fpf_citations\",\n  \"error\": \"citationIds must be non-empty\"\n}"
-      }
-    ],
-    "isError": true
-  }
-}
-```
+Tool-level validation and execution failures are surfaced by Mastra’s MCP implementation. This repo does not add custom JSON-RPC error wrapping on top of that server behavior.
 
 ## JSON-RPC error behavior
 
-Top-level JSON-RPC errors are reserved for protocol or transport failures.
-
-Current codes:
-
-- `-32600`: invalid request
-- `-32601`: method not found
-- `-32002`: request sent before `initialize`
-
-Example:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": null,
-  "error": {
-    "code": -32600,
-    "message": "Invalid JSON-RPC request."
-  }
-}
-```
+Protocol-level JSON-RPC errors are owned by Mastra and the upstream MCP SDK. Clients should treat those as transport/protocol failures rather than repo-authored tool semantics.
 
 ## Tool catalog
 

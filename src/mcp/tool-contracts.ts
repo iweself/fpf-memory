@@ -1,42 +1,16 @@
-import * as EffectJsonSchema from 'effect/JSONSchema';
-import * as ParseResult from 'effect/ParseResult';
-import * as EffectSchema from 'effect/Schema';
+import { z } from 'zod';
 
-import type {
-  AnchorRef,
-  AnswerMode,
-  AnswerStatus,
-  AskFpfResult,
-  BuildAudit,
-  CompiledNode,
-  ExpandCitationsResult,
-  FrontierOrigin,
-  InspectAnchorResult,
-  InspectNeighbor,
-  InspectResult,
-  QueryResult,
-  RuntimeStatus,
-  TraceResult,
-} from '../runtime/types.js';
-
-type JsonSchema = {
-  readonly [key: string]: unknown;
-  readonly type?: unknown;
-};
-
-export interface ToolContract<Value> {
-  readonly schema: unknown;
-  readonly jsonSchema: JsonSchema;
-  validate(value: unknown): ValidationResult<Value>;
-}
-
-export type ValidationResult<Value> =
-  | { success: true; value: Value }
-  | { success: false; error: string };
-
-const answerModeContract = EffectSchema.Literal('compact', 'verbose', 'proof');
-const nodeKindContract = EffectSchema.Literal('pattern', 'route', 'lexeme');
-const anchorRoleContract = EffectSchema.Literal(
+export const answerModeSchema = z.enum(['compact', 'verbose', 'proof']);
+export const nodeKindSchema = z.enum(['pattern', 'route', 'lexeme']);
+export const selectorKindSchema = z.enum(['auto', 'id', 'route', 'lexeme']);
+export const answerStatusSchema = z.enum([
+  'ok',
+  'not_found',
+  'ambiguous',
+  'unsupported',
+  'stale_snapshot_prevented',
+]);
+export const anchorRoleSchema = z.enum([
   'definition',
   'solution',
   'relations',
@@ -45,420 +19,404 @@ const anchorRoleContract = EffectSchema.Literal(
   'forces',
   'route_surface',
   'other',
-);
-const queryStatusContract = EffectSchema.Literal(
-  'ok',
-  'not_found',
-  'ambiguous',
-  'unsupported',
-  'stale_snapshot_prevented',
-);
-const buildReasonContract = EffectSchema.Literal(
+]);
+export const buildReasonSchema = z.enum([
   'forced',
   'missing_snapshot',
   'source_hash_changed',
   'snapshot_current',
-);
-const observabilityFormatContract = EffectSchema.Literal('flat', 'tree', 'normalized');
-const observabilityLogLevelContract = EffectSchema.Literal(
+]);
+export const observabilityFormatSchema = z.enum(['flat', 'tree', 'normalized']);
+export const observabilityLogLevelSchema = z.enum([
   'debug',
   'info',
   'warn',
   'error',
   'fatal',
-);
-const resolvedAsContract = EffectSchema.Literal('id', 'route', 'lexeme', 'not_found');
-const inspectStatusContract = EffectSchema.Literal('ok', 'not_found');
-const frontierOriginContract = EffectSchema.Literal(
+]);
+export const resolvedAsSchema = z.enum(['id', 'route', 'lexeme', 'not_found']);
+export const inspectStatusSchema = z.enum(['ok', 'not_found']);
+export const frontierOriginSchema = z.enum([
   'exact_match',
   'reference_follow',
   'route_expansion',
   'adjacency',
   'lexical',
   'session_context',
-);
-const expandedCitationStatusContract = EffectSchema.Literal('ok', 'not_found');
+]);
+export const expandedCitationStatusSchema = z.enum(['ok', 'not_found']);
+export const lmStudioApiStyleSchema = z.enum(['responses', 'lmstudio_chat']);
 
-const relationEdgeContract = EffectSchema.Struct({
-  from: EffectSchema.String,
-  relation: EffectSchema.String,
-  to: EffectSchema.String,
-});
+export const relationEdgeSchema = z
+  .object({
+    from: z.string(),
+    relation: z.string(),
+    to: z.string(),
+  })
+  .strict();
 
-const inspectNeighborContract = EffectSchema.Struct({
-  id: EffectSchema.String,
-  kind: nodeKindContract,
-  title: EffectSchema.String,
-  relation: EffectSchema.String,
-});
+export const inspectNeighborSchema = z
+  .object({
+    id: z.string(),
+    kind: nodeKindSchema,
+    title: z.string(),
+    relation: z.string(),
+  })
+  .strict();
 
-const anchorContract = EffectSchema.Struct({
-  id: EffectSchema.String,
-  nodeId: EffectSchema.optional(EffectSchema.String),
-  heading: EffectSchema.String,
-  lineStart: EffectSchema.Number,
-  lineEnd: EffectSchema.Number,
-  path: EffectSchema.Array(EffectSchema.String),
-  text: EffectSchema.String,
-  plainText: EffectSchema.String,
-  role: anchorRoleContract,
-});
+export const anchorSchema = z
+  .object({
+    id: z.string(),
+    nodeId: z.string().optional(),
+    heading: z.string(),
+    lineStart: z.number(),
+    lineEnd: z.number(),
+    path: z.array(z.string()),
+    text: z.string(),
+    plainText: z.string(),
+    role: anchorRoleSchema,
+  })
+  .strict();
 
-const compiledNeighborEdgeContract = EffectSchema.Struct({
-  from: EffectSchema.String,
-  relation: EffectSchema.String,
-  to: EffectSchema.String,
-  source: EffectSchema.String,
-});
+export const compiledNeighborEdgeSchema = z
+  .object({
+    from: z.string(),
+    relation: z.string(),
+    to: z.string(),
+    source: z.string(),
+  })
+  .strict();
 
-const compiledNodeContract = EffectSchema.Struct({
-  id: EffectSchema.String,
-  kind: nodeKindContract,
-  title: EffectSchema.String,
-  status: EffectSchema.optional(EffectSchema.String),
-  part: EffectSchema.optional(EffectSchema.String),
-  cluster: EffectSchema.optional(EffectSchema.String),
-  aliases: EffectSchema.Array(EffectSchema.String),
-  anchorIds: EffectSchema.Array(EffectSchema.String),
-  neighborEdges: EffectSchema.Array(compiledNeighborEdgeContract),
-  searchableText: EffectSchema.String,
-  details: EffectSchema.Unknown,
-});
+export const compiledNodeSchema = z
+  .object({
+    id: z.string(),
+    kind: nodeKindSchema,
+    title: z.string(),
+    status: z.string().optional(),
+    part: z.string().optional(),
+    cluster: z.string().optional(),
+    aliases: z.array(z.string()),
+    anchorIds: z.array(z.string()),
+    neighborEdges: z.array(compiledNeighborEdgeSchema),
+    searchableText: z.string(),
+    details: z.unknown(),
+  })
+  .strict();
 
-const snapshotWithRebuildContract = EffectSchema.Struct({
-  sourceHash: EffectSchema.String,
-  builtAt: EffectSchema.String,
-  rebuilt: EffectSchema.Boolean,
-});
+export const snapshotWithRebuildSchema = z
+  .object({
+    sourceHash: z.string(),
+    builtAt: z.string(),
+    rebuilt: z.boolean(),
+  })
+  .strict();
 
-const buildAuditContract = EffectSchema.Struct({
-  sourcePath: EffectSchema.String,
-  sourceHash: EffectSchema.String,
-  previousSourceHash: EffectSchema.optional(EffectSchema.String),
-  builtAt: EffectSchema.String,
-  rebuilt: EffectSchema.Boolean,
-  reason: buildReasonContract,
-  validation: EffectSchema.Struct({
-    parsedSections: EffectSchema.Number,
-    parsedPatterns: EffectSchema.Number,
-    parsedRoutes: EffectSchema.Number,
-    parsedLexiconEntries: EffectSchema.Number,
-    indexMapNodes: EffectSchema.Number,
-    missingRequiredFields: EffectSchema.Number,
-    unresolvedReferences: EffectSchema.Array(EffectSchema.String),
-    duplicateIds: EffectSchema.Array(EffectSchema.String),
-    brokenRoutes: EffectSchema.Array(EffectSchema.String),
-  }),
-  compiler: EffectSchema.Struct({
-    mode: EffectSchema.Literal('local_vectorless'),
-    compiledNodes: EffectSchema.Number,
-    patternNodes: EffectSchema.Number,
-    routeNodes: EffectSchema.Number,
-    lexiconEntries: EffectSchema.Number,
-    indexMapNodes: EffectSchema.Number,
-    anchorCount: EffectSchema.Number,
-  }),
-  artifacts: EffectSchema.Record({
-    key: EffectSchema.String,
-    value: EffectSchema.String,
-  }),
-});
+export const buildAuditSchema = z
+  .object({
+    sourcePath: z.string(),
+    sourceHash: z.string(),
+    previousSourceHash: z.string().optional(),
+    builtAt: z.string(),
+    rebuilt: z.boolean(),
+    reason: buildReasonSchema,
+    validation: z
+      .object({
+        parsedSections: z.number(),
+        parsedPatterns: z.number(),
+        parsedRoutes: z.number(),
+        parsedLexiconEntries: z.number(),
+        indexMapNodes: z.number(),
+        missingRequiredFields: z.number(),
+        unresolvedReferences: z.array(z.string()),
+        duplicateIds: z.array(z.string()),
+        brokenRoutes: z.array(z.string()),
+      })
+      .strict(),
+    compiler: z
+      .object({
+        mode: z.literal('local_vectorless'),
+        compiledNodes: z.number(),
+        patternNodes: z.number(),
+        routeNodes: z.number(),
+        lexiconEntries: z.number(),
+        indexMapNodes: z.number(),
+        anchorCount: z.number(),
+      })
+      .strict(),
+    artifacts: z.record(z.string(), z.string()),
+  })
+  .strict();
 
-const queryResultContract = EffectSchema.Struct({
-  mode: answerModeContract,
-  question: EffectSchema.String,
-  answer: EffectSchema.String,
-  ids: EffectSchema.Array(EffectSchema.String),
-  relations: EffectSchema.Array(relationEdgeContract),
-  constraints: EffectSchema.Array(EffectSchema.String),
-  citations: EffectSchema.Array(EffectSchema.String),
-  confidence: EffectSchema.Number,
-  gaps: EffectSchema.Array(EffectSchema.String),
-  snapshot: snapshotWithRebuildContract,
-  status: queryStatusContract,
-  groundingChain: EffectSchema.optional(EffectSchema.Array(EffectSchema.String)),
-});
+export const queryResultSchema = z
+  .object({
+    mode: answerModeSchema,
+    question: z.string(),
+    answer: z.string(),
+    ids: z.array(z.string()),
+    relations: z.array(relationEdgeSchema),
+    constraints: z.array(z.string()),
+    citations: z.array(z.string()),
+    confidence: z.number(),
+    gaps: z.array(z.string()),
+    snapshot: snapshotWithRebuildSchema,
+    status: answerStatusSchema,
+    groundingChain: z.array(z.string()).optional(),
+  })
+  .strict();
 
-const askFpfResultContract = EffectSchema.Struct({
-  question: EffectSchema.String,
-  mode: answerModeContract,
-  markdown: EffectSchema.String,
-  ids: EffectSchema.Array(EffectSchema.String),
-  citations: EffectSchema.Array(EffectSchema.String),
-  constraints: EffectSchema.Array(EffectSchema.String),
-  gaps: EffectSchema.Array(EffectSchema.String),
-  confidence: EffectSchema.Number,
-  status: queryStatusContract,
-  snapshot: snapshotWithRebuildContract,
-  groundingChain: EffectSchema.optional(EffectSchema.Array(EffectSchema.String)),
-});
+export const askFpfResultSchema = z
+  .object({
+    question: z.string(),
+    mode: answerModeSchema,
+    markdown: z.string(),
+    ids: z.array(z.string()),
+    citations: z.array(z.string()),
+    constraints: z.array(z.string()),
+    gaps: z.array(z.string()),
+    confidence: z.number(),
+    status: answerStatusSchema,
+    snapshot: snapshotWithRebuildSchema,
+    groundingChain: z.array(z.string()).optional(),
+  })
+  .strict();
 
-const runtimeStatusContract = EffectSchema.Struct({
-  sourcePath: EffectSchema.String,
-  sourceHash: EffectSchema.optional(EffectSchema.String),
-  builtAt: EffectSchema.optional(EffectSchema.String),
-  snapshotExists: EffectSchema.Boolean,
-  currentSourceHash: EffectSchema.String,
-  fresh: EffectSchema.Boolean,
-  compilerMode: EffectSchema.Literal('local_vectorless'),
-  artifacts: EffectSchema.Record({
-    key: EffectSchema.String,
-    value: EffectSchema.Boolean,
-  }),
-  synthesizer: EffectSchema.Struct({
-    configured: EffectSchema.Boolean,
-    provider: EffectSchema.optional(EffectSchema.String),
-    model: EffectSchema.optional(EffectSchema.String),
-    baseUrl: EffectSchema.optional(EffectSchema.String),
-    apiStyle: EffectSchema.optional(EffectSchema.Literal('responses', 'lmstudio_chat')),
-  }),
-  observability: EffectSchema.Struct({
-    configured: EffectSchema.Boolean,
-    filePath: EffectSchema.String,
-    format: observabilityFormatContract,
-    includeInternalSpans: EffectSchema.Boolean,
-    logLevel: observabilityLogLevelContract,
-    excludeModelChunks: EffectSchema.Boolean,
-  }),
-  sessionCache: EffectSchema.Struct({
-    enabled: EffectSchema.Boolean,
-    maxSessions: EffectSchema.Number,
-    activeSessions: EffectSchema.Number,
-  }),
-});
+export const runtimeStatusSchema = z
+  .object({
+    sourcePath: z.string(),
+    sourceHash: z.string().optional(),
+    builtAt: z.string().optional(),
+    snapshotExists: z.boolean(),
+    currentSourceHash: z.string(),
+    fresh: z.boolean(),
+    compilerMode: z.literal('local_vectorless'),
+    artifacts: z.record(z.string(), z.boolean()),
+    synthesizer: z
+      .object({
+        configured: z.boolean(),
+        provider: z.string().optional(),
+        model: z.string().optional(),
+        baseUrl: z.string().optional(),
+        apiStyle: lmStudioApiStyleSchema.optional(),
+      })
+      .strict(),
+    observability: z
+      .object({
+        configured: z.boolean(),
+        filePath: z.string(),
+        format: observabilityFormatSchema,
+        includeInternalSpans: z.boolean(),
+        logLevel: observabilityLogLevelSchema,
+        excludeModelChunks: z.boolean(),
+      })
+      .strict(),
+    sessionCache: z
+      .object({
+        enabled: z.boolean(),
+        maxSessions: z.number(),
+        activeSessions: z.number(),
+      })
+      .strict(),
+  })
+  .strict();
 
-const traceDetectedContract = EffectSchema.Struct({
-  ids: EffectSchema.Array(EffectSchema.String),
-  lexemes: EffectSchema.Array(EffectSchema.String),
-  routeNames: EffectSchema.Array(EffectSchema.String),
-  familyTerms: EffectSchema.Array(EffectSchema.String),
-  statusTerms: EffectSchema.Array(EffectSchema.String),
-});
+export const traceDetectedSchema = z
+  .object({
+    ids: z.array(z.string()),
+    lexemes: z.array(z.string()),
+    routeNames: z.array(z.string()),
+    familyTerms: z.array(z.string()),
+    statusTerms: z.array(z.string()),
+  })
+  .strict();
 
-const candidateScoreContract = EffectSchema.Struct({
-  nodeId: EffectSchema.String,
-  kind: nodeKindContract,
-  score: EffectSchema.Number,
-  reasons: EffectSchema.Array(EffectSchema.String),
-});
+export const candidateScoreSchema = z
+  .object({
+    nodeId: z.string(),
+    kind: nodeKindSchema,
+    score: z.number(),
+    reasons: z.array(z.string()),
+  })
+  .strict();
 
-const frontierCandidateContract = EffectSchema.Struct({
-  targetId: EffectSchema.String,
-  kind: nodeKindContract,
-  reason: EffectSchema.String,
-  score: EffectSchema.Number,
-  origin: frontierOriginContract,
-});
+export const frontierCandidateSchema = z
+  .object({
+    targetId: z.string(),
+    kind: nodeKindSchema,
+    reason: z.string(),
+    score: z.number(),
+    origin: frontierOriginSchema,
+  })
+  .strict();
 
-const graphExpansionContract = EffectSchema.Struct({
-  from: EffectSchema.String,
-  relation: EffectSchema.String,
-  to: EffectSchema.String,
-  reason: EffectSchema.String,
-});
+export const graphExpansionSchema = z
+  .object({
+    from: z.string(),
+    relation: z.string(),
+    to: z.string(),
+    reason: z.string(),
+  })
+  .strict();
 
-const followedReferenceContract = EffectSchema.Struct({
-  from: EffectSchema.String,
-  to: EffectSchema.String,
-  relation: EffectSchema.String,
-  source: EffectSchema.String,
-});
+export const followedReferenceSchema = z
+  .object({
+    from: z.string(),
+    to: z.string(),
+    relation: z.string(),
+    source: z.string(),
+  })
+  .strict();
 
-const retrievalHopContract = EffectSchema.Struct({
-  iteration: EffectSchema.Number,
-  reason: EffectSchema.String,
-  addedNodeIds: EffectSchema.Array(EffectSchema.String),
-  addedAnchorIds: EffectSchema.Array(EffectSchema.String),
-  sufficientAfter: EffectSchema.Boolean,
-});
+export const retrievalHopSchema = z
+  .object({
+    iteration: z.number(),
+    reason: z.string(),
+    addedNodeIds: z.array(z.string()),
+    addedAnchorIds: z.array(z.string()),
+    sufficientAfter: z.boolean(),
+  })
+  .strict();
 
-const traceResultContract = EffectSchema.Struct({
-  mode: answerModeContract,
-  question: EffectSchema.String,
-  normalizedQuestion: EffectSchema.String,
-  detected: traceDetectedContract,
-  candidateScores: EffectSchema.Array(candidateScoreContract),
-  frontierCandidates: EffectSchema.Array(frontierCandidateContract),
-  graphExpansions: EffectSchema.Array(graphExpansionContract),
-  selectedNodeIds: EffectSchema.Array(EffectSchema.String),
-  selectedAnchorIds: EffectSchema.Array(EffectSchema.String),
-  excludedNodeIds: EffectSchema.Array(EffectSchema.String),
-  followedReferences: EffectSchema.Array(followedReferenceContract),
-  retrievalHops: EffectSchema.Array(retrievalHopContract),
-  sessionApplied: EffectSchema.Boolean,
-  sessionReusedNodeIds: EffectSchema.Array(EffectSchema.String),
-  sessionMateriallyChanged: EffectSchema.Boolean,
-  sufficient: EffectSchema.Boolean,
-  status: queryStatusContract,
-  snapshot: snapshotWithRebuildContract,
-});
+export const traceResultSchema = z
+  .object({
+    mode: answerModeSchema,
+    question: z.string(),
+    normalizedQuestion: z.string(),
+    detected: traceDetectedSchema,
+    candidateScores: z.array(candidateScoreSchema),
+    frontierCandidates: z.array(frontierCandidateSchema),
+    graphExpansions: z.array(graphExpansionSchema),
+    selectedNodeIds: z.array(z.string()),
+    selectedAnchorIds: z.array(z.string()),
+    excludedNodeIds: z.array(z.string()),
+    followedReferences: z.array(followedReferenceSchema),
+    retrievalHops: z.array(retrievalHopSchema),
+    sessionApplied: z.boolean(),
+    sessionReusedNodeIds: z.array(z.string()),
+    sessionMateriallyChanged: z.boolean(),
+    sufficient: z.boolean(),
+    status: answerStatusSchema,
+    snapshot: snapshotWithRebuildSchema,
+  })
+  .strict();
 
-const snapshotContract = EffectSchema.Struct({
-  sourceHash: EffectSchema.String,
-  builtAt: EffectSchema.String,
-});
+export const inspectResultSchema = z
+  .object({
+    selector: z.string(),
+    resolvedAs: resolvedAsSchema,
+    status: inspectStatusSchema,
+    node: compiledNodeSchema.optional(),
+    anchors: z.array(anchorSchema),
+    neighbors: z.array(inspectNeighborSchema),
+    snapshot: z
+      .object({
+        sourceHash: z.string(),
+        builtAt: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
 
-const inspectResultContract = EffectSchema.Struct({
-  selector: EffectSchema.String,
-  resolvedAs: resolvedAsContract,
-  status: inspectStatusContract,
-  node: EffectSchema.optional(compiledNodeContract),
-  anchors: EffectSchema.Array(anchorContract),
-  neighbors: EffectSchema.Array(inspectNeighborContract),
-  snapshot: snapshotContract,
-});
+export const inspectAnchorResultSchema = z
+  .object({
+    anchorId: z.string(),
+    status: inspectStatusSchema,
+    anchor: anchorSchema.optional(),
+    ownerNode: compiledNodeSchema.optional(),
+    neighbors: z.array(inspectNeighborSchema),
+    snapshot: z
+      .object({
+        sourceHash: z.string(),
+        builtAt: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
 
-const inspectAnchorResultContract = EffectSchema.Struct({
-  anchorId: EffectSchema.String,
-  status: inspectStatusContract,
-  anchor: EffectSchema.optional(anchorContract),
-  ownerNode: EffectSchema.optional(compiledNodeContract),
-  neighbors: EffectSchema.Array(inspectNeighborContract),
-  snapshot: snapshotContract,
-});
+export const expandedCitationSchema = z
+  .object({
+    citationId: z.string(),
+    status: expandedCitationStatusSchema,
+    anchor: anchorSchema.optional(),
+    ownerNode: compiledNodeSchema.optional(),
+    neighbors: z.array(inspectNeighborSchema),
+  })
+  .strict();
 
-const expandedCitationContract = EffectSchema.Struct({
-  citationId: EffectSchema.String,
-  status: expandedCitationStatusContract,
-  anchor: EffectSchema.optional(anchorContract),
-  ownerNode: EffectSchema.optional(compiledNodeContract),
-  neighbors: EffectSchema.Array(inspectNeighborContract),
-});
+export const expandCitationsResultSchema = z
+  .object({
+    citationIds: z.array(z.string()),
+    items: z.array(expandedCitationSchema),
+    snapshot: z
+      .object({
+        sourceHash: z.string(),
+        builtAt: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
 
-const expandCitationsResultContract = EffectSchema.Struct({
-  citationIds: EffectSchema.Array(EffectSchema.String),
-  items: EffectSchema.Array(expandedCitationContract),
-  snapshot: snapshotContract,
-});
+export const refreshFpfIndexInputSchema = z
+  .object({
+    force: z.boolean().optional(),
+  })
+  .strict();
 
-function defineToolContract<Value>(
-  schema: unknown,
-  jsonSchemaOverride?: JsonSchema,
-): ToolContract<Value> {
-  const typedSchema = schema as EffectSchema.Schema<Value, unknown, never>;
-  const decodeUnknownEither = EffectSchema.decodeUnknownEither(typedSchema);
+export const queryFpfSpecInputSchema = z
+  .object({
+    question: z.string().min(1),
+    mode: answerModeSchema.optional(),
+    forceRefresh: z.boolean().optional(),
+    sessionId: z.string().min(1).optional(),
+  })
+  .strict();
 
-  return {
-    schema: typedSchema,
-    jsonSchema: jsonSchemaOverride ?? (EffectJsonSchema.make(typedSchema) as unknown as JsonSchema),
-    validate(value) {
-      const result = decodeUnknownEither(value);
-      return result._tag === 'Right'
-        ? { success: true, value: result.right as Value }
-        : {
-            success: false,
-            error: ParseResult.TreeFormatter.formatErrorSync(result.left),
-          };
-    },
-  };
-}
+export const askFpfInputSchema = z
+  .object({
+    question: z.string().min(1),
+    mode: answerModeSchema.optional(),
+    forceRefresh: z.boolean().optional(),
+    sessionId: z.string().min(1).optional(),
+  })
+  .strict();
 
-export const refreshFpfIndexInputContract = defineToolContract<{
-  force?: boolean;
-}>(
-  EffectSchema.Struct({
-    force: EffectSchema.optional(EffectSchema.Boolean),
-  }),
-);
-export const refreshFpfIndexOutputContract = defineToolContract<BuildAudit>(buildAuditContract);
+export const getFpfIndexStatusInputSchema = z.object({}).strict();
 
-export const queryFpfSpecInputContract = defineToolContract<{
-  question: string;
-  mode?: AnswerMode;
-  forceRefresh?: boolean;
-  sessionId?: string;
-}>(
-  EffectSchema.Struct({
-    question: EffectSchema.NonEmptyString,
-    mode: EffectSchema.optional(answerModeContract),
-    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
-    sessionId: EffectSchema.optional(EffectSchema.NonEmptyString),
-  }),
-);
-export const queryFpfSpecOutputContract = defineToolContract<QueryResult>(queryResultContract);
+export const inspectFpfNodeInputSchema = z
+  .object({
+    selector: z.string().min(1),
+    kind: selectorKindSchema.optional(),
+    forceRefresh: z.boolean().optional(),
+  })
+  .strict();
 
-export const askFpfInputContract = defineToolContract<{
-  question: string;
-  mode?: AnswerMode;
-  forceRefresh?: boolean;
-  sessionId?: string;
-}>(
-  EffectSchema.Struct({
-    question: EffectSchema.NonEmptyString,
-    mode: EffectSchema.optional(answerModeContract),
-    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
-    sessionId: EffectSchema.optional(EffectSchema.NonEmptyString),
-  }),
-);
-export const askFpfOutputContract = defineToolContract<AskFpfResult>(askFpfResultContract);
+export const inspectFpfAnchorInputSchema = z
+  .object({
+    anchorId: z.string().min(1),
+    forceRefresh: z.boolean().optional(),
+  })
+  .strict();
 
-export const getFpfIndexStatusInputContract = defineToolContract<{}>(
-  EffectSchema.Struct({}),
-  {
-    $schema: 'http://json-schema.org/draft-07/schema#',
-    type: 'object',
-    properties: {},
-    additionalProperties: false,
-  },
-);
-export const getFpfIndexStatusOutputContract =
-  defineToolContract<RuntimeStatus>(runtimeStatusContract);
+export const expandFpfCitationsInputSchema = z
+  .object({
+    citationIds: z.array(z.string().min(1)).min(1),
+    forceRefresh: z.boolean().optional(),
+  })
+  .strict();
 
-export const inspectFpfNodeInputContract = defineToolContract<{
-  selector: string;
-  kind?: 'auto' | 'id' | 'route' | 'lexeme';
-  forceRefresh?: boolean;
-}>(
-  EffectSchema.Struct({
-    selector: EffectSchema.NonEmptyString,
-    kind: EffectSchema.optional(EffectSchema.Literal('auto', 'id', 'route', 'lexeme')),
-    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
-  }),
-);
-export const inspectFpfNodeOutputContract = defineToolContract<InspectResult>(inspectResultContract);
+export const traceFpfPathInputSchema = z
+  .object({
+    question: z.string().min(1),
+    mode: answerModeSchema.optional(),
+    forceRefresh: z.boolean().optional(),
+    sessionId: z.string().min(1).optional(),
+  })
+  .strict();
 
-export const inspectFpfAnchorInputContract = defineToolContract<{
-  anchorId: string;
-  forceRefresh?: boolean;
-}>(
-  EffectSchema.Struct({
-    anchorId: EffectSchema.NonEmptyString,
-    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
-  }),
-);
-export const inspectFpfAnchorOutputContract =
-  defineToolContract<InspectAnchorResult>(inspectAnchorResultContract);
-
-export const expandFpfCitationsInputContract = defineToolContract<{
-  citationIds: string[];
-  forceRefresh?: boolean;
-}>(
-  EffectSchema.Struct({
-    citationIds: EffectSchema.NonEmptyArray(EffectSchema.NonEmptyString),
-    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
-  }),
-);
-export const expandFpfCitationsOutputContract =
-  defineToolContract<ExpandCitationsResult>(expandCitationsResultContract);
-
-export const traceFpfPathInputContract = defineToolContract<{
-  question: string;
-  mode?: AnswerMode;
-  forceRefresh?: boolean;
-  sessionId?: string;
-}>(
-  EffectSchema.Struct({
-    question: EffectSchema.NonEmptyString,
-    mode: EffectSchema.optional(answerModeContract),
-    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
-    sessionId: EffectSchema.optional(EffectSchema.NonEmptyString),
-  }),
-);
-export const traceFpfPathOutputContract = defineToolContract<TraceResult>(traceResultContract);
-
-export type _ContractExportCoverage =
-  | AnchorRef
-  | AnswerStatus
-  | CompiledNode
-  | FrontierOrigin
-  | InspectNeighbor;
+export type RefreshFpfIndexInput = z.infer<typeof refreshFpfIndexInputSchema>;
+export type QueryFpfSpecInput = z.infer<typeof queryFpfSpecInputSchema>;
+export type AskFpfInput = z.infer<typeof askFpfInputSchema>;
+export type GetFpfIndexStatusInput = z.infer<typeof getFpfIndexStatusInputSchema>;
+export type InspectFpfNodeInput = z.infer<typeof inspectFpfNodeInputSchema>;
+export type InspectFpfAnchorInput = z.infer<typeof inspectFpfAnchorInputSchema>;
+export type ExpandFpfCitationsInput = z.infer<typeof expandFpfCitationsInputSchema>;
+export type TraceFpfPathInput = z.infer<typeof traceFpfPathInputSchema>;

@@ -1,77 +1,54 @@
+import { createTool } from '@mastra/core/tools';
+
 import { FpfRuntime } from '../runtime/runtime.js';
-import type {
-  AnswerMode,
-  AskFpfResult,
-  BuildAudit,
-  ExpandCitationsResult,
-  InspectAnchorResult,
-  InspectResult,
-  QueryResult,
-  RuntimeStatus,
-  TraceResult,
-} from '../runtime/types.js';
+import type { AnswerMode, AskFpfResult, QueryResult } from '../runtime/types.js';
 import {
-  askFpfInputContract,
-  askFpfOutputContract,
-  expandFpfCitationsInputContract,
-  expandFpfCitationsOutputContract,
-  getFpfIndexStatusInputContract,
-  getFpfIndexStatusOutputContract,
-  inspectFpfAnchorInputContract,
-  inspectFpfAnchorOutputContract,
-  inspectFpfNodeInputContract,
-  inspectFpfNodeOutputContract,
-  queryFpfSpecInputContract,
-  queryFpfSpecOutputContract,
-  refreshFpfIndexInputContract,
-  refreshFpfIndexOutputContract,
-  traceFpfPathInputContract,
-  traceFpfPathOutputContract,
-  type ToolContract,
+  askFpfInputSchema,
+  askFpfResultSchema,
+  expandCitationsResultSchema,
+  expandFpfCitationsInputSchema,
+  getFpfIndexStatusInputSchema,
+  inspectAnchorResultSchema,
+  inspectFpfAnchorInputSchema,
+  inspectFpfNodeInputSchema,
+  inspectResultSchema,
+  queryFpfSpecInputSchema,
+  queryResultSchema,
+  refreshFpfIndexInputSchema,
+  runtimeStatusSchema,
+  buildAuditSchema,
+  traceFpfPathInputSchema,
+  traceResultSchema,
 } from './tool-contracts.js';
 
 const runtime = new FpfRuntime();
 const DEFAULT_QUERY_MODE: AnswerMode = 'verbose';
 
-export interface FpfMcpToolDefinition<Input, Output> {
-  readonly name: string;
-  readonly description: string;
-  readonly inputContract: ToolContract<Input>;
-  readonly outputContract: ToolContract<Output>;
-  execute(input: Input): Promise<Output>;
-}
-
-export const refreshFpfIndexTool = defineTool<
-  { force?: boolean },
-  BuildAudit
->({
-  name: 'refresh_fpf_index',
-  description: 'Build or rebuild the local vectorless FPF index from FPF-spec.md and persist the artifact set.',
-  inputContract: refreshFpfIndexInputContract,
-  outputContract: refreshFpfIndexOutputContract,
+export const refreshFpfIndexTool = createTool({
+  id: 'refresh_fpf_index',
+  description:
+    'Build or rebuild the local vectorless FPF index from FPF-spec.md and persist the artifact set.',
+  inputSchema: refreshFpfIndexInputSchema,
+  outputSchema: buildAuditSchema,
   execute: async ({ force }) => runtime.refresh(force ?? false),
 });
 
-export const queryFpfSpecTool = defineTool<
-  { question: string; mode?: AnswerMode; forceRefresh?: boolean; sessionId?: string },
-  QueryResult
->({
-  name: 'query_fpf_spec',
-  description: 'Answer questions against the local vectorless FPF runtime with auditable IDs, citations, constraints, and freshness metadata.',
-  inputContract: queryFpfSpecInputContract,
-  outputContract: queryFpfSpecOutputContract,
+export const queryFpfSpecTool = createTool({
+  id: 'query_fpf_spec',
+  description:
+    'Answer questions against the local vectorless FPF runtime with auditable IDs, citations, constraints, and freshness metadata.',
+  inputSchema: queryFpfSpecInputSchema,
+  outputSchema: queryResultSchema,
   execute: async ({ question, mode, forceRefresh, sessionId }) =>
     runtime.query(question, mode ?? resolveDefaultQueryMode(), forceRefresh ?? false, sessionId),
 });
 
-export const askFpfTool = defineTool<
-  { question: string; mode?: AnswerMode; forceRefresh?: boolean; sessionId?: string },
-  AskFpfResult
->({
-  name: 'ask_fpf',
-  description: 'Return an FPF answer in markdown with grounding metadata using the local vectorless runtime.',
-  inputContract: askFpfInputContract,
-  outputContract: askFpfOutputContract,
+export const askFpfTool = createTool({
+  id: 'ask_fpf',
+  description:
+    'Return an FPF answer in markdown with grounding metadata using the local vectorless runtime.',
+  inputSchema: askFpfInputSchema,
+  outputSchema: askFpfResultSchema,
   execute: async ({ question, mode, forceRefresh, sessionId }) => {
     const result = await runtime.query(
       question,
@@ -83,76 +60,65 @@ export const askFpfTool = defineTool<
   },
 });
 
-export const getFpfIndexStatusTool = defineTool<{}, RuntimeStatus>({
-  name: 'get_fpf_index_status',
-  description: 'Inspect whether the local FPF index exists, whether it is fresh against the current source hash, and which artifacts are present.',
-  inputContract: getFpfIndexStatusInputContract,
-  outputContract: getFpfIndexStatusOutputContract,
+export const getFpfIndexStatusTool = createTool({
+  id: 'get_fpf_index_status',
+  description:
+    'Inspect whether the local FPF index exists, whether it is fresh against the current source hash, and which artifacts are present.',
+  inputSchema: getFpfIndexStatusInputSchema,
+  outputSchema: runtimeStatusSchema,
   execute: async () => runtime.status(),
 });
 
-export const inspectFpfNodeTool = defineTool<
-  { selector: string; kind?: 'auto' | 'id' | 'route' | 'lexeme'; forceRefresh?: boolean },
-  InspectResult
->({
-  name: 'inspect_fpf_node',
-  description: 'Inspect one compiled FPF node by exact ID, route name, or lexeme and return anchors plus neighboring relations.',
-  inputContract: inspectFpfNodeInputContract,
-  outputContract: inspectFpfNodeOutputContract,
+export const inspectFpfNodeTool = createTool({
+  id: 'inspect_fpf_node',
+  description:
+    'Inspect one compiled FPF node by exact ID, route name, or lexeme and return anchors plus neighboring relations.',
+  inputSchema: inspectFpfNodeInputSchema,
+  outputSchema: inspectResultSchema,
   execute: async ({ selector, kind, forceRefresh }) =>
     runtime.inspect(selector, kind ?? 'auto', forceRefresh ?? false),
 });
 
-export const inspectFpfAnchorTool = defineTool<
-  { anchorId: string; forceRefresh?: boolean },
-  InspectAnchorResult
->({
-  name: 'inspect_fpf_anchor',
-  description: 'Inspect one compiled FPF anchor by exact anchor ID and return raw anchor text plus owning node context.',
-  inputContract: inspectFpfAnchorInputContract,
-  outputContract: inspectFpfAnchorOutputContract,
+export const inspectFpfAnchorTool = createTool({
+  id: 'inspect_fpf_anchor',
+  description:
+    'Inspect one compiled FPF anchor by exact anchor ID and return raw anchor text plus owning node context.',
+  inputSchema: inspectFpfAnchorInputSchema,
+  outputSchema: inspectAnchorResultSchema,
   execute: async ({ anchorId, forceRefresh }) =>
     runtime.inspectAnchor(anchorId, forceRefresh ?? false),
 });
 
-export const expandFpfCitationsTool = defineTool<
-  { citationIds: string[]; forceRefresh?: boolean },
-  ExpandCitationsResult
->({
-  name: 'expand_fpf_citations',
-  description: 'Expand multiple exact citation IDs into raw anchor text plus owning node context without adding new semantics.',
-  inputContract: expandFpfCitationsInputContract,
-  outputContract: expandFpfCitationsOutputContract,
+export const expandFpfCitationsTool = createTool({
+  id: 'expand_fpf_citations',
+  description:
+    'Expand multiple exact citation IDs into raw anchor text plus owning node context without adding new semantics.',
+  inputSchema: expandFpfCitationsInputSchema,
+  outputSchema: expandCitationsResultSchema,
   execute: async ({ citationIds, forceRefresh }) =>
     runtime.expandCitations(citationIds, forceRefresh ?? false),
 });
 
-export const traceFpfPathTool = defineTool<
-  { question: string; mode?: AnswerMode; forceRefresh?: boolean; sessionId?: string },
-  TraceResult
->({
-  name: 'trace_fpf_path',
-  description: 'Return the deterministic retrieval trace showing normalization, candidate scores, graph expansion, and selected slices.',
-  inputContract: traceFpfPathInputContract,
-  outputContract: traceFpfPathOutputContract,
+export const traceFpfPathTool = createTool({
+  id: 'trace_fpf_path',
+  description:
+    'Return the deterministic retrieval trace showing normalization, candidate scores, graph expansion, and selected slices.',
+  inputSchema: traceFpfPathInputSchema,
+  outputSchema: traceResultSchema,
   execute: async ({ question, mode, forceRefresh, sessionId }) =>
     runtime.trace(question, mode ?? 'compact', forceRefresh ?? false, sessionId),
 });
 
-export const fpfMcpTools = [
-  refreshFpfIndexTool,
-  getFpfIndexStatusTool,
-  queryFpfSpecTool,
-  traceFpfPathTool,
-  inspectFpfNodeTool,
-  inspectFpfAnchorTool,
-  expandFpfCitationsTool,
-  askFpfTool,
-] as const;
-
-export const fpfMcpToolMap = Object.fromEntries(
-  fpfMcpTools.map((tool) => [tool.name, tool]),
-) as Record<string, FpfMcpToolDefinition<unknown, unknown>>;
+export const fpfMcpTools = {
+  refresh_fpf_index: refreshFpfIndexTool,
+  get_fpf_index_status: getFpfIndexStatusTool,
+  query_fpf_spec: queryFpfSpecTool,
+  trace_fpf_path: traceFpfPathTool,
+  inspect_fpf_node: inspectFpfNodeTool,
+  inspect_fpf_anchor: inspectFpfAnchorTool,
+  expand_fpf_citations: expandFpfCitationsTool,
+  ask_fpf: askFpfTool,
+} as const;
 
 export function resolveDefaultQueryMode(env: NodeJS.ProcessEnv = process.env): AnswerMode {
   const mode = env.FPF_QUERY_DEFAULT_MODE?.trim().toLowerCase();
@@ -161,13 +127,7 @@ export function resolveDefaultQueryMode(env: NodeJS.ProcessEnv = process.env): A
     : DEFAULT_QUERY_MODE;
 }
 
-function defineTool<Input, Output>(
-  definition: FpfMcpToolDefinition<Input, Output>,
-): FpfMcpToolDefinition<Input, Output> {
-  return definition;
-}
-
-function renderAskFpfResult(question: string, result: QueryResult): AskFpfResult {
+export function renderAskFpfResult(question: string, result: QueryResult): AskFpfResult {
   return {
     question,
     mode: result.mode,

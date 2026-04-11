@@ -1,6 +1,6 @@
 ---
 title: FPF Spec Runtime
-description: Bun-first raw MCP runtime and generated reference docs for FPF-spec.md.
+description: Bun-first Mastra runtime and generated reference docs for FPF-spec.md.
 ---
 
 # FPF Spec Runtime
@@ -10,8 +10,9 @@ This site is generated from the local `FPF-spec.md` source and the compiler snap
 ## Stack
 
 - Bun is the preferred local runtime and package manager.
-- Effect Schema owns repo-authored contracts and validation.
-- The MCP boundary is a repo-owned raw JSON-RPC stdio server.
+- Zod owns repo-authored contracts and validation.
+- Mastra owns the MCP, logging, and observability boundary.
+- Hono is the hosted server engine.
 - Rstest, Rslint, and Rspress provide the test, lint, and docs surfaces.
 
 ## Reference Surfaces
@@ -33,4 +34,4 @@ This site is generated from the local `FPF-spec.md` source and the compiler snap
 ## Notes
 
 - Generated pages are rebuilt from the compiler snapshot during `bun run docs:build`.
-- The docs site is a presentation layer only; the runtime and MCP behavior remain owned by the repo runtime and MCP surfaces under `src/runtime/` and `src/mcp/`.
+- The docs site is a presentation layer only; the runtime behavior lives under `src/runtime/`, the MCP surface under `src/mcp/`, and the hosted server bootstrap under `src/mastra.ts` and `src/server.ts`.

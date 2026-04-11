@@ -1,4 +1,13 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import {
+  SpanType,
+  type FeedbackEvent,
+  type LogEvent,
+  type MetricEvent,
+  type ScoreEvent,
+  type SpanTypeMap,
+  type TracingEvent,
+} from '@mastra/core/observability';
+import { Observability, TestExporter } from '@mastra/observability';
 
 import { resolveLogPath } from '../logging/file-paths.js';
 
@@ -6,7 +15,11 @@ type ObservabilityFileFormat = 'flat' | 'tree' | 'normalized';
 type ObservabilityLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 const DEFAULT_LOG_FILE = 'mastra-observability.json';
-const writeChains = new Map<string, Promise<void>>();
+
+interface PersistedExporterOptions {
+  filePath: string;
+  format: ObservabilityFileFormat;
+}
 
 export interface RuntimeObservabilitySummary {
   configured: boolean;
@@ -17,59 +30,179 @@ export interface RuntimeObservabilitySummary {
   excludeModelChunks: boolean;
 }
 
-interface PersistedObservabilityLog {
-  service: string;
-  format: ObservabilityFileFormat;
-  updatedAt: string;
-  events: Array<Record<string, unknown>>;
+interface RuntimeObservabilityHandle extends RuntimeObservabilitySummary {
+  observability: Observability;
 }
 
-export async function withRuntimeSpan<TResult>(options: {
-  env?: NodeJS.ProcessEnv;
-  type: string;
-  name: string;
-  input?: unknown;
-  attributes?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  mapOutput?: (result: TResult) => unknown;
-  operation: () => Promise<TResult>;
-}): Promise<TResult> {
-  const env = options.env ?? process.env;
-  const summary = getRuntimeObservabilitySummary(env);
-  const startedAt = new Date().toISOString();
+class PersistedTestExporter extends TestExporter {
+  readonly name = 'persisted-test-exporter';
+  private writeChain = Promise.resolve();
 
-  try {
-    const result = await options.operation();
-    await appendObservabilityEvent(summary.filePath, summary.format, {
-      type: options.type,
-      name: options.name,
-      startedAt,
-      endedAt: new Date().toISOString(),
-      input: options.input,
-      attributes: options.attributes,
-      metadata: options.metadata,
-      output: options.mapOutput ? options.mapOutput(result) : result,
+  constructor(private readonly options: PersistedExporterOptions) {
+    super({
+      jsonIndent: 2,
+      logLevel: 'error',
+      logMetricsOnFlush: false,
+      storeLogs: true,
+      validateLifecycle: true,
     });
-    return result;
-  } catch (error) {
-    await appendObservabilityEvent(summary.filePath, summary.format, {
-      type: options.type,
-      name: options.name,
-      startedAt,
-      endedAt: new Date().toISOString(),
-      input: options.input,
-      attributes: options.attributes,
-      metadata: options.metadata,
-      errorInfo: {
-        message: error instanceof Error ? error.message : 'Unknown observability error',
-      },
-    });
-    throw error;
   }
+
+  protected override async _exportTracingEvent(event: TracingEvent): Promise<void> {
+    await super._exportTracingEvent(event);
+    await this.persist();
+  }
+
+  override async onLogEvent(event: LogEvent): Promise<void> {
+    await super.onLogEvent(event);
+    await this.persist();
+  }
+
+  override async onMetricEvent(event: MetricEvent): Promise<void> {
+    await super.onMetricEvent(event);
+    await this.persist();
+  }
+
+  override async onScoreEvent(event: ScoreEvent): Promise<void> {
+    await super.onScoreEvent(event);
+    await this.persist();
+  }
+
+  override async onFeedbackEvent(event: FeedbackEvent): Promise<void> {
+    await super.onFeedbackEvent(event);
+    await this.persist();
+  }
+
+  override async flush(): Promise<void> {
+    await super.flush();
+    await this.persist();
+  }
+
+  override async shutdown(): Promise<void> {
+    await this.flush();
+    await super.shutdown();
+  }
+
+  private async persist(): Promise<void> {
+    const writeOperation = this.writeChain.then(() =>
+      this.writeToFile(this.options.filePath, {
+        indent: 2,
+        includeEvents: true,
+        includeStats: true,
+        format: this.options.format,
+      }),
+    );
+    this.writeChain = writeOperation.catch(() => undefined);
+    await writeOperation;
+  }
+}
+
+let cachedHandle: RuntimeObservabilityHandle | undefined;
+let cachedKey: string | undefined;
+
+export function getRuntimeObservability(
+  env: NodeJS.ProcessEnv = process.env,
+): RuntimeObservabilityHandle {
+  const summary = resolveRuntimeObservabilitySummary(env);
+  const cacheKey = JSON.stringify(summary);
+
+  if (cachedHandle && cachedKey === cacheKey) {
+    return cachedHandle;
+  }
+
+  if (cachedHandle) {
+    void cachedHandle.observability.shutdown().catch(() => undefined);
+  }
+
+  const exporter = new PersistedTestExporter({
+    filePath: summary.filePath,
+    format: summary.format,
+  });
+  const observability = new Observability({
+    configs: {
+      default: {
+        serviceName: 'fpf-spec-runtime',
+        exporters: [exporter],
+        includeInternalSpans: summary.includeInternalSpans,
+        excludeSpanTypes: summary.excludeModelChunks ? [SpanType.MODEL_CHUNK] : [],
+        logging: {
+          enabled: true,
+          level: summary.logLevel,
+        },
+        serializationOptions: {
+          maxStringLength: 8_000,
+          maxDepth: 8,
+          maxArrayLength: 24,
+          maxObjectKeys: 40,
+        },
+      },
+    },
+  });
+
+  cachedHandle = {
+    ...summary,
+    observability,
+  };
+  cachedKey = cacheKey;
+  return cachedHandle;
 }
 
 export function getRuntimeObservabilitySummary(
   env: NodeJS.ProcessEnv = process.env,
+): RuntimeObservabilitySummary {
+  return resolveRuntimeObservabilitySummary(env);
+}
+
+export async function withRuntimeSpan<TType extends SpanType, TResult>(options: {
+  env?: NodeJS.ProcessEnv;
+  type: TType;
+  name: string;
+  input?: unknown;
+  attributes?: SpanTypeMap[TType];
+  metadata?: Record<string, unknown>;
+  mapOutput?: (result: TResult) => unknown;
+  operation: () => Promise<TResult>;
+}): Promise<TResult> {
+  const handle = getRuntimeObservability(options.env);
+  const instance = handle.observability.getDefaultInstance();
+  if (!instance) {
+    return options.operation();
+  }
+
+  const span = instance.startSpan({
+    type: options.type,
+    name: options.name,
+    input: options.input,
+    attributes: options.attributes,
+    metadata: options.metadata,
+  });
+
+  try {
+    const result = await options.operation();
+    span.end({
+      output: options.mapOutput ? options.mapOutput(result) : result,
+    });
+    return result;
+  } catch (error) {
+    span.error({
+      error: toError(error),
+      endSpan: true,
+      metadata: options.metadata,
+    });
+    throw error;
+  } finally {
+    await instance.flush();
+  }
+}
+
+export async function resetRuntimeObservabilityForTests(): Promise<void> {
+  await cachedHandle?.observability.shutdown().catch(() => undefined);
+  cachedHandle = undefined;
+  cachedKey = undefined;
+}
+
+function resolveRuntimeObservabilitySummary(
+  env: NodeJS.ProcessEnv,
 ): RuntimeObservabilitySummary {
   return {
     configured: true,
@@ -77,48 +210,10 @@ export function getRuntimeObservabilitySummary(
     format: normalizeFormat(env.FPF_MASTRA_OBSERVABILITY_FORMAT),
     includeInternalSpans: parseBoolean(env.FPF_MASTRA_OBSERVABILITY_INCLUDE_INTERNAL_SPANS, true),
     logLevel: normalizeLogLevel(env.FPF_MASTRA_OBSERVABILITY_LOG_LEVEL),
-    excludeModelChunks: !parseBoolean(env.FPF_MASTRA_OBSERVABILITY_INCLUDE_MODEL_CHUNKS, false),
-  };
-}
-
-export async function resetRuntimeObservabilityForTests(): Promise<void> {
-  writeChains.clear();
-}
-
-async function appendObservabilityEvent(
-  filePath: string,
-  format: ObservabilityFileFormat,
-  event: Record<string, unknown>,
-): Promise<void> {
-  const current = writeChains.get(filePath) ?? Promise.resolve();
-  const next = current.then(async () => {
-    const document = await loadPersistedObservability(filePath, format);
-    document.updatedAt = new Date().toISOString();
-    document.events.push(event);
-    await writeFile(filePath, JSON.stringify(document, null, 2));
-  });
-  writeChains.set(filePath, next.catch(() => undefined));
-  await next;
-}
-
-async function loadPersistedObservability(
-  filePath: string,
-  format: ObservabilityFileFormat,
-): Promise<PersistedObservabilityLog> {
-  try {
-    const existing = JSON.parse(await readFile(filePath, 'utf8')) as PersistedObservabilityLog;
-    if (Array.isArray(existing.events)) {
-      return existing;
-    }
-  } catch {
-    // Fall through to initialize a new document.
-  }
-
-  return {
-    service: 'fpf-spec-runtime',
-    format,
-    updatedAt: new Date().toISOString(),
-    events: [],
+    excludeModelChunks: !parseBoolean(
+      env.FPF_MASTRA_OBSERVABILITY_INCLUDE_MODEL_CHUNKS,
+      false,
+    ),
   };
 }
 
@@ -163,4 +258,11 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
     default:
       return fallback;
   }
+}
+
+function toError(value: unknown): Error {
+  if (value instanceof Error) {
+    return value;
+  }
+  return new Error(typeof value === 'string' ? value : 'Unknown observability error');
 }

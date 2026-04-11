@@ -41,7 +41,21 @@ trap - EXIT
 
 grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
-printf '==> CLI and MCP logging verified\n'
+printf '==> Starting hosted Hono runtime briefly\n'
+hosted_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
+bun run start >/dev/null 2>&1 &
+hosted_pid="$!"
+trap 'kill "$hosted_pid" 2>/dev/null || true; wait "$hosted_pid" 2>/dev/null || true' EXIT
+sleep 2
+kill "$hosted_pid" 2>/dev/null || true
+wait "$hosted_pid" 2>/dev/null || true
+trap - EXIT
+
+hosted_after_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
+(( hosted_after_size > hosted_before_size ))
+grep -q '"msg":"Mastra Hono server start"' "$MAS_LOG"
+
+printf '==> CLI, MCP, and hosted runtime logging verified\n'
 printf '    runtime log: %s\n' "$MAS_LOG"
 
 if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" && -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
