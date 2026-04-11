@@ -229,6 +229,24 @@ export interface QueryResult {
   groundingChain?: string[];
 }
 
+export interface AskFpfResult {
+  question: string;
+  mode: AnswerMode;
+  markdown: string;
+  ids: string[];
+  citations: string[];
+  constraints: string[];
+  gaps: string[];
+  confidence: number;
+  status: AnswerStatus;
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+    rebuilt: boolean;
+  };
+  groundingChain?: string[];
+}
+
 export interface TraceCandidate {
   nodeId: string;
   kind: NodeKind;
@@ -325,6 +343,35 @@ export interface InspectResult {
   };
 }
 
+export interface InspectAnchorResult {
+  anchorId: string;
+  status: 'ok' | 'not_found';
+  anchor?: AnchorRef;
+  ownerNode?: CompiledNode;
+  neighbors: InspectNeighbor[];
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}
+
+export interface ExpandedCitation {
+  citationId: string;
+  status: 'ok' | 'not_found';
+  anchor?: AnchorRef;
+  ownerNode?: CompiledNode;
+  neighbors: InspectNeighbor[];
+}
+
+export interface ExpandCitationsResult {
+  citationIds: string[];
+  items: ExpandedCitation[];
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}
+
 export interface RuntimeStatus {
   sourcePath: string;
   sourceHash?: string;
@@ -339,6 +386,7 @@ export interface RuntimeStatus {
     provider?: string;
     model?: string;
     baseUrl?: string;
+    apiStyle?: 'responses' | 'lmstudio_chat';
   };
   observability: {
     configured: boolean;
@@ -387,6 +435,7 @@ export interface LocalAnswerSynthesizerInfo {
   provider: string;
   model?: string;
   baseUrl?: string;
+  apiStyle?: 'responses' | 'lmstudio_chat';
 }
 
 export interface LocalAnswerSynthesizer {

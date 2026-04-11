@@ -1,14 +1,16 @@
 import { PinoLogger } from '@mastra/loggers';
 import { FileTransport } from '@mastra/loggers/file';
 
-import { resolveLogPath } from '../logging/file-paths.js';
+import { resolveLogPath } from './file-paths.js';
+
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 let cachedLogger: PinoLogger | undefined;
 let cachedKey: string | undefined;
 
-export function getMastraLogger(): PinoLogger {
-  const filePath = resolveLogPath(process.env.FPF_MASTRA_LOG_PATH, 'mastra.log');
-  const level = normalizeLogLevel(process.env.FPF_MASTRA_LOG_LEVEL);
+export function getRuntimeLogger(env: NodeJS.ProcessEnv = process.env): PinoLogger {
+  const filePath = resolveLogPath(env.FPF_MASTRA_LOG_PATH, 'mastra.log');
+  const level = normalizeLogLevel(env.FPF_MASTRA_LOG_LEVEL);
   const cacheKey = `${filePath}:${level}`;
 
   if (cachedLogger && cachedKey === cacheKey) {
@@ -33,12 +35,12 @@ export function getMastraLogger(): PinoLogger {
   return cachedLogger;
 }
 
-function normalizeLogLevel(value: string | undefined): 'debug' | 'info' | 'warn' | 'error' {
+function normalizeLogLevel(value: string | undefined): LogLevel {
   switch (value?.trim().toLowerCase()) {
     case 'debug':
     case 'warn':
     case 'error':
-      return value.trim().toLowerCase() as 'debug' | 'warn' | 'error';
+      return value.trim().toLowerCase() as LogLevel;
     default:
       return 'info';
   }

@@ -33,7 +33,6 @@ import type {
   RouteRecord,
   SectionRole,
   Snapshot,
-  TraceCandidate,
 } from './types.js';
 
 interface HeadingSectionInternal extends AnchorRef {

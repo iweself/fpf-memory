@@ -9,7 +9,14 @@
     "skipLibCheck": true,
     "noEmit": true,
     "outDir": "dist",
-    "types": ["node", "vitest/globals"]
+    "types": ["node", "bun-types"]
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "rslint.config.ts",
+    "rstest.config.ts",
+    "rspress.config.ts"
+  ]
 }
