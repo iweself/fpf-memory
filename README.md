@@ -238,4 +238,4 @@ The script verifies:
 - the real `cli` path updates `.runtime/logs/mastra.log`
 - the real `mcp` stdio startup path writes a startup record to `.runtime/logs/mastra.log`
 - the real `start` path writes a hosted-runtime startup record to `.runtime/logs/mastra.log`
-- the LM Studio path updates `.runtime/logs/mastra-observability.json` and `.runtime/logs/ai-traces.jsonl` when `FPF_LOCAL_LLM_BASE_URL` and `FPF_LOCAL_LLM_MODEL` are set
+- the LM Studio path updates `.runtime/logs/mastra-observability.json` and `.runtime/logs/ai-traces.jsonl` when either `FPF_LOCAL_LLM_BASE_URL` or `FPF_LOCAL_LLM_MODEL` is set; the missing half falls back to the repo defaults
