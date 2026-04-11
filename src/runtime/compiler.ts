@@ -47,6 +47,7 @@ interface PatternMeta {
   id: string;
   title: string;
   status: string;
+  description?: string;
   keywords: string[];
   queries: string[];
   dependenciesRaw: string;
@@ -444,11 +445,18 @@ function parseCatalogMetadata(lines: string[]): Record<string, PatternMeta> {
     const status = normalizeLabel(cells[2] ?? '');
     const keywordsCell = cleanMarkdown(cells[3] ?? '');
     const dependenciesRaw = cleanMarkdown(cells[4] ?? '');
+    const description =
+      !dependenciesRaw &&
+      keywordsCell &&
+      !/\*keywords:\*|\*queries:\*/i.test(keywordsCell)
+        ? keywordsCell
+        : undefined;
 
     metadata[firstCell] = {
       id: firstCell,
       title,
       status,
+      description,
       keywords: parseKeywords(keywordsCell),
       queries: parseQueries(keywordsCell),
       dependenciesRaw,
@@ -493,6 +501,7 @@ function buildPatternGraph(
       id,
       title,
       status: meta?.status ?? headerMeta.status ?? 'Unknown',
+      description: meta?.description,
       part: meta?.part,
       cluster: meta?.cluster,
       type: headerMeta.type,
@@ -506,6 +515,7 @@ function buildPatternGraph(
       searchableText: unique([
         id,
         title,
+        meta?.description,
         ...keywords,
         ...queries,
         ...aliases,
@@ -523,6 +533,7 @@ function buildPatternGraph(
       id,
       title: meta.title,
       status: meta.status,
+      description: meta.description,
       part: meta.part,
       cluster: meta.cluster,
       keywords: meta.keywords,
@@ -531,7 +542,13 @@ function buildPatternGraph(
       dependenciesRaw: meta.dependenciesRaw,
       sectionIds: [],
       relations: meta.relations,
-      searchableText: unique([id, meta.title, ...meta.keywords, ...meta.queries]).join(' '),
+      searchableText: unique([
+        id,
+        meta.title,
+        meta.description,
+        ...meta.keywords,
+        ...meta.queries,
+      ]).join(' '),
     };
     relations.push(...meta.relations);
   }

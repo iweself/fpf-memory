@@ -64,6 +64,13 @@ export const inspectNeighborSchema = z
   })
   .strict();
 
+export const docRefSchema = z
+  .object({
+    markdownPath: z.string(),
+    staticPath: z.string(),
+  })
+  .strict();
+
 export const anchorSchema = z
   .object({
     id: z.string(),
@@ -307,6 +314,25 @@ export const inspectResultSchema = z
     node: compiledNodeSchema.optional(),
     anchors: z.array(anchorSchema),
     neighbors: z.array(inspectNeighborSchema),
+    docRef: docRefSchema.optional(),
+    snapshot: z
+      .object({
+        sourceHash: z.string(),
+        builtAt: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const readDocResultSchema = z
+  .object({
+    selector: z.string(),
+    resolvedAs: resolvedAsSchema,
+    status: inspectStatusSchema,
+    nodeId: z.string().optional(),
+    title: z.string().optional(),
+    docRef: docRefSchema.optional(),
+    markdown: z.string().optional(),
     snapshot: z
       .object({
         sourceHash: z.string(),
@@ -389,6 +415,14 @@ export const inspectFpfNodeInputSchema = z
   })
   .strict();
 
+export const readFpfDocInputSchema = z
+  .object({
+    selector: z.string().min(1),
+    kind: selectorKindSchema.optional(),
+    forceRefresh: z.boolean().optional(),
+  })
+  .strict();
+
 export const inspectFpfAnchorInputSchema = z
   .object({
     anchorId: z.string().min(1),
@@ -417,6 +451,7 @@ export type QueryFpfSpecInput = z.infer<typeof queryFpfSpecInputSchema>;
 export type AskFpfInput = z.infer<typeof askFpfInputSchema>;
 export type GetFpfIndexStatusInput = z.infer<typeof getFpfIndexStatusInputSchema>;
 export type InspectFpfNodeInput = z.infer<typeof inspectFpfNodeInputSchema>;
+export type ReadFpfDocInput = z.infer<typeof readFpfDocInputSchema>;
 export type InspectFpfAnchorInput = z.infer<typeof inspectFpfAnchorInputSchema>;
 export type ExpandFpfCitationsInput = z.infer<typeof expandFpfCitationsInputSchema>;
 export type TraceFpfPathInput = z.infer<typeof traceFpfPathInputSchema>;

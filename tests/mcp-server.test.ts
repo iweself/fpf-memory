@@ -194,6 +194,7 @@ describe('Mastra MCP server', () => {
       'query_fpf_spec',
       'trace_fpf_path',
       'inspect_fpf_node',
+      'read_fpf_doc',
       'inspect_fpf_anchor',
       'expand_fpf_citations',
       'ask_fpf',
@@ -245,6 +246,16 @@ describe('Mastra MCP server', () => {
     });
     const tracePayload = asToolPayload(trace);
     expect(tracePayload.mode).toBe('compact');
+
+    const readDoc = await harness.request('tools/call', {
+      name: 'read_fpf_doc',
+      arguments: {
+        selector: 'A.1.1',
+      },
+    });
+    const readDocPayload = asToolPayload(readDoc);
+    expect(readDocPayload.nodeId).toBe('A.1.1');
+    expect(readDocPayload.markdown).toContain('# U.BoundedContext: The Semantic Frame');
 
     const ask = await harness.request('tools/call', {
       name: 'ask_fpf',

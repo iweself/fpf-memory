@@ -28,6 +28,9 @@ try {
     case 'inspect':
       await runInspect(args.slice(1));
       break;
+    case 'read-doc':
+      await runReadDoc(args.slice(1));
+      break;
     case 'trace':
       await runTrace(args.slice(1));
       break;
@@ -75,6 +78,20 @@ async function runInspect(commandArgs: string[]): Promise<void> {
   }
 
   await print(runtime.inspect(selector, kind, forceRefresh));
+}
+
+async function runReadDoc(commandArgs: string[]): Promise<void> {
+  const selector =
+    value(commandArgs, '--selector') ??
+    commandArgs.filter((argument) => !argument.startsWith('--')).join(' ').trim();
+  const kind = (value(commandArgs, '--kind') ?? 'auto') as 'auto' | 'id' | 'route' | 'lexeme';
+  const forceRefresh = flag(commandArgs, '--force');
+
+  if (!selector) {
+    throw new Error('read-doc requires --selector "<id|route|lexeme>" or trailing selector text.');
+  }
+
+  await print(runtime.readDoc(selector, kind, forceRefresh));
 }
 
 async function runTrace(commandArgs: string[]): Promise<void> {
@@ -133,6 +150,7 @@ function printHelp(): void {
   bun run cli -- refresh [--force]
   bun run cli -- query --question "What is U.BoundedContext?" [--mode compact|verbose|proof] [--session s1] [--force]
   bun run cli -- inspect --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
+  bun run cli -- read-doc --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
   bun run cli -- trace --question "How do routes work?" [--mode compact|verbose|proof] [--session s1] [--force]
   bun run cli -- lm-check [--base-url http://localhost:1234/v1] [--model google/gemma-4-31b] [--api-style responses|chat|lmstudio_chat] [--api-key <token>] [--timeout-ms 60000]
 `);

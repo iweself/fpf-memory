@@ -22,6 +22,7 @@ import type {
   InspectResult,
   LocalAnswerSynthesizer,
   QueryResult,
+  ReadDocResult,
   RuntimeStatus,
   Snapshot,
   TraceResult,
@@ -162,6 +163,16 @@ export class FpfRuntime {
     await this.refresh(forceRefresh);
     const snapshot = await this.requireSnapshot();
     return new QueryEngine(snapshot, false, this.synthesizer).inspect(selector, kind);
+  }
+
+  async readDoc(
+    selector: string,
+    kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
+    forceRefresh = false,
+  ): Promise<ReadDocResult> {
+    await this.refresh(forceRefresh);
+    const snapshot = await this.requireSnapshot();
+    return new QueryEngine(snapshot, false, this.synthesizer).readDoc(selector, kind);
   }
 
   async inspectAnchor(anchorId: string, forceRefresh = false): Promise<InspectAnchorResult> {

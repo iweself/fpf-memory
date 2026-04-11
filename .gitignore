@@ -8,5 +8,4 @@ doc_build
 output.txt
 *.db
 *.db-*
-docs/generated
 .DS_Store

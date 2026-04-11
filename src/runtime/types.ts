@@ -87,6 +87,7 @@ export interface PatternRecord {
   id: string;
   title: string;
   status: string;
+  description?: string;
   part?: string;
   cluster?: string;
   type?: string;
@@ -330,6 +331,11 @@ export interface InspectNeighbor {
   relation: RelationKind;
 }
 
+export interface DocRef {
+  markdownPath: string;
+  staticPath: string;
+}
+
 export interface InspectResult {
   selector: string;
   resolvedAs: 'id' | 'route' | 'lexeme' | 'not_found';
@@ -337,6 +343,21 @@ export interface InspectResult {
   node?: CompiledNode;
   anchors: AnchorRef[];
   neighbors: InspectNeighbor[];
+  docRef?: DocRef;
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}
+
+export interface ReadDocResult {
+  selector: string;
+  resolvedAs: 'id' | 'route' | 'lexeme' | 'not_found';
+  status: 'ok' | 'not_found';
+  nodeId?: string;
+  title?: string;
+  docRef?: DocRef;
+  markdown?: string;
   snapshot: {
     sourceHash: string;
     builtAt: string;

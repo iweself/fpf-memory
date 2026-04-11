@@ -209,12 +209,40 @@ describe('FpfRuntime', () => {
     expect(inspectById.resolvedAs).toBe('id');
     expect(inspectById.node?.kind).toBe('pattern');
     expect(inspectById.anchors.length).toBeGreaterThan(0);
+    expect(inspectById.docRef).toEqual({
+      markdownPath: 'docs/generated/patterns/A.1.1.md',
+      staticPath: '/generated/patterns/A.1.1',
+    });
 
     const inspectLexeme = await runtime.inspect('U.BoundedContext', 'lexeme');
     expect(inspectLexeme.status).toBe('ok');
     expect(inspectLexeme.resolvedAs).toBe('lexeme');
     expect(inspectLexeme.node?.kind).toBe('lexeme');
     expect(inspectLexeme.node?.neighborEdges.some((edge) => edge.to === 'A.1.1')).toBe(true);
+    expect(inspectLexeme.docRef).toEqual({
+      markdownPath: 'docs/generated/patterns/A.1.1.md',
+      staticPath: '/generated/patterns/A.1.1',
+    });
+
+    const readById = await runtime.readDoc('A.1.1', 'id');
+    expect(readById.status).toBe('ok');
+    expect(readById.nodeId).toBe('A.1.1');
+    expect(readById.docRef?.markdownPath).toBe('docs/generated/patterns/A.1.1.md');
+    expect(readById.markdown).toContain('# U.BoundedContext: The Semantic Frame');
+
+    const readByRoute = await runtime.readDoc('project alignment', 'route');
+    expect(readByRoute.status).toBe('ok');
+    expect(readByRoute.nodeId).toBe('route:project-alignment');
+    expect(readByRoute.docRef?.markdownPath).toBe(
+      'docs/generated/routes/route_project-alignment.md',
+    );
+    expect(readByRoute.markdown).toContain('# project alignment');
+
+    const readByLexeme = await runtime.readDoc('U.BoundedContext', 'lexeme');
+    expect(readByLexeme.status).toBe('ok');
+    expect(readByLexeme.nodeId).toBe('A.1.1');
+    expect(readByLexeme.docRef?.markdownPath).toBe('docs/generated/patterns/A.1.1.md');
+    expect(readByLexeme.markdown).toContain('# U.BoundedContext: The Semantic Frame');
 
     const inspectAnchor = await runtime.inspectAnchor(inspectById.anchors[0]!.id);
     expect(inspectAnchor.status).toBe('ok');

@@ -7,7 +7,7 @@ export function createFpfMcpServer(): MCPServer {
     name: 'fpf_memory',
     version: '1.0.0',
     description:
-      'Local vectorless MCP runtime for FPF-spec.md with refresh, query, trace, status, node inspect, anchor inspect, citation expansion, and markdown answer tools.',
+      'Local vectorless MCP runtime for FPF-spec.md with refresh, query, trace, status, node inspect, direct doc read, anchor inspect, citation expansion, and markdown answer tools.',
     tools: fpfMcpTools,
   });
 }

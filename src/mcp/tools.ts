@@ -14,6 +14,8 @@ import {
   inspectResultSchema,
   queryFpfSpecInputSchema,
   queryResultSchema,
+  readDocResultSchema,
+  readFpfDocInputSchema,
   refreshFpfIndexInputSchema,
   runtimeStatusSchema,
   buildAuditSchema,
@@ -79,6 +81,16 @@ export const inspectFpfNodeTool = createTool({
     runtime.inspect(selector, kind ?? 'auto', forceRefresh ?? false),
 });
 
+export const readFpfDocTool = createTool({
+  id: 'read_fpf_doc',
+  description:
+    'Resolve one FPF selector to the canonical generated markdown page and return exact text plus stable markdown/static paths.',
+  inputSchema: readFpfDocInputSchema,
+  outputSchema: readDocResultSchema,
+  execute: async ({ selector, kind, forceRefresh }) =>
+    runtime.readDoc(selector, kind ?? 'auto', forceRefresh ?? false),
+});
+
 export const inspectFpfAnchorTool = createTool({
   id: 'inspect_fpf_anchor',
   description:
@@ -115,6 +127,7 @@ export const fpfMcpTools = {
   query_fpf_spec: queryFpfSpecTool,
   trace_fpf_path: traceFpfPathTool,
   inspect_fpf_node: inspectFpfNodeTool,
+  read_fpf_doc: readFpfDocTool,
   inspect_fpf_anchor: inspectFpfAnchorTool,
   expand_fpf_citations: expandFpfCitationsTool,
   ask_fpf: askFpfTool,

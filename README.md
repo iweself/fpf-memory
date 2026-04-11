@@ -19,6 +19,8 @@ It uses:
 ## Scope
 
 - Runtime source set: `FPF-spec.md` only
+- Canonical publishable markdown: `docs/generated/**`
+- Static docs build output: `doc_build/` (deterministic, ignored)
 - Validation/tuning corpus: outside the runtime path
 - No vector database
 - No remote indexing service
@@ -83,7 +85,9 @@ bun run lint
 bun run check
 bun run test
 bun run build
+bun run docs:generate
 bun run docs:build
+bun run docs:dev
 ./scripts/verify-runtime.sh
 bun run start
 bun run cli -- status
@@ -91,6 +95,7 @@ bun run cli -- refresh
 bun run cli -- query --question "What is U.BoundedContext?" --mode verbose
 bun run cli -- query --question "How does it connect to role assignment?" --session s1
 bun run cli -- inspect --selector "A.1.1"
+bun run cli -- read-doc --selector "A.1.1"
 bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof --session s1
 bun run cli -- lm-check --timeout-ms 60000
 bun run cli -- lm-check --base-url http://localhost:1234 --api-style chat --api-key "$FPF_LOCAL_LLM_API_KEY" --timeout-ms 60000
@@ -189,7 +194,8 @@ Call trace_fpf_path with:
 - `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
 - `ask_fpf`: return the grounded answer as markdown with IDs, citations, constraints, gaps, and snapshot metadata
 - `trace_fpf_path`: return deterministic retrieval evidence only
-- `inspect_fpf_node`: expand one node into its anchors plus neighboring relations
+- `inspect_fpf_node`: expand one node into its anchors, neighboring relations, and stable doc references
+- `read_fpf_doc`: return the canonical generated markdown page plus stable markdown/static paths
 - `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
 - `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
 
@@ -217,6 +223,14 @@ On each refresh trigger the runtime:
 9. answers with IDs, citations, constraints, relations, and snapshot metadata
 
 Artifacts are stored under `.runtime/fpf-index/`.
+
+## Docs surfaces
+
+- `FPF-spec.md`: authored source of truth
+- `docs/generated/**`: canonical generated markdown collection
+- `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
+
+The docs pipeline does not use an LLM step. `npm run docs:generate` writes the canonical markdown collection, and `npm run docs:build` builds the static viewer from that collection.
 
 ## Log Files
 
