@@ -612,6 +612,12 @@ function getScript(): string {
       err.status = r.status;
       throw err;
     }
+    var ct = r.headers.get('content-type') || '';
+    if (ct.indexOf('application/json') === -1) {
+      var err = new Error('Not found (server returned non-JSON response)');
+      err.status = 404;
+      throw err;
+    }
     return r.json();
   }
 
