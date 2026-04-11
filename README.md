@@ -6,14 +6,15 @@ It uses:
 
 - local deterministic parsing for exact FPF IDs, routes, relations, anchors, and answer envelopes
 - a vectorless index compiler that emits structural and graph artifacts directly from `FPF-spec.md`
-- Mastra tools plus a stdio MCP server as the integration surface
+- a repo-owned raw stdio MCP server plus a Bun CLI as the integration surface
 
 ## Stack
 
 - Bun is the preferred local runtime and package manager.
-- Mastra remains the library of choice for agent and MCP runtime surfaces in this repo.
-- Effect Schema owns repo-authored MCP contracts at the Mastra boundary.
+- Effect Schema owns repo-authored MCP contracts and validation.
+- The MCP boundary is a repo-owned raw JSON-RPC stdio server.
 - Rstest, Rslint, and Rspress are the preferred test, lint, and docs tools.
+- `zod` is not part of the dependency graph.
 
 ## Scope
 
@@ -30,8 +31,10 @@ Copy `.env.example` to `.env` and set:
 ```bash
 FPF_SPEC_SOURCE_PATH=FPF-spec.md
 FPF_RUNTIME_ARTIFACT_DIR=.runtime/fpf-index
+FPF_QUERY_DEFAULT_MODE=verbose
 FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1
-FPF_LOCAL_LLM_MODEL=qwen/qwen3-coder-next
+FPF_LOCAL_LLM_MODEL=google/gemma-4-31b
+FPF_LOCAL_LLM_API_STYLE=responses
 FPF_LOCAL_LLM_API_KEY=
 FPF_LOCAL_LLM_TIMEOUT_MS=20000
 FPF_MASTRA_LOG_PATH=.runtime/logs/mastra.log
@@ -44,11 +47,37 @@ FPF_MASTRA_OBSERVABILITY_LOG_LEVEL=info
 FPF_AI_TRACE_LOG_PATH=.runtime/logs/ai-traces.jsonl
 ```
 
+`FPF_QUERY_DEFAULT_MODE` applies to `query_fpf_spec` and `ask_fpf` when `mode` is omitted. `trace_fpf_path` stays `compact` by default.
+
 `FPF_LOCAL_LLM_*` is optional. If present, the runtime uses the local LM Studio `/v1/responses` API only after deterministic retrieval has selected a bounded slice set. If absent, the runtime stays fully deterministic.
 
-`FPF_MASTRA_LOG_PATH` writes Mastra/MCP structured logs as JSON lines.
+`FPF_LOCAL_LLM_API_STYLE` controls which LM Studio generation route is used:
 
-`FPF_MASTRA_OBSERVABILITY_*` writes Mastra observability snapshots to a JSON file. That file includes Mastra-native spans, logs, metrics, and manual `model_generation` spans around the local LM Studio synthesis call.
+- `responses`: OpenAI-compatible `/v1/responses`
+- `lmstudio_chat`: LM Studio-native `/api/v1/chat`
+- `chat`: accepted alias for `lmstudio_chat`
+
+If you opt into the LM Studio path by setting either `FPF_LOCAL_LLM_BASE_URL` or `FPF_LOCAL_LLM_MODEL`, the missing half falls back to the repo defaults:
+
+- `FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1`
+- `FPF_LOCAL_LLM_MODEL=google/gemma-4-31b`
+- `FPF_LOCAL_LLM_API_STYLE=responses`
+
+Checked locally on April 11, 2026:
+
+- `http://localhost:1234/v1/models` responds and lists `google/gemma-4-31b`
+- `http://localhost:1234/api/v1/models` also responds and lists the same model family
+
+This runtime should still use `FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1`, because the synthesizer targets the OpenAI-compatible `/v1/responses` API rather than the `/api/v1/chat` route.
+
+If you want to force the LM Studio-native route instead, set:
+
+- `FPF_LOCAL_LLM_BASE_URL=http://localhost:1234`
+- `FPF_LOCAL_LLM_API_STYLE=lmstudio_chat`
+
+`FPF_MASTRA_LOG_PATH` is preserved for compatibility and writes runtime/MCP structured logs as JSON lines.
+
+`FPF_MASTRA_OBSERVABILITY_*` is preserved for compatibility and writes runtime observability snapshots to a JSON file. That file includes manual `model_generation` events around the local LM Studio synthesis call.
 
 `FPF_AI_TRACE_LOG_PATH` writes bounded LM Studio synthesis traces as JSON lines. This is the actual local model call path in this project, because the synthesizer uses a direct `fetch` to the LM Studio-compatible endpoint instead of a Mastra agent model wrapper.
 
@@ -67,15 +96,81 @@ bun run cli -- query --question "What is U.BoundedContext?" --mode verbose
 bun run cli -- query --question "How does it connect to role assignment?" --session s1
 bun run cli -- inspect --selector "A.1.1"
 bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof --session s1
+bun run cli -- lm-check --timeout-ms 60000
+bun run cli -- lm-check --base-url http://localhost:1234 --api-style chat --api-key "$FPF_LOCAL_LLM_API_KEY" --timeout-ms 60000
 bun run mcp
 ```
 
-## Mastra surfaces
+## Run And Test MCP
 
-- `src/mastra/index.ts`: Mastra entrypoint
-- `src/mastra/contracts/fpf-spec-tool-contracts.ts`: Effect Schema contract source of truth adapted to the Mastra boundary
-- `src/mastra/tools/fpf-spec-tools.ts`: refresh/query/status/node-inspect/anchor-inspect/citation-expansion/trace tools
-- `src/mastra/mcp/fpf-spec-server.ts`: stdio MCP server
+Start the stdio MCP server:
+
+```bash
+bun run mcp
+```
+
+Smoke-test the same runtime surface locally before wiring it into Codex:
+
+```bash
+bun run cli -- status
+bun run cli -- lm-check --timeout-ms 60000
+bun run cli -- lm-check --base-url http://localhost:1234 --api-style chat --api-key "$FPF_LOCAL_LLM_API_KEY" --timeout-ms 60000
+bun run cli -- refresh
+bun run cli -- query --question "What is U.BoundedContext?" --mode verbose
+bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof
+bun run cli -- inspect --selector "A.1.1"
+```
+
+Run the end-to-end verification script for the real CLI and MCP startup paths:
+
+```bash
+./scripts/verify-runtime.sh
+```
+
+If this repo is registered as a Codex MCP server, restart Codex after changes and then test with a forced tool-use prompt such as:
+
+```text
+Use only the fpf_memory MCP server.
+Call ask_fpf with:
+- question: "Give me a checklist for how to model my project's information system."
+```
+
+For the normal high-level path, that is the whole prompt.
+
+Proof-style grounding:
+
+```text
+Use only the fpf_memory MCP server.
+Call ask_fpf with:
+- question: "Give me a checklist for how to model my project's information system."
+- mode: "proof"
+```
+
+Raw structured answer envelope:
+
+```text
+Use only the fpf_memory MCP server.
+Call query_fpf_spec with:
+- question: "Give me a checklist for how to model my project's information system."
+```
+
+Deterministic retrieval/debug trace:
+
+```text
+Use only the fpf_memory MCP server.
+Call trace_fpf_path with:
+- question: "Give me a checklist for how to model my project's information system."
+- mode: "proof"
+```
+
+## Runtime surfaces
+
+- `src/mcp/tool-contracts.ts`: Effect Schema contracts plus plain draft-07 JSON Schema emission
+- `src/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
+- `src/mcp/server.ts`: raw newline-delimited JSON-RPC stdio MCP server
+- `src/runtime/`: compiler, retrieval, trace, inspect, and synthesis logic
+- `src/logging/runtime-logger.ts`: structured runtime/MCP log writer
+- `src/observability/runtime-observability.ts`: repo-owned observability sink for local synthesis
 
 ## Docs surface
 
@@ -88,10 +183,13 @@ bun run mcp
 - `refresh_fpf_index`: rebuild the local artifact set
 - `get_fpf_index_status`: inspect runtime freshness, artifact presence, and runtime configuration
 - `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
+- `ask_fpf`: return the grounded answer as markdown with IDs, citations, constraints, gaps, and snapshot metadata
 - `trace_fpf_path`: return deterministic retrieval evidence only
 - `inspect_fpf_node`: expand one node into its anchors plus neighboring relations
 - `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
 - `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
+
+Only `query_fpf_spec` and `ask_fpf` can use the optional LM Studio synthesizer. All other MCP tools stay deterministic.
 
 ## Runtime behavior
 
@@ -118,8 +216,8 @@ Artifacts are stored under `.runtime/fpf-index/`.
 
 ## Log Files
 
-- `.runtime/logs/mastra.log`: structured Mastra server/tool logs
-- `.runtime/logs/mastra-observability.json`: Mastra observability snapshot containing spans, logs, metrics, and manual LM Studio `model_generation` traces
+- `.runtime/logs/mastra.log`: structured runtime server/tool logs
+- `.runtime/logs/mastra-observability.json`: runtime observability snapshot containing manual LM Studio `model_generation` traces
 - `.runtime/logs/ai-traces.jsonl`: request/response/error traces for local LM Studio synthesis calls
 
 ## Real Verification

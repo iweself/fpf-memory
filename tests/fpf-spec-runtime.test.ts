@@ -5,9 +5,13 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
 import {
+  askFpfTool,
   expandFpfCitationsTool,
-  fpfSpecRuntimeTools,
-} from '../src/mastra/tools/fpf-spec-tools.js';
+  getFpfIndexStatusTool,
+  queryFpfSpecTool,
+  resolveDefaultQueryMode,
+  traceFpfPathTool,
+} from '../src/mcp/tools.js';
 import { ARTIFACT_FILENAMES } from '../src/runtime/constants.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
@@ -303,27 +307,95 @@ describe('FpfRuntime', () => {
   });
 
   it('exports the batch citation expansion tool with a non-empty citation schema', async () => {
-    expect(fpfSpecRuntimeTools.expandFpfCitationsTool).toBe(expandFpfCitationsTool);
-
-    const inputSchema = (expandFpfCitationsTool.inputSchema as {
-      '~standard': {
-        validate: (value: unknown) => Promise<{ issues?: unknown[]; value?: unknown }> | { issues?: unknown[]; value?: unknown };
-      };
-    })['~standard'];
-
-    const empty = await inputSchema.validate({ citationIds: [] });
-    const valid = await inputSchema.validate({ citationIds: ['A.1.1:4.1'] });
-    const validWithRefresh = await inputSchema.validate({
+    const empty = expandFpfCitationsTool.inputContract.validate({ citationIds: [] });
+    const valid = expandFpfCitationsTool.inputContract.validate({ citationIds: ['A.1.1:4.1'] });
+    const validWithRefresh = expandFpfCitationsTool.inputContract.validate({
       citationIds: ['A.1.1:4.1'],
       forceRefresh: true,
     });
 
-    expect(empty.issues?.length).toBeGreaterThan(0);
-    expect(valid.value).toEqual({ citationIds: ['A.1.1:4.1'] });
-    expect(validWithRefresh.value).toEqual({
-      citationIds: ['A.1.1:4.1'],
+    expect(empty.success).toBe(false);
+    expect(valid).toEqual({ success: true, value: { citationIds: ['A.1.1:4.1'] } });
+    expect(validWithRefresh).toEqual({
+      success: true,
+      value: {
+        citationIds: ['A.1.1:4.1'],
+        forceRefresh: true,
+      },
+    });
+  });
+
+  it('defaults query and ask tools to the configured verbose mode only', async () => {
+    expect(resolveDefaultQueryMode({ FPF_QUERY_DEFAULT_MODE: 'proof' } as NodeJS.ProcessEnv)).toBe(
+      'proof',
+    );
+    expect(resolveDefaultQueryMode({ FPF_QUERY_DEFAULT_MODE: 'invalid' } as NodeJS.ProcessEnv)).toBe(
+      'verbose',
+    );
+
+    const queryInput = queryFpfSpecTool.inputContract.validate({
+      question: 'What is U.BoundedContext?',
+    });
+    const askInput = askFpfTool.inputContract.validate({
+      question: 'What is U.BoundedContext?',
+    });
+
+    expect(queryInput).toEqual({
+      success: true,
+      value: {
+        question: 'What is U.BoundedContext?',
+      },
+    });
+    expect(askInput).toEqual({
+      success: true,
+      value: {
+        question: 'What is U.BoundedContext?',
+      },
+    });
+  });
+
+  it('renders ask_fpf results as markdown with grounding sections', async () => {
+    const result = await askFpfTool.execute({
+      question: 'What is U.BoundedContext?',
       forceRefresh: true,
     });
+
+    expect(result.mode).toBe('verbose');
+    expect(result.markdown).toContain('## Result');
+    expect(result.markdown).toContain('## Grounding');
+    expect(result.markdown).toContain('`A.1.1`');
+    expect(result.ids).toContain('A.1.1');
+    expect(result.citations.some((citation) => citation.startsWith('A.1.1'))).toBe(true);
+  });
+
+  it('exports the status tool with an explicit object input schema', async () => {
+    expect(getFpfIndexStatusTool.inputContract.jsonSchema).toEqual({
+      $schema: 'http://json-schema.org/draft-07/schema#',
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    });
+
+    const empty = getFpfIndexStatusTool.inputContract.validate({});
+
+    expect(empty).toEqual({
+      success: true,
+      value: {},
+    });
+  });
+
+  it('exposes plain JSON Schema objects for MCP listing', async () => {
+    expect(expandFpfCitationsTool.inputContract.jsonSchema.type).toBe('object');
+    expect(getFpfIndexStatusTool.inputContract.jsonSchema.type).toBe('object');
+    expect(queryFpfSpecTool.inputContract.jsonSchema.type).toBe('object');
+  });
+
+  it('keeps trace mode default compact instead of inheriting the query default', async () => {
+    const trace = await traceFpfPathTool.execute({
+      question: 'What is U.BoundedContext?',
+      forceRefresh: true,
+    });
+    expect(trace.mode).toBe('compact');
   });
 
   it('follows explicit references for same-entity rewrite and comparative reading', async () => {

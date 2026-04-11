@@ -1,9 +1,38 @@
-import { jsonSchema, type Schema as AiSchema } from 'ai';
 import * as EffectJsonSchema from 'effect/JSONSchema';
+import * as ParseResult from 'effect/ParseResult';
 import * as EffectSchema from 'effect/Schema';
-import type { createTool } from '@mastra/core/tools';
 
-type MastraSchemaLike = NonNullable<Parameters<typeof createTool>[0]['inputSchema']>;
+import type {
+  AnchorRef,
+  AnswerMode,
+  AnswerStatus,
+  AskFpfResult,
+  BuildAudit,
+  CompiledNode,
+  ExpandCitationsResult,
+  FrontierOrigin,
+  InspectAnchorResult,
+  InspectNeighbor,
+  InspectResult,
+  QueryResult,
+  RuntimeStatus,
+  TraceResult,
+} from '../runtime/types.js';
+
+type JsonSchema = {
+  readonly [key: string]: unknown;
+  readonly type?: unknown;
+};
+
+export interface ToolContract<Value> {
+  readonly schema: unknown;
+  readonly jsonSchema: JsonSchema;
+  validate(value: unknown): ValidationResult<Value>;
+}
+
+export type ValidationResult<Value> =
+  | { success: true; value: Value }
+  | { success: false; error: string };
 
 const answerModeContract = EffectSchema.Literal('compact', 'verbose', 'proof');
 const nodeKindContract = EffectSchema.Literal('pattern', 'route', 'lexeme');
@@ -150,6 +179,20 @@ const queryResultContract = EffectSchema.Struct({
   groundingChain: EffectSchema.optional(EffectSchema.Array(EffectSchema.String)),
 });
 
+const askFpfResultContract = EffectSchema.Struct({
+  question: EffectSchema.String,
+  mode: answerModeContract,
+  markdown: EffectSchema.String,
+  ids: EffectSchema.Array(EffectSchema.String),
+  citations: EffectSchema.Array(EffectSchema.String),
+  constraints: EffectSchema.Array(EffectSchema.String),
+  gaps: EffectSchema.Array(EffectSchema.String),
+  confidence: EffectSchema.Number,
+  status: queryStatusContract,
+  snapshot: snapshotWithRebuildContract,
+  groundingChain: EffectSchema.optional(EffectSchema.Array(EffectSchema.String)),
+});
+
 const runtimeStatusContract = EffectSchema.Struct({
   sourcePath: EffectSchema.String,
   sourceHash: EffectSchema.optional(EffectSchema.String),
@@ -167,6 +210,7 @@ const runtimeStatusContract = EffectSchema.Struct({
     provider: EffectSchema.optional(EffectSchema.String),
     model: EffectSchema.optional(EffectSchema.String),
     baseUrl: EffectSchema.optional(EffectSchema.String),
+    apiStyle: EffectSchema.optional(EffectSchema.Literal('responses', 'lmstudio_chat')),
   }),
   observability: EffectSchema.Struct({
     configured: EffectSchema.Boolean,
@@ -287,29 +331,43 @@ const expandCitationsResultContract = EffectSchema.Struct({
   snapshot: snapshotContract,
 });
 
-function toMastraSchema<Value>(
-  contract: EffectSchema.Schema<Value>,
-): MastraSchemaLike {
-  const decodeUnknown = EffectSchema.decodeUnknownEither(contract);
+function defineToolContract<Value>(
+  schema: unknown,
+  jsonSchemaOverride?: JsonSchema,
+): ToolContract<Value> {
+  const typedSchema = schema as EffectSchema.Schema<Value, unknown, never>;
+  const decodeUnknownEither = EffectSchema.decodeUnknownEither(typedSchema);
 
-  return jsonSchema(EffectJsonSchema.make(contract), {
-    validate: async (value) => {
-      const result = decodeUnknown(value);
+  return {
+    schema: typedSchema,
+    jsonSchema: jsonSchemaOverride ?? (EffectJsonSchema.make(typedSchema) as unknown as JsonSchema),
+    validate(value) {
+      const result = decodeUnknownEither(value);
       return result._tag === 'Right'
-        ? { success: true, value: result.right }
-        : { success: false, error: new Error(result.left.message) };
+        ? { success: true, value: result.right as Value }
+        : {
+            success: false,
+            error: ParseResult.TreeFormatter.formatErrorSync(result.left),
+          };
     },
-  }) as unknown as AiSchema<Value> as MastraSchemaLike;
+  };
 }
 
-export const refreshFpfIndexInputSchema = toMastraSchema(
+export const refreshFpfIndexInputContract = defineToolContract<{
+  force?: boolean;
+}>(
   EffectSchema.Struct({
     force: EffectSchema.optional(EffectSchema.Boolean),
   }),
 );
-export const refreshFpfIndexOutputSchema = toMastraSchema(buildAuditContract);
+export const refreshFpfIndexOutputContract = defineToolContract<BuildAudit>(buildAuditContract);
 
-export const queryFpfSpecInputSchema = toMastraSchema(
+export const queryFpfSpecInputContract = defineToolContract<{
+  question: string;
+  mode?: AnswerMode;
+  forceRefresh?: boolean;
+  sessionId?: string;
+}>(
   EffectSchema.Struct({
     question: EffectSchema.NonEmptyString,
     mode: EffectSchema.optional(answerModeContract),
@@ -317,37 +375,78 @@ export const queryFpfSpecInputSchema = toMastraSchema(
     sessionId: EffectSchema.optional(EffectSchema.NonEmptyString),
   }),
 );
-export const queryFpfSpecOutputSchema = toMastraSchema(queryResultContract);
+export const queryFpfSpecOutputContract = defineToolContract<QueryResult>(queryResultContract);
 
-export const getFpfIndexStatusInputSchema = toMastraSchema(EffectSchema.Struct({}));
-export const getFpfIndexStatusOutputSchema = toMastraSchema(runtimeStatusContract);
+export const askFpfInputContract = defineToolContract<{
+  question: string;
+  mode?: AnswerMode;
+  forceRefresh?: boolean;
+  sessionId?: string;
+}>(
+  EffectSchema.Struct({
+    question: EffectSchema.NonEmptyString,
+    mode: EffectSchema.optional(answerModeContract),
+    forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
+    sessionId: EffectSchema.optional(EffectSchema.NonEmptyString),
+  }),
+);
+export const askFpfOutputContract = defineToolContract<AskFpfResult>(askFpfResultContract);
 
-export const inspectFpfNodeInputSchema = toMastraSchema(
+export const getFpfIndexStatusInputContract = defineToolContract<{}>(
+  EffectSchema.Struct({}),
+  {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    type: 'object',
+    properties: {},
+    additionalProperties: false,
+  },
+);
+export const getFpfIndexStatusOutputContract =
+  defineToolContract<RuntimeStatus>(runtimeStatusContract);
+
+export const inspectFpfNodeInputContract = defineToolContract<{
+  selector: string;
+  kind?: 'auto' | 'id' | 'route' | 'lexeme';
+  forceRefresh?: boolean;
+}>(
   EffectSchema.Struct({
     selector: EffectSchema.NonEmptyString,
     kind: EffectSchema.optional(EffectSchema.Literal('auto', 'id', 'route', 'lexeme')),
     forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
   }),
 );
-export const inspectFpfNodeOutputSchema = toMastraSchema(inspectResultContract);
+export const inspectFpfNodeOutputContract = defineToolContract<InspectResult>(inspectResultContract);
 
-export const inspectFpfAnchorInputSchema = toMastraSchema(
+export const inspectFpfAnchorInputContract = defineToolContract<{
+  anchorId: string;
+  forceRefresh?: boolean;
+}>(
   EffectSchema.Struct({
     anchorId: EffectSchema.NonEmptyString,
     forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
   }),
 );
-export const inspectFpfAnchorOutputSchema = toMastraSchema(inspectAnchorResultContract);
+export const inspectFpfAnchorOutputContract =
+  defineToolContract<InspectAnchorResult>(inspectAnchorResultContract);
 
-export const expandFpfCitationsInputSchema = toMastraSchema(
+export const expandFpfCitationsInputContract = defineToolContract<{
+  citationIds: string[];
+  forceRefresh?: boolean;
+}>(
   EffectSchema.Struct({
     citationIds: EffectSchema.NonEmptyArray(EffectSchema.NonEmptyString),
     forceRefresh: EffectSchema.optional(EffectSchema.Boolean),
   }),
 );
-export const expandFpfCitationsOutputSchema = toMastraSchema(expandCitationsResultContract);
+export const expandFpfCitationsOutputContract =
+  defineToolContract<ExpandCitationsResult>(expandCitationsResultContract);
 
-export const traceFpfPathInputSchema = toMastraSchema(
+export const traceFpfPathInputContract = defineToolContract<{
+  question: string;
+  mode?: AnswerMode;
+  forceRefresh?: boolean;
+  sessionId?: string;
+}>(
   EffectSchema.Struct({
     question: EffectSchema.NonEmptyString,
     mode: EffectSchema.optional(answerModeContract),
@@ -355,4 +454,11 @@ export const traceFpfPathInputSchema = toMastraSchema(
     sessionId: EffectSchema.optional(EffectSchema.NonEmptyString),
   }),
 );
-export const traceFpfPathOutputSchema = toMastraSchema(traceResultContract);
+export const traceFpfPathOutputContract = defineToolContract<TraceResult>(traceResultContract);
+
+export type _ContractExportCoverage =
+  | AnchorRef
+  | AnswerStatus
+  | CompiledNode
+  | FrontierOrigin
+  | InspectNeighbor;

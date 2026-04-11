@@ -26,7 +26,7 @@ import type {
   Snapshot,
   TraceResult,
 } from './types.js';
-import { getMastraObservabilitySummary } from '../mastra/observability.js';
+import { getRuntimeObservabilitySummary } from '../observability/runtime-observability.js';
 
 export interface FpfRuntimeOptions {
   sourcePath?: string;
@@ -197,7 +197,7 @@ export class FpfRuntime {
             ...this.synthesizer.describe(),
           }
         : { configured: false },
-      observability: getMastraObservabilitySummary(),
+      observability: getRuntimeObservabilitySummary(),
       sessionCache: this.sessionCache.summary(),
     };
   }

@@ -42,7 +42,7 @@ trap - EXIT
 grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
 printf '==> CLI and MCP logging verified\n'
-printf '    mastra log: %s\n' "$MAS_LOG"
+printf '    runtime log: %s\n' "$MAS_LOG"
 
 if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" && -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
   printf '==> Running LM Studio-backed query\n'

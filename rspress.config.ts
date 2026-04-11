@@ -8,11 +8,19 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: 'Overview', link: '/' },
+      { text: 'MCP Interface', link: '/mcp-interface/' },
       { text: 'Patterns', link: '/generated/patterns/' },
       { text: 'Routes', link: '/generated/routes/' },
       { text: 'Preface', link: '/generated/preface/' },
     ],
     sidebar: {
+      '/mcp-interface/': [
+        {
+          text: 'MCP',
+          link: '/mcp-interface/',
+          items: ['/mcp-interface/'],
+        },
+      ],
       '/generated/patterns/': [
         {
           text: 'Patterns',

@@ -229,6 +229,24 @@ export interface QueryResult {
   groundingChain?: string[];
 }
 
+export interface AskFpfResult {
+  question: string;
+  mode: AnswerMode;
+  markdown: string;
+  ids: string[];
+  citations: string[];
+  constraints: string[];
+  gaps: string[];
+  confidence: number;
+  status: AnswerStatus;
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+    rebuilt: boolean;
+  };
+  groundingChain?: string[];
+}
+
 export interface TraceCandidate {
   nodeId: string;
   kind: NodeKind;
@@ -368,6 +386,7 @@ export interface RuntimeStatus {
     provider?: string;
     model?: string;
     baseUrl?: string;
+    apiStyle?: 'responses' | 'lmstudio_chat';
   };
   observability: {
     configured: boolean;
@@ -416,6 +435,7 @@ export interface LocalAnswerSynthesizerInfo {
   provider: string;
   model?: string;
   baseUrl?: string;
+  apiStyle?: 'responses' | 'lmstudio_chat';
 }
 
 export interface LocalAnswerSynthesizer {

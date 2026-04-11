@@ -1,6 +1,4 @@
-import { SpanType } from '@mastra/core/observability';
-
-import { withMastraSpan } from '../mastra/observability.js';
+import { withRuntimeSpan } from '../observability/runtime-observability.js';
 import type {
   AnswerSlice,
   AnswerSynthesizerInput,
@@ -10,13 +8,71 @@ import type {
 } from './types.js';
 import { createAiTraceRecorder } from './ai-trace-log.js';
 
+export type LmStudioApiStyle = 'responses' | 'lmstudio_chat';
+
 export interface LmStudioSynthesizerOptions {
   baseUrl: string;
   model: string;
+  apiStyle?: LmStudioApiStyle;
   apiKey?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
   env?: NodeJS.ProcessEnv;
+}
+
+export interface LmStudioHealthCheckOptions {
+  baseUrl?: string;
+  model?: string;
+  apiStyle?: LmStudioApiStyle;
+  timeoutMs?: number;
+  systemPrompt?: string;
+  input?: string;
+  apiKey?: string;
+  fetchImpl?: typeof fetch;
+  env?: NodeJS.ProcessEnv;
+}
+
+export interface LmStudioHealthCheckResult {
+  baseUrl: string;
+  model: string;
+  apiStyle: LmStudioApiStyle;
+  timeoutMs: number;
+  endpoints: {
+    models: string;
+    generation: string;
+  };
+  modelDiscovery: {
+    ok: boolean;
+    httpStatus?: number;
+    durationMs: number;
+    listed: boolean;
+    modelCount: number;
+    error?: string;
+  };
+  generation: {
+    ok: boolean;
+    httpStatus?: number;
+    durationMs: number;
+    responsePreview?: string;
+    error?: string;
+  };
+}
+
+export const DEFAULT_LM_STUDIO_BASE_URL = 'http://localhost:1234/v1';
+export const DEFAULT_LM_STUDIO_MODEL = 'google/gemma-4-31b';
+export const DEFAULT_LM_STUDIO_API_STYLE: LmStudioApiStyle = 'responses';
+export const DEFAULT_LM_STUDIO_TIMEOUT_MS = 20_000;
+
+export function normalizeLmStudioApiStyle(value: string | undefined): LmStudioApiStyle | undefined {
+  switch (value?.trim().toLowerCase()) {
+    case 'responses':
+      return 'responses';
+    case 'lmstudio_chat':
+    case 'chat':
+      return 'lmstudio_chat';
+    default:
+      return undefined;
+  }
 }
 
 interface ResponsesApiPayload {
@@ -30,17 +86,27 @@ interface ResponsesApiPayload {
   }>;
 }
 
+interface LmStudioChatPayload {
+  output?: Array<{
+    type?: string;
+    content?: string;
+  }>;
+}
+
+type ResponsesOutputItem = NonNullable<ResponsesApiPayload['output']>[number];
+type LmStudioChatOutputItem = NonNullable<LmStudioChatPayload['output']>[number];
+
 export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
+  private readonly apiStyle: LmStudioApiStyle;
   private readonly endpoint: string;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(private readonly options: LmStudioSynthesizerOptions) {
-    this.endpoint = options.baseUrl.replace(/\/$/, '').endsWith('/responses')
-      ? options.baseUrl.replace(/\/$/, '')
-      : `${options.baseUrl.replace(/\/$/, '')}/responses`;
+    this.apiStyle = options.apiStyle ?? DEFAULT_LM_STUDIO_API_STYLE;
+    this.endpoint = buildGenerationEndpoint(options.baseUrl, this.apiStyle);
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.timeoutMs = options.timeoutMs ?? 20_000;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_LM_STUDIO_TIMEOUT_MS;
   }
 
   isAvailable(): boolean {
@@ -52,6 +118,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
       provider: 'lm_studio',
       model: this.options.model,
       baseUrl: this.options.baseUrl,
+      apiStyle: this.apiStyle,
     };
   }
 
@@ -64,6 +131,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
       phase: 'request',
       provider: 'lm_studio',
       endpoint: this.endpoint,
+      apiStyle: this.apiStyle,
       model: this.options.model,
       question: input.question,
       mode: input.mode,
@@ -81,9 +149,9 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
     });
 
     const endpointInfo = describeEndpoint(this.endpoint);
-    const spanResult = await withMastraSpan({
+    const spanResult = await withRuntimeSpan({
       env: this.options.env,
-      type: SpanType.MODEL_GENERATION,
+      type: 'model_generation',
       name: `local synthesis: ${this.options.model}`,
       input: {
         question: input.question,
@@ -103,6 +171,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
       },
       metadata: {
         endpoint: this.endpoint,
+        apiStyle: this.apiStyle,
         frontierCount: input.trace.frontierCandidates.length,
         followedReferenceCount: input.trace.followedReferences.length,
         traceStatus: input.trace.status,
@@ -126,30 +195,9 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
                 ? { Authorization: `Bearer ${this.options.apiKey}` }
                 : {}),
             },
-            body: JSON.stringify({
-              model: this.options.model,
-              temperature: 0.1,
-              input: [
-                {
-                  role: 'system',
-                  content: [
-                    {
-                      type: 'input_text',
-                      text: systemPrompt,
-                    },
-                  ],
-                },
-                {
-                  role: 'user',
-                  content: [
-                    {
-                      type: 'input_text',
-                      text: userPrompt,
-                    },
-                  ],
-                },
-              ],
-            }),
+            body: JSON.stringify(
+              buildGenerationRequestPayload(this.apiStyle, this.options.model, systemPrompt, userPrompt),
+            ),
             signal: AbortSignal.timeout(this.timeoutMs),
           });
         } catch (error) {
@@ -157,6 +205,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
             phase: 'error',
             provider: 'lm_studio',
             endpoint: this.endpoint,
+            apiStyle: this.apiStyle,
             model: this.options.model,
             durationMs: Date.now() - startedAt,
             error: {
@@ -173,6 +222,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
             phase: 'response',
             provider: 'lm_studio',
             endpoint: this.endpoint,
+            apiStyle: this.apiStyle,
             model: this.options.model,
             durationMs: Date.now() - startedAt,
             httpStatus: response.status,
@@ -184,12 +234,13 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
           );
         }
 
-        const payload = (await response.json()) as ResponsesApiPayload;
-        const text = extractResponsesText(payload);
+        const payload = (await response.json()) as ResponsesApiPayload | LmStudioChatPayload;
+        const text = extractGenerationText(payload);
         await traceRecorder.append({
           phase: 'response',
           provider: 'lm_studio',
           endpoint: this.endpoint,
+          apiStyle: this.apiStyle,
           model: this.options.model,
           durationMs: Date.now() - startedAt,
           httpStatus: response.status,
@@ -216,21 +267,102 @@ export function createSynthesizerFromEnv(
   env: NodeJS.ProcessEnv = process.env,
   fetchImpl?: typeof fetch,
 ): LocalAnswerSynthesizer | undefined {
-  const baseUrl = env.FPF_LOCAL_LLM_BASE_URL?.trim();
-  const model = env.FPF_LOCAL_LLM_MODEL?.trim();
-  if (!baseUrl || !model) {
+  const configuredBaseUrl = env.FPF_LOCAL_LLM_BASE_URL?.trim();
+  const configuredModel = env.FPF_LOCAL_LLM_MODEL?.trim();
+  if (!configuredBaseUrl && !configuredModel) {
     return undefined;
   }
 
-  const timeoutMs = Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? '20000');
+  const baseUrl = configuredBaseUrl || DEFAULT_LM_STUDIO_BASE_URL;
+  const model = configuredModel || DEFAULT_LM_STUDIO_MODEL;
+  const apiStyle = normalizeLmStudioApiStyle(env.FPF_LOCAL_LLM_API_STYLE) ?? DEFAULT_LM_STUDIO_API_STYLE;
+  const timeoutMs = Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? `${DEFAULT_LM_STUDIO_TIMEOUT_MS}`);
   return new LmStudioSynthesizer({
     baseUrl,
     model,
+    apiStyle,
     apiKey: env.FPF_LOCAL_LLM_API_KEY?.trim(),
-    timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 20_000,
+    timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : DEFAULT_LM_STUDIO_TIMEOUT_MS,
     fetchImpl,
     env,
   });
+}
+
+export async function runLmStudioHealthCheck(
+  options: LmStudioHealthCheckOptions = {},
+): Promise<LmStudioHealthCheckResult> {
+  const env = options.env ?? process.env;
+  const apiStyle = options.apiStyle
+    ?? normalizeLmStudioApiStyle(env.FPF_LOCAL_LLM_API_STYLE)
+    ?? DEFAULT_LM_STUDIO_API_STYLE;
+  const baseUrl = options.baseUrl?.trim() || env.FPF_LOCAL_LLM_BASE_URL?.trim() || DEFAULT_LM_STUDIO_BASE_URL;
+  const model = options.model?.trim() || env.FPF_LOCAL_LLM_MODEL?.trim() || DEFAULT_LM_STUDIO_MODEL;
+  const apiKey = options.apiKey?.trim() || env.FPF_LOCAL_LLM_API_KEY?.trim();
+  const timeoutMs = Number.isFinite(options.timeoutMs)
+    ? Number(options.timeoutMs)
+    : Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? `${DEFAULT_LM_STUDIO_TIMEOUT_MS}`);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const modelsEndpoint = buildModelsEndpoint(baseUrl, apiStyle);
+  const generationEndpoint = buildGenerationEndpoint(baseUrl, apiStyle);
+  const resolvedTimeoutMs = Number.isFinite(timeoutMs) ? timeoutMs : DEFAULT_LM_STUDIO_TIMEOUT_MS;
+  const systemPrompt = options.systemPrompt ?? 'You answer only in rhymes.';
+  const input = options.input ?? 'What is your favorite color?';
+
+  const modelDiscovery = await runHealthRequest(async () => {
+    const response = await fetchImpl(modelsEndpoint, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      signal: AbortSignal.timeout(resolvedTimeoutMs),
+    });
+    const payload = await response.json();
+    const listedModels = extractListedModels(payload);
+    return {
+      httpStatus: response.status,
+      ok: response.ok && listedModels.includes(model),
+      listed: listedModels.includes(model),
+      modelCount: listedModels.length,
+    };
+  });
+
+  const generation = await runHealthRequest(async () => {
+    const response = await fetchImpl(generationEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify(
+        buildGenerationRequestPayload(apiStyle, model, systemPrompt, input),
+      ),
+      signal: AbortSignal.timeout(resolvedTimeoutMs),
+    });
+
+    const text = response.ok
+      ? extractGenerationText((await response.json()) as ResponsesApiPayload | LmStudioChatPayload)
+      : await response.text();
+
+    return {
+      httpStatus: response.status,
+      ok: response.ok && Boolean(text?.trim()),
+      responsePreview: text?.slice(0, 240),
+    };
+  });
+
+  return {
+    baseUrl,
+    model,
+    apiStyle,
+    timeoutMs: resolvedTimeoutMs,
+    endpoints: {
+      models: modelsEndpoint,
+      generation: generationEndpoint,
+    },
+    modelDiscovery,
+    generation,
+  };
 }
 
 function buildSystemPrompt(): string {
@@ -321,20 +453,224 @@ function buildTraceSummary(input: AnswerSynthesizerInput): string {
   ].join('\n\n');
 }
 
-function extractResponsesText(payload: ResponsesApiPayload): string | undefined {
-  if (typeof payload.output_text === 'string' && payload.output_text.trim()) {
+function extractGenerationText(
+  payload: ResponsesApiPayload | LmStudioChatPayload,
+): string | undefined {
+  if ('output_text' in payload && typeof payload.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim();
   }
 
-  for (const item of payload.output ?? []) {
-    for (const content of item.content ?? []) {
-      if (typeof content.text === 'string' && content.text.trim()) {
-        return content.text.trim();
+  const preferredMessage = findStructuredMessageText(payload.output ?? []);
+  if (preferredMessage) {
+    return preferredMessage;
+  }
+
+  return findAnyGenerationText(payload.output ?? []);
+}
+
+function findStructuredMessageText(
+  output: Array<ResponsesOutputItem | LmStudioChatOutputItem>,
+): string | undefined {
+  for (const item of output) {
+    if (item?.type === 'message' && 'content' in item && typeof item.content === 'string' && item.content.trim()) {
+      return item.content.trim();
+    }
+
+    if (item?.type === 'message' && 'content' in item && Array.isArray(item.content)) {
+      for (const content of item.content) {
+        if (
+          content &&
+          typeof content === 'object' &&
+          'text' in content &&
+          typeof content.text === 'string' &&
+          content.text.trim()
+        ) {
+          return content.text.trim();
+        }
       }
     }
   }
 
   return undefined;
+}
+
+function findAnyGenerationText(
+  output: Array<ResponsesOutputItem | LmStudioChatOutputItem>,
+): string | undefined {
+  for (const item of output) {
+    if ('content' in item && typeof item.content === 'string' && item.content.trim()) {
+      return item.content.trim();
+    }
+    if ('content' in item && Array.isArray(item.content)) {
+      for (const content of item.content ?? []) {
+        if (
+          content &&
+          typeof content === 'object' &&
+          'text' in content &&
+          typeof content.text === 'string' &&
+          content.text.trim()
+        ) {
+          return content.text.trim();
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function buildGenerationRequestPayload(
+  apiStyle: LmStudioApiStyle,
+  model: string,
+  systemPrompt: string,
+  userPrompt: string,
+): Record<string, unknown> {
+  if (apiStyle === 'lmstudio_chat') {
+    return {
+      model,
+      system_prompt: systemPrompt,
+      input: userPrompt,
+    };
+  }
+
+  return {
+    model,
+    temperature: 0.1,
+    input: [
+      {
+        role: 'system',
+        content: [
+          {
+            type: 'input_text',
+            text: systemPrompt,
+          },
+        ],
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: userPrompt,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function buildGenerationEndpoint(baseUrl: string, apiStyle: LmStudioApiStyle): string {
+  const trimmed = baseUrl.replace(/\/$/, '');
+  if (apiStyle === 'lmstudio_chat') {
+    if (trimmed.endsWith('/chat')) {
+      return trimmed;
+    }
+
+    const url = safeUrl(trimmed);
+    if (!url) {
+      return `${trimmed}/chat`;
+    }
+
+    if (url.pathname === '/api/v1' || url.pathname === '/api/v1/') {
+      return `${url.origin}/api/v1/chat`;
+    }
+    if (url.pathname === '/v1' || url.pathname === '/v1/' || url.pathname === '/' || url.pathname === '') {
+      return `${url.origin}/api/v1/chat`;
+    }
+
+    return `${trimmed}/chat`;
+  }
+
+  if (trimmed.endsWith('/responses')) {
+    return trimmed;
+  }
+
+  const url = safeUrl(trimmed);
+  if (!url) {
+    return `${trimmed}/responses`;
+  }
+
+  if (url.pathname === '/' || url.pathname === '') {
+    return `${url.origin}/v1/responses`;
+  }
+
+  return `${trimmed}/responses`;
+}
+
+function buildModelsEndpoint(baseUrl: string, apiStyle: LmStudioApiStyle): string {
+  const trimmed = baseUrl.replace(/\/$/, '');
+  const url = safeUrl(trimmed);
+  if (!url) {
+    return apiStyle === 'lmstudio_chat' ? `${trimmed}/models` : `${trimmed}/models`;
+  }
+
+  if (apiStyle === 'lmstudio_chat') {
+    if (url.pathname === '/api/v1' || url.pathname === '/api/v1/' || url.pathname === '/api/v1/chat') {
+      return `${url.origin}/api/v1/models`;
+    }
+    if (url.pathname === '/v1' || url.pathname === '/v1/' || url.pathname === '/' || url.pathname === '') {
+      return `${url.origin}/api/v1/models`;
+    }
+  }
+
+  if (url.pathname === '/responses') {
+    return `${url.origin}/v1/models`;
+  }
+  if (url.pathname === '/' || url.pathname === '') {
+    return `${url.origin}/v1/models`;
+  }
+
+  return `${trimmed}/models`;
+}
+
+function extractListedModels(payload: unknown): string[] {
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const asRecord = payload as Record<string, unknown>;
+  const openAiList = Array.isArray(asRecord.data) ? asRecord.data : undefined;
+  if (openAiList) {
+    return openAiList
+      .map((item) => (item && typeof item === 'object' ? (item as Record<string, unknown>).id : undefined))
+      .filter((item): item is string => typeof item === 'string');
+  }
+
+  const lmStudioList = Array.isArray(asRecord.models) ? asRecord.models : undefined;
+  if (lmStudioList) {
+    return lmStudioList
+      .map((item) => (item && typeof item === 'object' ? (item as Record<string, unknown>).key : undefined))
+      .filter((item): item is string => typeof item === 'string');
+  }
+
+  return [];
+}
+
+async function runHealthRequest<T extends { httpStatus?: number; ok: boolean }>(
+  operation: () => Promise<T>,
+): Promise<T & { durationMs: number; error?: string }> {
+  const startedAt = Date.now();
+  try {
+    const result = await operation();
+    return {
+      ...result,
+      durationMs: Date.now() - startedAt,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : 'Unknown LM Studio health-check error',
+    } as T & { durationMs: number; error?: string };
+  }
+}
+
+function safeUrl(value: string): URL | undefined {
+  try {
+    return new URL(value);
+  } catch {
+    return undefined;
+  }
 }
 
 function parseSynthesisOutput(text: string): AnswerSynthesizerOutput {

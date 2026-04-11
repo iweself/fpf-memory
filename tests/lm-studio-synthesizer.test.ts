@@ -4,8 +4,14 @@ import { resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
-import { resetMastraObservabilityForTests } from '../src/mastra/observability.js';
-import { LmStudioSynthesizer } from '../src/runtime/lm-studio-synthesizer.js';
+import { resetRuntimeObservabilityForTests } from '../src/observability/runtime-observability.js';
+import {
+  DEFAULT_LM_STUDIO_BASE_URL,
+  DEFAULT_LM_STUDIO_API_STYLE,
+  DEFAULT_LM_STUDIO_MODEL,
+  LmStudioSynthesizer,
+  runLmStudioHealthCheck,
+} from '../src/runtime/lm-studio-synthesizer.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
 describe('LmStudioSynthesizer', () => {
@@ -23,7 +29,7 @@ describe('LmStudioSynthesizer', () => {
     aiTraceLogPath = resolve(tempRoot, 'ai-traces.jsonl');
     observabilityLogPath = resolve(tempRoot, 'mastra-observability.json');
     await copyFile(canonicalSourcePath, sourcePath);
-    await resetMastraObservabilityForTests();
+    await resetRuntimeObservabilityForTests();
   });
 
   afterEach(async () => {
@@ -36,7 +42,7 @@ describe('LmStudioSynthesizer', () => {
     delete process.env.FPF_MASTRA_OBSERVABILITY_INCLUDE_INTERNAL_SPANS;
     delete process.env.FPF_MASTRA_OBSERVABILITY_INCLUDE_MODEL_CHUNKS;
     delete process.env.FPF_MASTRA_OBSERVABILITY_LOG_LEVEL;
-    await resetMastraObservabilityForTests();
+    await resetRuntimeObservabilityForTests();
     await rm(tempRoot, { recursive: true, force: true });
   });
 
@@ -49,7 +55,7 @@ describe('LmStudioSynthesizer', () => {
       artifactDir,
       synthesizer: new LmStudioSynthesizer({
         baseUrl: 'http://localhost:1234/v1',
-        model: 'qwen/qwen3-coder-next',
+        model: 'google/gemma-4-31b',
         env: {
           FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
           FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
@@ -85,7 +91,7 @@ describe('LmStudioSynthesizer', () => {
     expect(result.groundingChain).toEqual(['Used the bounded slice set only.']);
 
     expect(requestUrl).toBe('http://localhost:1234/v1/responses');
-    expect(requestBody).toContain('"model":"qwen/qwen3-coder-next"');
+    expect(requestBody).toContain('"model":"google/gemma-4-31b"');
     expect(requestBody).toContain('A.1.1');
     expect(requestBody).toContain('Retrieval summary:');
     expect(requestBody).toContain('Frontier:');
@@ -99,12 +105,12 @@ describe('LmStudioSynthesizer', () => {
     const observabilityLog = await readFile(observabilityLogPath, 'utf8');
     expect(observabilityLog).toContain('"type": "model_generation"');
     expect(observabilityLog).toContain('"provider": "lm_studio"');
-    expect(observabilityLog).toContain('"model": "qwen/qwen3-coder-next"');
+    expect(observabilityLog).toContain('"model": "google/gemma-4-31b"');
   });
 
   it('auto-configures the local synthesizer from environment for status visibility', async () => {
     process.env.FPF_LOCAL_LLM_BASE_URL = 'http://localhost:1234/v1';
-    process.env.FPF_LOCAL_LLM_MODEL = 'qwen/qwen3-coder-next';
+    process.env.FPF_LOCAL_LLM_MODEL = 'google/gemma-4-31b';
     process.env.FPF_MASTRA_OBSERVABILITY_PATH = observabilityLogPath;
 
     const runtime = new FpfRuntime({
@@ -115,12 +121,179 @@ describe('LmStudioSynthesizer', () => {
     const status = await runtime.status();
     expect(status.synthesizer.configured).toBe(true);
     expect(status.synthesizer.provider).toBe('lm_studio');
-    expect(status.synthesizer.model).toBe('qwen/qwen3-coder-next');
+    expect(status.synthesizer.model).toBe('google/gemma-4-31b');
     expect(status.synthesizer.baseUrl).toBe('http://localhost:1234/v1');
+    expect(status.synthesizer.apiStyle).toBe('responses');
     expect(status.observability.configured).toBe(true);
     expect(status.observability.filePath).toBe(observabilityLogPath);
     expect(status.observability.format).toBe('flat');
     expect(status.sessionCache.enabled).toBe(true);
+  });
+
+  it('fills missing LM Studio env fields from repo defaults after opt-in', async () => {
+    process.env.FPF_LOCAL_LLM_MODEL = DEFAULT_LM_STUDIO_MODEL;
+
+    const runtime = new FpfRuntime({
+      sourcePath,
+      artifactDir,
+    });
+
+    const status = await runtime.status();
+    expect(status.synthesizer.configured).toBe(true);
+    expect(status.synthesizer.provider).toBe('lm_studio');
+    expect(status.synthesizer.model).toBe(DEFAULT_LM_STUDIO_MODEL);
+    expect(status.synthesizer.baseUrl).toBe(DEFAULT_LM_STUDIO_BASE_URL);
+    expect(status.synthesizer.apiStyle).toBe(DEFAULT_LM_STUDIO_API_STYLE);
+  });
+
+  it('supports the LM Studio native chat endpoint when api style is configured', async () => {
+    let requestUrl = '';
+    let requestBody = '';
+
+    const runtime = new FpfRuntime({
+      sourcePath,
+      artifactDir,
+      synthesizer: new LmStudioSynthesizer({
+        baseUrl: 'http://localhost:1234',
+        model: 'google/gemma-4-31b',
+        apiStyle: 'lmstudio_chat',
+        env: {
+          FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
+          FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
+        },
+        fetchImpl: async (url, init) => {
+          requestUrl = String(url);
+          requestBody = String(init?.body ?? '');
+          return new Response(
+            JSON.stringify({
+              output: [
+                {
+                  type: 'reasoning',
+                  content: 'internal',
+                },
+                {
+                  type: 'message',
+                  content: JSON.stringify({
+                    answer: 'Chat-style synthesis answer.',
+                    constraints: ['Use only provided bounded slices.'],
+                    confidence: 0.61,
+                  }),
+                },
+              ],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        },
+      }),
+    });
+
+    const result = await runtime.query('What is U.BoundedContext?', 'compact');
+
+    expect(result.answer).toBe('Chat-style synthesis answer.');
+    expect(result.constraints).toEqual(['Use only provided bounded slices.']);
+    expect(result.confidence).toBe(0.61);
+    expect(requestUrl).toBe('http://localhost:1234/api/v1/chat');
+    expect(requestBody).toContain('"model":"google/gemma-4-31b"');
+    expect(requestBody).toContain('"system_prompt"');
+    expect(requestBody).toContain('"input"');
+  });
+
+  it('reports model-list and generation health for the configured api style', async () => {
+    let requestedUrls: string[] = [];
+
+    const result = await runLmStudioHealthCheck({
+      baseUrl: 'http://localhost:1234',
+      model: 'google/gemma-4-31b',
+      apiStyle: 'lmstudio_chat',
+      timeoutMs: 1234,
+      fetchImpl: async (url, init) => {
+        requestedUrls = [...requestedUrls, String(url)];
+        if ((init?.method ?? 'GET') === 'GET') {
+          return new Response(
+            JSON.stringify({
+              models: [{ key: 'google/gemma-4-31b' }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            output: [
+              {
+                type: 'message',
+                content: 'Health check response.',
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      },
+    });
+
+    expect(result.apiStyle).toBe('lmstudio_chat');
+    expect(result.timeoutMs).toBe(1234);
+    expect(result.endpoints.models).toBe('http://localhost:1234/api/v1/models');
+    expect(result.endpoints.generation).toBe('http://localhost:1234/api/v1/chat');
+    expect(result.modelDiscovery.ok).toBe(true);
+    expect(result.modelDiscovery.listed).toBe(true);
+    expect(result.generation.ok).toBe(true);
+    expect(result.generation.responsePreview).toContain('Health check response.');
+    expect(requestedUrls).toEqual([
+      'http://localhost:1234/api/v1/models',
+      'http://localhost:1234/api/v1/chat',
+    ]);
+  });
+
+  it('uses env api key and normalizes the chat alias for health checks', async () => {
+    const authHeaders: Array<string | null> = [];
+
+    const result = await runLmStudioHealthCheck({
+      env: {
+        FPF_LOCAL_LLM_BASE_URL: 'http://localhost:1234',
+        FPF_LOCAL_LLM_MODEL: 'google/gemma-4-31b',
+        FPF_LOCAL_LLM_API_STYLE: 'chat',
+        FPF_LOCAL_LLM_API_KEY: 'secret-token',
+      },
+      fetchImpl: async (_url, init) => {
+        authHeaders.push(new Headers(init?.headers).get('Authorization'));
+        if ((init?.method ?? 'GET') === 'GET') {
+          return new Response(
+            JSON.stringify({
+              models: [{ key: 'google/gemma-4-31b' }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            output: [{ type: 'message', content: 'Health check response.' }],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      },
+    });
+
+    expect(result.apiStyle).toBe('lmstudio_chat');
+    expect(result.endpoints.models).toBe('http://localhost:1234/api/v1/models');
+    expect(result.endpoints.generation).toBe('http://localhost:1234/api/v1/chat');
+    expect(authHeaders).toEqual(['Bearer secret-token', 'Bearer secret-token']);
   });
 
   it('falls back deterministically when LM Studio returns an error', async () => {
@@ -129,7 +302,7 @@ describe('LmStudioSynthesizer', () => {
       artifactDir,
       synthesizer: new LmStudioSynthesizer({
         baseUrl: 'http://localhost:1234/v1',
-        model: 'qwen/qwen3-coder-next',
+        model: 'google/gemma-4-31b',
         env: {
           FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
           FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
