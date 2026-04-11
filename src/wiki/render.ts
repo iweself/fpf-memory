@@ -1,8 +1,25 @@
 import { Marked } from 'marked';
 
+/** Escape raw HTML so it renders as visible text instead of executing. */
+function escapeHtml(html: string): string {
+  return html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const marked = new Marked({
   gfm: true,
   breaks: false,
+  renderer: {
+    // Neutralise raw HTML blocks and inline HTML so <script>, onerror, etc.
+    // are rendered as visible text rather than executable DOM nodes.
+    html(token) {
+      return escapeHtml(token.raw);
+    },
+  },
 });
 
 export function renderMarkdownToHtml(markdown: string): string {

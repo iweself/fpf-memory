@@ -606,7 +606,11 @@ function getScript(): string {
 
   async function fetchJson(url) {
     const r = await fetch(url);
-    if (!r.ok) throw new Error('Failed to load ' + url);
+    if (!r.ok) {
+      var err = new Error('Failed to load ' + url + ' (' + r.status + ')');
+      err.status = r.status;
+      throw err;
+    }
     return r.json();
   }
 
@@ -710,8 +714,14 @@ function getScript(): string {
       renderPatternPage(p);
       highlightActive(id);
     } catch(e) {
-      document.getElementById('main-content').innerHTML =
-        '<div class="welcome"><h1>Not Found</h1><p>Pattern "' + esc(id) + '" was not found.</p></div>';
+      if (e && e.status === 404) {
+        document.getElementById('main-content').innerHTML =
+          '<div class="welcome"><h1>Not Found</h1><p>Pattern "' + esc(id) + '" was not found.</p></div>';
+      } else {
+        console.error('Error loading pattern', id, e);
+        document.getElementById('main-content').innerHTML =
+          '<div class="welcome"><h1>Load Error</h1><p>Failed to load "' + esc(id) + '": ' + esc(String(e && e.message || e)) + '</p></div>';
+      }
     }
   }
 
