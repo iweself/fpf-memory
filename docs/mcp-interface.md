@@ -455,13 +455,13 @@ Output:
 - `query_fpf_spec` and `ask_fpf` are the only tools that may use the optional LM Studio path.
 - `trace_fpf_path`, `inspect_fpf_node`, `inspect_fpf_anchor`, and `expand_fpf_citations` stay deterministic.
 - Missing tool arguments are normalized to `{}` for object-shaped schemas.
-- The server validates both tool input and tool output against repo-owned Effect-authored contracts before returning a result.
+- The server validates both tool input and tool output against repo-owned Zod contracts before returning a result.
 
 ## Verification
 
 The implemented protocol and tool surface are verified in:
 
-- [tests/mcp-server.test.ts](</Users/stas-studio/Developer/fpf-memory/tests/mcp-server.test.ts>)
-- [src/mcp/server.ts](</Users/stas-studio/Developer/fpf-memory/src/mcp/server.ts>)
-- [src/mcp/tools.ts](</Users/stas-studio/Developer/fpf-memory/src/mcp/tools.ts>)
-- [src/mcp/tool-contracts.ts](</Users/stas-studio/Developer/fpf-memory/src/mcp/tool-contracts.ts>)
+- `tests/mcp-server.test.ts`
+- `src/mcp/server.ts`
+- `src/mcp/tools.ts`
+- `src/mcp/tool-contracts.ts`

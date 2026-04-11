@@ -353,9 +353,10 @@ describe('FpfRuntime', () => {
 
   it('renders ask_fpf results as markdown with grounding sections', async () => {
     const query = await runtime.query('What is U.BoundedContext?', 'verbose', true);
-    const result = renderAskFpfResult('What is U.BoundedContext?', query);
+    const result = renderAskFpfResult(query);
 
     expect(result.mode).toBe('verbose');
+    expect(result.question).toBe(query.question);
     expect(result.markdown).toContain('## Result');
     expect(result.markdown).toContain('## Grounding');
     expect(result.markdown).toContain('`A.1.1`');

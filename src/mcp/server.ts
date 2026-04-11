@@ -4,7 +4,7 @@ import { fpfMcpTools } from './tools.js';
 
 export function createFpfMcpServer(): MCPServer {
   return new MCPServer({
-    name: 'FPF Spec Runtime',
+    name: 'fpf_memory',
     version: '1.0.0',
     description:
       'Local vectorless MCP runtime for FPF-spec.md with refresh, query, trace, status, node inspect, anchor inspect, citation expansion, and markdown answer tools.',

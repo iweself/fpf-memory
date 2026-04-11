@@ -160,6 +160,10 @@ describe('Mastra MCP server', () => {
 
     expect(initialize.error).toBeUndefined();
     expect(initialize.result?.protocolVersion).toBe('2024-11-05');
+    expect(initialize.result?.serverInfo).toEqual({
+      name: 'fpf_memory',
+      version: '1.0.0',
+    });
     harness.notify('notifications/initialized');
   }
 

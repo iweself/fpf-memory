@@ -56,7 +56,7 @@ export const askFpfTool = createTool({
       forceRefresh ?? false,
       sessionId,
     );
-    return renderAskFpfResult(question, result);
+    return renderAskFpfResult(result);
   },
 });
 
@@ -127,9 +127,9 @@ export function resolveDefaultQueryMode(env: NodeJS.ProcessEnv = process.env): A
     : DEFAULT_QUERY_MODE;
 }
 
-export function renderAskFpfResult(question: string, result: QueryResult): AskFpfResult {
+export function renderAskFpfResult(result: QueryResult): AskFpfResult {
   return {
-    question,
+    question: result.question,
     mode: result.mode,
     markdown: renderMarkdown(result),
     ids: result.ids,
@@ -147,11 +147,16 @@ function renderMarkdown(result: QueryResult): string {
   const lines: string[] = ['## Result', '', result.answer];
 
   if (result.constraints.length > 0) {
-    lines.push('', '## Constraints', '', ...result.constraints.map((constraint) => `- ${constraint}`));
+    lines.push(
+      '',
+      '## Constraints',
+      '',
+      ...result.constraints.map((constraint) => `- ${sanitizeListItem(constraint)}`),
+    );
   }
 
   if (result.gaps.length > 0) {
-    lines.push('', '## Gaps', '', ...result.gaps.map((gap) => `- ${gap}`));
+    lines.push('', '## Gaps', '', ...result.gaps.map((gap) => `- ${sanitizeListItem(gap)}`));
   }
 
   lines.push(
@@ -167,10 +172,23 @@ function renderMarkdown(result: QueryResult): string {
   );
 
   if (result.groundingChain && result.groundingChain.length > 0) {
-    lines.push('', '## Grounding Chain', '', ...result.groundingChain.map((item) => `- ${item}`));
+    lines.push(
+      '',
+      '## Grounding Chain',
+      '',
+      ...result.groundingChain.map((item) => `- ${sanitizeListItem(item)}`),
+    );
   }
 
   return lines.join('\n');
+}
+
+function sanitizeListItem(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function formatCodeList(items: string[]): string {

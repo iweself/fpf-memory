@@ -63,12 +63,7 @@ If you opt into the LM Studio path by setting either `FPF_LOCAL_LLM_BASE_URL` or
 - `FPF_LOCAL_LLM_MODEL=google/gemma-4-31b`
 - `FPF_LOCAL_LLM_API_STYLE=responses`
 
-Checked locally on April 11, 2026:
-
-- `http://localhost:1234/v1/models` responds and lists `google/gemma-4-31b`
-- `http://localhost:1234/api/v1/models` also responds and lists the same model family
-
-This runtime should still use `FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1`, because the synthesizer targets the OpenAI-compatible `/v1/responses` API rather than the `/api/v1/chat` route.
+For the OpenAI-compatible route, use `FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1`, because the synthesizer targets `/v1/responses` rather than `/api/v1/chat`.
 
 If you want to force the LM Studio-native route instead, set:
 

@@ -58,6 +58,8 @@ interface GroundingResult {
 }
 
 export class QueryEngine {
+  private anchorOwnerNodeMap?: Map<string, CompiledNode>;
+
   constructor(
     private readonly snapshot: Snapshot,
     private readonly rebuilt: boolean,
@@ -1364,7 +1366,25 @@ export class QueryEngine {
       return this.snapshot.compiledNodes[anchor.nodeId];
     }
 
-    return Object.values(this.snapshot.compiledNodes).find((node) => node.anchorIds.includes(anchor.id));
+    return this.getAnchorOwnerNodeMap().get(anchor.id);
+  }
+
+  private getAnchorOwnerNodeMap(): Map<string, CompiledNode> {
+    if (this.anchorOwnerNodeMap) {
+      return this.anchorOwnerNodeMap;
+    }
+
+    const ownerMap = new Map<string, CompiledNode>();
+    for (const node of Object.values(this.snapshot.compiledNodes)) {
+      for (const anchorId of node.anchorIds) {
+        if (!ownerMap.has(anchorId)) {
+          ownerMap.set(anchorId, node);
+        }
+      }
+    }
+
+    this.anchorOwnerNodeMap = ownerMap;
+    return ownerMap;
   }
 
   private expandCitation(citationId: string): ExpandedCitation {

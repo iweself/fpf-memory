@@ -43,22 +43,34 @@ grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
 printf '==> Starting hosted Hono runtime briefly\n'
 hosted_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
-bun run start >/dev/null 2>&1 &
+FPF_VERIFY_PORT="${FPF_VERIFY_PORT:-42111}"
+PORT="$FPF_VERIFY_PORT" bun run start >/dev/null 2>&1 &
 hosted_pid="$!"
 trap 'kill "$hosted_pid" 2>/dev/null || true; wait "$hosted_pid" 2>/dev/null || true' EXIT
-sleep 2
+deadline=$((SECONDS + 15))
+until [[ "$(wc -c <"$MAS_LOG" | tr -d ' ')" -gt "$hosted_before_size" ]] \
+  && tail -c +"$((hosted_before_size + 1))" "$MAS_LOG" | grep -q '"msg":"Mastra Hono server start"'; do
+  if ! kill -0 "$hosted_pid" 2>/dev/null; then
+    printf 'Hosted runtime exited before emitting startup log\n' >&2
+    exit 1
+  fi
+  (( SECONDS < deadline )) || {
+    printf 'Timed out waiting for hosted runtime startup log\n' >&2
+    exit 1
+  }
+  sleep 0.2
+done
 kill "$hosted_pid" 2>/dev/null || true
 wait "$hosted_pid" 2>/dev/null || true
 trap - EXIT
 
 hosted_after_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
 (( hosted_after_size > hosted_before_size ))
-grep -q '"msg":"Mastra Hono server start"' "$MAS_LOG"
 
 printf '==> CLI, MCP, and hosted runtime logging verified\n'
 printf '    runtime log: %s\n' "$MAS_LOG"
 
-if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" && -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
+if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" || -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
   printf '==> Running LM Studio-backed query\n'
   obs_before_size="$([[ -f "$OBS_LOG" ]] && wc -c <"$OBS_LOG" | tr -d ' ' || printf '0')"
   ai_before_size="$([[ -f "$AI_LOG" ]] && wc -c <"$AI_LOG" | tr -d ' ' || printf '0')"
@@ -79,7 +91,7 @@ if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" && -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
   printf '    observability log: %s\n' "$OBS_LOG"
   printf '    ai trace log: %s\n' "$AI_LOG"
 else
-  printf '==> Skipping LM Studio verification because FPF_LOCAL_LLM_BASE_URL and FPF_LOCAL_LLM_MODEL are not both set\n'
+  printf '==> Skipping LM Studio verification because neither FPF_LOCAL_LLM_BASE_URL nor FPF_LOCAL_LLM_MODEL is set\n'
 fi
 
 printf '==> Verification complete\n'

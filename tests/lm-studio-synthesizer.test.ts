@@ -254,6 +254,46 @@ describe('LmStudioSynthesizer', () => {
     ]);
   });
 
+  it('maps a /v1/responses base URL back to /v1/models for discovery', async () => {
+    const requestedUrls: string[] = [];
+
+    const result = await runLmStudioHealthCheck({
+      baseUrl: 'http://localhost:1234/v1/responses',
+      model: 'google/gemma-4-31b',
+      apiStyle: 'responses',
+      fetchImpl: async (url, init) => {
+        requestedUrls.push(String(url));
+        if ((init?.method ?? 'GET') === 'GET') {
+          return new Response(
+            JSON.stringify({
+              data: [{ id: 'google/gemma-4-31b' }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            output_text: 'Health check response.',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      },
+    });
+
+    expect(result.endpoints.models).toBe('http://localhost:1234/v1/models');
+    expect(requestedUrls).toEqual([
+      'http://localhost:1234/v1/models',
+      'http://localhost:1234/v1/responses',
+    ]);
+  });
+
   it('uses env api key and normalizes the chat alias for health checks', async () => {
     const authHeaders: Array<string | null> = [];
 
@@ -294,6 +334,33 @@ describe('LmStudioSynthesizer', () => {
     expect(result.endpoints.models).toBe('http://localhost:1234/api/v1/models');
     expect(result.endpoints.generation).toBe('http://localhost:1234/api/v1/chat');
     expect(authHeaders).toEqual(['Bearer secret-token', 'Bearer secret-token']);
+  });
+
+  it('preserves model discovery shape when discovery requests fail', async () => {
+    const result = await runLmStudioHealthCheck({
+      baseUrl: 'http://localhost:1234/v1',
+      model: 'google/gemma-4-31b',
+      fetchImpl: async (url, init) => {
+        if ((init?.method ?? 'GET') === 'GET') {
+          throw new Error(`boom:${String(url)}`);
+        }
+
+        return new Response(
+          JSON.stringify({
+            output_text: 'Health check response.',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      },
+    });
+
+    expect(result.modelDiscovery.ok).toBe(false);
+    expect(result.modelDiscovery.listed).toBe(false);
+    expect(result.modelDiscovery.modelCount).toBe(0);
+    expect(result.modelDiscovery.error).toContain('boom:http://localhost:1234/v1/models');
   });
 
   it('falls back deterministically when LM Studio returns an error', async () => {

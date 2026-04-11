@@ -331,7 +331,7 @@ export async function runLmStudioHealthCheck(
       listed: listedModels.includes(model),
       modelCount: listedModels.length,
     };
-  });
+  }, { listed: false, modelCount: 0 });
 
   const generation = await runHealthRequest(async () => {
     const response = await fetchImpl(generationEndpoint, {
@@ -619,8 +619,8 @@ function buildModelsEndpoint(baseUrl: string, apiStyle: LmStudioApiStyle): strin
     }
   }
 
-  if (url.pathname === '/responses') {
-    return `${url.origin}/v1/models`;
+  if (url.pathname.endsWith('/responses')) {
+    return `${url.origin}${url.pathname.replace(/\/responses$/, '/models')}`;
   }
   if (url.pathname === '/' || url.pathname === '') {
     return `${url.origin}/v1/models`;
@@ -654,6 +654,7 @@ function extractListedModels(payload: unknown): string[] {
 
 async function runHealthRequest<T extends { httpStatus?: number; ok: boolean }>(
   operation: () => Promise<T>,
+  fallback: Partial<Omit<T, 'ok' | 'httpStatus'>> = {},
 ): Promise<T & { durationMs: number; error?: string }> {
   const startedAt = Date.now();
   try {
@@ -664,6 +665,7 @@ async function runHealthRequest<T extends { httpStatus?: number; ok: boolean }>(
     };
   } catch (error) {
     return {
+      ...fallback,
       ok: false,
       durationMs: Date.now() - startedAt,
       error: error instanceof Error ? error.message : 'Unknown LM Studio health-check error',

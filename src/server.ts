@@ -16,6 +16,14 @@ logger.info('Mastra Hono server start', {
 });
 
 function parsePort(value: string | undefined): number {
-  const parsed = Number.parseInt(value ?? '4111', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 4111;
+  if (value === undefined) {
+    return 4111;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) {
+    return 4111;
+  }
+
+  return Math.min(65_535, Math.max(1, parsed));
 }

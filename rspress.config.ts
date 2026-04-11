@@ -18,28 +18,28 @@ export default defineConfig({
         {
           text: 'MCP',
           link: '/mcp-interface/',
-          items: ['/mcp-interface/'],
+          items: [{ text: 'MCP Interface', link: '/mcp-interface/' }],
         },
       ],
       '/generated/patterns/': [
         {
           text: 'Patterns',
           link: '/generated/patterns/',
-          items: ['/generated/patterns/'],
+          items: [{ text: 'Patterns Index', link: '/generated/patterns/' }],
         },
       ],
       '/generated/routes/': [
         {
           text: 'Routes',
           link: '/generated/routes/',
-          items: ['/generated/routes/'],
+          items: [{ text: 'Routes Index', link: '/generated/routes/' }],
         },
       ],
       '/generated/preface/': [
         {
           text: 'Preface',
           link: '/generated/preface/',
-          items: ['/generated/preface/'],
+          items: [{ text: 'Preface Index', link: '/generated/preface/' }],
         },
       ],
     },
