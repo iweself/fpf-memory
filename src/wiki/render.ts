@@ -14,7 +14,7 @@ export function renderMarkdownToHtml(markdown: string): string {
 }
 
 const PATTERN_ID_RE =
-  /(?<!\w)([A-K]\.\d+(?:\.\d+)*(?:\.[A-Za-z]+(?:\.[A-Za-z]+)*)?)(?!\w)/g;
+  /(?<!\w)([A-K]\.\d+(?:\.\d+)*(?:\.[A-Za-z0-9]+)*(?::[A-Za-z0-9.]+)?)(?!\w)/g;
 
 export function autoLinkPatternIds(
   html: string,

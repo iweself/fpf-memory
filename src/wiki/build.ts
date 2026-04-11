@@ -393,23 +393,23 @@ export async function buildWiki(): Promise<void> {
   const patternsDir = resolve(OUTPUT_DIR, 'data/patterns');
   await mkdir(patternsDir, { recursive: true });
 
-  for (const pid of patternIds) {
+  await Promise.all(patternIds.map(async (pid) => {
     const page = buildPatternPage(pid, snapshot, knownIds);
-    await writeJson(resolve(patternsDir, `${pid}.json`), page);
-  }
+    await writeJson(resolve(patternsDir, `${sanitizeFilename(pid)}.json`), page);
+  }));
 
   // Build preface pages (non-pattern leaf nodes from tree)
-  for (const group of tree) {
-    for (const child of group.children) {
-      if (!child.patternId) {
+  await Promise.all(tree.flatMap((group) =>
+    group.children
+      .filter((child) => !child.patternId)
+      .map(async (child) => {
         const page = buildPrefacePage(child.id, snapshot, knownIds);
         await writeJson(
           resolve(patternsDir, `${sanitizeFilename(child.id)}.json`),
           page,
         );
-      }
-    }
-  }
+      }),
+  ));
 
   console.log('Writing index.html…');
   await mkdir(OUTPUT_DIR, { recursive: true });

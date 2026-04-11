@@ -702,7 +702,7 @@ function getScript(): string {
   // --- Pattern page ---
   async function loadPattern(id) {
     try {
-      var safeId = id.replace(/[^A-Za-z0-9._:-]/g, '');
+      var safeId = id.replace(/[^A-Za-z0-9._-]/g, '_');
       if (!patternCache[safeId]) {
         patternCache[safeId] = await fetchJson('data/patterns/' + encodeURIComponent(safeId) + '.json');
       }
