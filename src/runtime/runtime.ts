@@ -17,6 +17,8 @@ import {
 import type {
   AnswerMode,
   BuildAudit,
+  ExpandCitationsResult,
+  InspectAnchorResult,
   InspectResult,
   LocalAnswerSynthesizer,
   QueryResult,
@@ -160,6 +162,21 @@ export class FpfRuntime {
     await this.refresh(forceRefresh);
     const snapshot = await this.requireSnapshot();
     return new QueryEngine(snapshot, false, this.synthesizer).inspect(selector, kind);
+  }
+
+  async inspectAnchor(anchorId: string, forceRefresh = false): Promise<InspectAnchorResult> {
+    await this.refresh(forceRefresh);
+    const snapshot = await this.requireSnapshot();
+    return new QueryEngine(snapshot, false, this.synthesizer).inspectAnchor(anchorId);
+  }
+
+  async expandCitations(
+    citationIds: string[],
+    forceRefresh = false,
+  ): Promise<ExpandCitationsResult> {
+    await this.refresh(forceRefresh);
+    const snapshot = await this.requireSnapshot();
+    return new QueryEngine(snapshot, false, this.synthesizer).expandCitations(citationIds);
   }
 
   async status(): Promise<RuntimeStatus> {

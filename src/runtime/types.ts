@@ -325,6 +325,35 @@ export interface InspectResult {
   };
 }
 
+export interface InspectAnchorResult {
+  anchorId: string;
+  status: 'ok' | 'not_found';
+  anchor?: AnchorRef;
+  ownerNode?: CompiledNode;
+  neighbors: InspectNeighbor[];
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}
+
+export interface ExpandedCitation {
+  citationId: string;
+  status: 'ok' | 'not_found';
+  anchor?: AnchorRef;
+  ownerNode?: CompiledNode;
+  neighbors: InspectNeighbor[];
+}
+
+export interface ExpandCitationsResult {
+  citationIds: string[];
+  items: ExpandedCitation[];
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}
+
 export interface RuntimeStatus {
   sourcePath: string;
   sourceHash?: string;

@@ -242,6 +242,49 @@ const inspectResultSchema = z.object({
   }),
 });
 
+const inspectAnchorResultSchema = z.object({
+  anchorId: z.string(),
+  status: z.enum(['ok', 'not_found']),
+  anchor: anchorSchema.optional(),
+  ownerNode: compiledNodeSchema.optional(),
+  neighbors: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(['pattern', 'route', 'lexeme']),
+      title: z.string(),
+      relation: z.string(),
+    }),
+  ),
+  snapshot: z.object({
+    sourceHash: z.string(),
+    builtAt: z.string(),
+  }),
+});
+
+const expandedCitationSchema = z.object({
+  citationId: z.string(),
+  status: z.enum(['ok', 'not_found']),
+  anchor: anchorSchema.optional(),
+  ownerNode: compiledNodeSchema.optional(),
+  neighbors: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.enum(['pattern', 'route', 'lexeme']),
+      title: z.string(),
+      relation: z.string(),
+    }),
+  ),
+});
+
+const expandCitationsResultSchema = z.object({
+  citationIds: z.array(z.string()),
+  items: z.array(expandedCitationSchema),
+  snapshot: z.object({
+    sourceHash: z.string(),
+    builtAt: z.string(),
+  }),
+});
+
 const runtime = new FpfRuntime();
 
 export const refreshFpfIndexTool = createTool({
@@ -287,6 +330,7 @@ export const getFpfIndexStatusTool = createTool({
   id: 'get_fpf_index_status',
   description:
     'Inspect whether the local FPF index exists, whether it is fresh against the current source hash, and which artifacts are present.',
+  inputSchema: z.object({}),
   outputSchema: runtimeStatusSchema,
   execute: async () => runtime.status(),
 });
@@ -309,6 +353,37 @@ export const inspectFpfNodeTool = createTool({
   outputSchema: inspectResultSchema,
   execute: async ({ selector, kind, forceRefresh }) =>
     runtime.inspect(selector, kind ?? 'auto', forceRefresh ?? false),
+});
+
+export const inspectFpfAnchorTool = createTool({
+  id: 'inspect_fpf_anchor',
+  description:
+    'Inspect one compiled FPF anchor by exact anchor ID and return raw anchor text plus owning node context.',
+  inputSchema: z.object({
+    anchorId: z.string().min(1),
+    forceRefresh: z
+      .boolean()
+      .optional()
+      .describe('Force a rebuild before inspecting the anchor.'),
+  }),
+  outputSchema: inspectAnchorResultSchema,
+  execute: async ({ anchorId, forceRefresh }) => runtime.inspectAnchor(anchorId, forceRefresh ?? false),
+});
+
+export const expandFpfCitationsTool = createTool({
+  id: 'expand_fpf_citations',
+  description:
+    'Expand multiple exact citation IDs into raw anchor text plus owning node context without adding new semantics.',
+  inputSchema: z.object({
+    citationIds: z.array(z.string().min(1)).min(1),
+    forceRefresh: z
+      .boolean()
+      .optional()
+      .describe('Force a rebuild before expanding citations.'),
+  }),
+  outputSchema: expandCitationsResultSchema,
+  execute: async ({ citationIds, forceRefresh }) =>
+    runtime.expandCitations(citationIds, forceRefresh ?? false),
 });
 
 export const traceFpfPathTool = createTool({
@@ -341,5 +416,7 @@ export const fpfSpecRuntimeTools = {
   queryFpfSpecTool,
   getFpfIndexStatusTool,
   inspectFpfNodeTool,
+  inspectFpfAnchorTool,
+  expandFpfCitationsTool,
   traceFpfPathTool,
 };

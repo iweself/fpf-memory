@@ -20,10 +20,13 @@ import type {
   AnswerMode,
   AnswerSlice,
   CompiledNode,
+  ExpandedCitation,
+  ExpandCitationsResult,
   FollowedReference,
   FrontierCandidate,
   FrontierOrigin,
   GraphExpansion,
+  InspectAnchorResult,
   InspectNeighbor,
   InspectResult,
   LocalAnswerSynthesizer,
@@ -421,6 +424,32 @@ export class QueryEngine {
       node,
       anchors,
       neighbors,
+      snapshot: {
+        sourceHash: this.snapshot.sourceHash,
+        builtAt: this.snapshot.builtAt,
+      },
+    };
+  }
+
+  inspectAnchor(anchorId: string): InspectAnchorResult {
+    const expanded = this.expandCitation(anchorId);
+    return {
+      anchorId,
+      status: expanded.status,
+      anchor: expanded.anchor,
+      ownerNode: expanded.ownerNode,
+      neighbors: expanded.neighbors,
+      snapshot: {
+        sourceHash: this.snapshot.sourceHash,
+        builtAt: this.snapshot.builtAt,
+      },
+    };
+  }
+
+  expandCitations(citationIds: string[]): ExpandCitationsResult {
+    return {
+      citationIds,
+      items: citationIds.map((citationId) => this.expandCitation(citationId)),
       snapshot: {
         sourceHash: this.snapshot.sourceHash,
         builtAt: this.snapshot.builtAt,
@@ -1328,6 +1357,55 @@ export class QueryEngine {
     }
 
     return undefined;
+  }
+
+  private findOwnerNodeForAnchor(anchor: AnchorRef): CompiledNode | undefined {
+    if (anchor.nodeId && this.snapshot.compiledNodes[anchor.nodeId]) {
+      return this.snapshot.compiledNodes[anchor.nodeId];
+    }
+
+    return Object.values(this.snapshot.compiledNodes).find((node) => node.anchorIds.includes(anchor.id));
+  }
+
+  private expandCitation(citationId: string): ExpandedCitation {
+    const anchor = this.snapshot.anchorMap[citationId];
+    if (!anchor) {
+      return {
+        citationId,
+        status: 'not_found',
+        neighbors: [],
+      };
+    }
+
+    const ownerNode = this.findOwnerNodeForAnchor(anchor);
+    return {
+      citationId,
+      status: 'ok',
+      anchor,
+      ownerNode,
+      neighbors: this.neighborsForNode(ownerNode),
+    };
+  }
+
+  private neighborsForNode(node?: CompiledNode): InspectNeighbor[] {
+    if (!node) {
+      return [];
+    }
+
+    return node.neighborEdges
+      .map((edge): InspectNeighbor | undefined => {
+        const target = this.snapshot.compiledNodes[edge.to];
+        if (!target) {
+          return undefined;
+        }
+        return {
+          id: target.id,
+          kind: target.kind,
+          title: target.title,
+          relation: edge.relation,
+        };
+      })
+      .filter((neighbor): neighbor is InspectNeighbor => Boolean(neighbor));
   }
 
   private isAmbiguous(question: string, candidates: TraceCandidate[]): boolean {

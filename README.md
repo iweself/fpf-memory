@@ -64,8 +64,18 @@ npm run mcp
 ## Mastra surfaces
 
 - `src/mastra/index.ts`: Mastra entrypoint
-- `src/mastra/tools/fpf-spec-tools.ts`: refresh/query/status/inspect/trace tools
+- `src/mastra/tools/fpf-spec-tools.ts`: refresh/query/status/node-inspect/anchor-inspect/citation-expansion/trace tools
 - `src/mastra/mcp/fpf-spec-server.ts`: stdio MCP server
+
+## MCP tool roles
+
+- `refresh_fpf_index`: rebuild the local artifact set
+- `get_fpf_index_status`: inspect runtime freshness, artifact presence, and runtime configuration
+- `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
+- `trace_fpf_path`: return deterministic retrieval evidence only
+- `inspect_fpf_node`: expand one node into its anchors plus neighboring relations
+- `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
+- `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
 
 ## Runtime behavior
 

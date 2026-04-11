@@ -2,8 +2,12 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  expandFpfCitationsTool,
+  fpfSpecRuntimeTools,
+} from '../src/mastra/tools/fpf-spec-tools.js';
 import { ARTIFACT_FILENAMES } from '../src/runtime/constants.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
@@ -206,6 +210,16 @@ describe('FpfRuntime', () => {
     expect(inspectLexeme.node?.kind).toBe('lexeme');
     expect(inspectLexeme.node?.neighborEdges.some((edge) => edge.to === 'A.1.1')).toBe(true);
 
+    const inspectAnchor = await runtime.inspectAnchor(inspectById.anchors[0]!.id);
+    expect(inspectAnchor.status).toBe('ok');
+    expect(inspectAnchor.anchor?.id).toBe(inspectById.anchors[0]!.id);
+    expect(inspectAnchor.ownerNode?.id).toBe('A.1.1');
+    expect(inspectAnchor.neighbors).toEqual(inspectById.neighbors);
+
+    const inspectSyntheticAnchor = await runtime.inspectAnchor('Preface/Where to start');
+    expect(inspectSyntheticAnchor.status).toBe('ok');
+    expect(inspectSyntheticAnchor.ownerNode?.kind).toBe('route');
+
     const trace = await runtime.trace(
       'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?',
       'proof',
@@ -229,6 +243,71 @@ describe('FpfRuntime', () => {
     for (const key of Object.keys(ARTIFACT_FILENAMES)) {
       expect(status.artifacts[key]).toBe(true);
     }
+  });
+
+  it('expands citations in batch without changing single-anchor semantics', async () => {
+    await runtime.refresh();
+
+    const inspectById = await runtime.inspect('A.1.1', 'id');
+    const citationId = inspectById.anchors[0]!.id;
+    const syntheticCitationId = 'Preface/Where to start';
+
+    const refreshSpy = vi.spyOn(runtime, 'refresh');
+    const expanded = await runtime.expandCitations([
+      citationId,
+      syntheticCitationId,
+      citationId,
+      'missing-citation',
+    ]);
+
+    expect(refreshSpy).toHaveBeenCalledTimes(1);
+    expect(expanded.citationIds).toEqual([
+      citationId,
+      syntheticCitationId,
+      citationId,
+      'missing-citation',
+    ]);
+    expect(expanded.items.map((item) => item.citationId)).toEqual(expanded.citationIds);
+    expect(expanded.items[0]?.status).toBe('ok');
+    expect(expanded.items[1]?.status).toBe('ok');
+    expect(expanded.items[2]?.status).toBe('ok');
+    expect(expanded.items[3]).toEqual({
+      citationId: 'missing-citation',
+      status: 'not_found',
+      neighbors: [],
+    });
+    expect(expanded.items[0]).toEqual({
+      citationId,
+      status: 'ok',
+      anchor: expect.objectContaining({ id: citationId }),
+      ownerNode: expect.objectContaining({ id: 'A.1.1' }),
+      neighbors: inspectById.neighbors,
+    });
+    expect(expanded.items[1]?.ownerNode?.kind).toBe('route');
+    expect(expanded.items[2]).toEqual(expanded.items[0]);
+    expect(expanded.snapshot.sourceHash.length).toBeGreaterThan(0);
+
+    const single = await runtime.inspectAnchor(citationId);
+    expect(expanded.items[0]).toEqual({
+      citationId,
+      status: single.status,
+      anchor: single.anchor,
+      ownerNode: single.ownerNode,
+      neighbors: single.neighbors,
+    });
+  });
+
+  it('exports the batch citation expansion tool with a non-empty citation schema', () => {
+    expect(fpfSpecRuntimeTools.expandFpfCitationsTool).toBe(expandFpfCitationsTool);
+
+    const inputSchema = (expandFpfCitationsTool.inputSchema ?? null) as unknown as {
+      safeParse: (value: unknown) => { success: boolean };
+    };
+    expect(inputSchema.safeParse({ citationIds: [] }).success).toBe(false);
+    expect(inputSchema.safeParse({ citationIds: ['A.1.1:4.1'] }).success).toBe(true);
+    expect(inputSchema.safeParse({ citationIds: ['A.1.1:4.1'], forceRefresh: true }).success).toBe(
+      true,
+    );
   });
 
   it('follows explicit references for same-entity rewrite and comparative reading', async () => {
