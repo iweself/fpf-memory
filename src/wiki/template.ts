@@ -693,8 +693,10 @@ function getScript(): string {
     if ((m = hash.match(/^#\\/pattern\\/(.+)$/))) {
       loadPattern(decodeURIComponent(m[1]));
     } else if (hash === '#/routes') {
+      highlightActive('');
       showRoutes();
     } else if ((m = hash.match(/^#\\/route\\/(.+)$/))) {
+      highlightActive('');
       showRoute(decodeURIComponent(m[1]));
     } else {
       showHome();

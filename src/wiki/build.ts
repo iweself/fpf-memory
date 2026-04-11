@@ -27,6 +27,7 @@ export interface TreeNode {
   id: string;
   title: string;
   patternId?: string;
+  indexId?: string;
   status?: string;
   children: TreeNode[];
 }
@@ -135,6 +136,7 @@ function buildTreeData(snapshot: Snapshot): TreeNode[] {
           if (!child) continue;
           children.push({
             id: child.anchorId || child.id,
+            indexId: child.id,
             title: cleanTitle(child.title),
             patternId: child.metadata?.patternId,
             status: child.metadata?.patternId
@@ -273,9 +275,10 @@ function buildPrefacePage(
   nodeId: string,
   snapshot: Snapshot,
   knownIds: Set<string>,
+  indexId?: string,
 ): PatternPage {
   const anchor = snapshot.anchorMap[nodeId];
-  const indexNode = snapshot.indexMap[nodeId];
+  const indexNode = snapshot.indexMap[indexId ?? nodeId] ?? snapshot.indexMap[nodeId];
   const sections: PatternSection[] = [];
 
   if (anchor && anchor.text.trim()) {
@@ -432,7 +435,7 @@ export async function buildWiki(): Promise<void> {
     group.children
       .filter((child) => !child.patternId)
       .map(async (child) => {
-        const page = buildPrefacePage(child.id, snapshot, knownIds);
+        const page = buildPrefacePage(child.id, snapshot, knownIds, child.indexId);
         await writeJson(
           resolve(patternsDir, `${sanitizeFilename(child.id)}.json`),
           page,
