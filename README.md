@@ -8,6 +8,13 @@ It uses:
 - a vectorless index compiler that emits structural and graph artifacts directly from `FPF-spec.md`
 - Mastra tools plus a stdio MCP server as the integration surface
 
+## Stack
+
+- Bun is the preferred local runtime and package manager.
+- Mastra remains the library of choice for agent and MCP runtime surfaces in this repo.
+- Effect Schema owns repo-authored MCP contracts at the Mastra boundary.
+- Rstest, Rslint, and Rspress are the preferred test, lint, and docs tools.
+
 ## Scope
 
 - Runtime source set: `FPF-spec.md` only
@@ -48,24 +55,33 @@ FPF_AI_TRACE_LOG_PATH=.runtime/logs/ai-traces.jsonl
 ## Commands
 
 ```bash
-npm run check
-npm test
-npm run build
+bun run lint
+bun run check
+bun run test
+bun run build
+bun run docs:build
 ./scripts/verify-runtime.sh
-npm run cli -- status
-npm run cli -- refresh
-npm run cli -- query --question "What is U.BoundedContext?" --mode verbose
-npm run cli -- query --question "How does it connect to role assignment?" --session s1
-npm run cli -- inspect --selector "A.1.1"
-npm run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof --session s1
-npm run mcp
+bun run cli -- status
+bun run cli -- refresh
+bun run cli -- query --question "What is U.BoundedContext?" --mode verbose
+bun run cli -- query --question "How does it connect to role assignment?" --session s1
+bun run cli -- inspect --selector "A.1.1"
+bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof --session s1
+bun run mcp
 ```
 
 ## Mastra surfaces
 
 - `src/mastra/index.ts`: Mastra entrypoint
+- `src/mastra/contracts/fpf-spec-tool-contracts.ts`: Effect Schema contract source of truth adapted to the Mastra boundary
 - `src/mastra/tools/fpf-spec-tools.ts`: refresh/query/status/node-inspect/anchor-inspect/citation-expansion/trace tools
 - `src/mastra/mcp/fpf-spec-server.ts`: stdio MCP server
+
+## Docs surface
+
+- `docs/`: hand-authored Rspress landing content
+- `scripts/generate-docs.ts`: compiler-backed docs generation into `docs/generated/`
+- `rspress.config.ts`: docs site config
 
 ## MCP tool roles
 
@@ -111,6 +127,7 @@ Artifacts are stored under `.runtime/fpf-index/`.
 Run:
 
 ```bash
+bun run docs:build
 ./scripts/verify-runtime.sh
 ```
 

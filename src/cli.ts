@@ -104,10 +104,10 @@ async function print(valueToPrint: Promise<unknown> | unknown): Promise<void> {
 
 function printHelp(): void {
   process.stdout.write(`Usage:
-  npm run cli -- status
-  npm run cli -- refresh [--force]
-  npm run cli -- query --question "What is U.BoundedContext?" [--mode compact|verbose|proof] [--session s1] [--force]
-  npm run cli -- inspect --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
-  npm run cli -- trace --question "How do routes work?" [--mode compact|verbose|proof] [--session s1] [--force]
+  bun run cli -- status
+  bun run cli -- refresh [--force]
+  bun run cli -- query --question "What is U.BoundedContext?" [--mode compact|verbose|proof] [--session s1] [--force]
+  bun run cli -- inspect --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
+  bun run cli -- trace --question "How do routes work?" [--mode compact|verbose|proof] [--session s1] [--force]
 `);
 }

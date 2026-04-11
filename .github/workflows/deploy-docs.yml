@@ -1,4 +1,4 @@
-name: Deploy Wiki to GitHub Pages
+name: Deploy Docs to GitHub Pages
 
 on:
   push:
@@ -20,18 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
-          cache: npm
+          bun-version: 1.3.5
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
-      - run: npm run wiki
+      - run: bun run docs:build
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/wiki
+          path: doc_build
 
   deploy:
     needs: build

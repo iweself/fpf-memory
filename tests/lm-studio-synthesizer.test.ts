@@ -2,7 +2,7 @@ import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
 import { resetMastraObservabilityForTests } from '../src/mastra/observability.js';
 import { LmStudioSynthesizer } from '../src/runtime/lm-studio-synthesizer.js';

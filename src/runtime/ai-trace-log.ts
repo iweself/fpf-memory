@@ -52,7 +52,6 @@ export interface AiTraceErrorLog {
   };
 }
 
-type AiTraceLogRecord = AiTraceRequestLog | AiTraceResponseLog | AiTraceErrorLog;
 type AiTraceLogInput =
   | Omit<AiTraceRequestLog, 'traceId' | 'timestamp'>
   | Omit<AiTraceResponseLog, 'traceId' | 'timestamp'>

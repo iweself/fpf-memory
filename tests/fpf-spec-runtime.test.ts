@@ -2,7 +2,7 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
 import {
   expandFpfCitationsTool,
@@ -93,7 +93,7 @@ describe('FpfRuntime', () => {
     const forced = await runtime.refresh(true);
     expect(forced.rebuilt).toBe(true);
     expect(forced.reason).toBe('forced');
-  }, 20_000);
+  });
 
   it('does not depend on any remote indexing path', async () => {
     const originalFetch = globalThis.fetch;
@@ -162,7 +162,7 @@ describe('FpfRuntime', () => {
     const boundedContextTrace = await runtime.trace('What is U.BoundedContext?', 'compact');
     expect(boundedContextTrace.status).toBe('ok');
     expect(boundedContextTrace.selectedNodeIds[0]).toBe('A.1.1');
-  }, 20_000);
+  });
 
   it('returns the project-alignment route from the preface and J.4 route surfaces', async () => {
     await runtime.refresh();
@@ -252,7 +252,12 @@ describe('FpfRuntime', () => {
     const citationId = inspectById.anchors[0]!.id;
     const syntheticCitationId = 'Preface/Where to start';
 
-    const refreshSpy = vi.spyOn(runtime, 'refresh');
+    const originalRefresh = runtime.refresh.bind(runtime);
+    let refreshCalls = 0;
+    (runtime as { refresh: typeof runtime.refresh }).refresh = async (...args) => {
+      refreshCalls += 1;
+      return originalRefresh(...args);
+    };
     const expanded = await runtime.expandCitations([
       citationId,
       syntheticCitationId,
@@ -260,7 +265,7 @@ describe('FpfRuntime', () => {
       'missing-citation',
     ]);
 
-    expect(refreshSpy).toHaveBeenCalledTimes(1);
+    expect(refreshCalls).toBe(1);
     expect(expanded.citationIds).toEqual([
       citationId,
       syntheticCitationId,
@@ -297,17 +302,28 @@ describe('FpfRuntime', () => {
     });
   });
 
-  it('exports the batch citation expansion tool with a non-empty citation schema', () => {
+  it('exports the batch citation expansion tool with a non-empty citation schema', async () => {
     expect(fpfSpecRuntimeTools.expandFpfCitationsTool).toBe(expandFpfCitationsTool);
 
-    const inputSchema = (expandFpfCitationsTool.inputSchema ?? null) as unknown as {
-      safeParse: (value: unknown) => { success: boolean };
-    };
-    expect(inputSchema.safeParse({ citationIds: [] }).success).toBe(false);
-    expect(inputSchema.safeParse({ citationIds: ['A.1.1:4.1'] }).success).toBe(true);
-    expect(inputSchema.safeParse({ citationIds: ['A.1.1:4.1'], forceRefresh: true }).success).toBe(
-      true,
-    );
+    const inputSchema = (expandFpfCitationsTool.inputSchema as {
+      '~standard': {
+        validate: (value: unknown) => Promise<{ issues?: unknown[]; value?: unknown }> | { issues?: unknown[]; value?: unknown };
+      };
+    })['~standard'];
+
+    const empty = await inputSchema.validate({ citationIds: [] });
+    const valid = await inputSchema.validate({ citationIds: ['A.1.1:4.1'] });
+    const validWithRefresh = await inputSchema.validate({
+      citationIds: ['A.1.1:4.1'],
+      forceRefresh: true,
+    });
+
+    expect(empty.issues?.length).toBeGreaterThan(0);
+    expect(valid.value).toEqual({ citationIds: ['A.1.1:4.1'] });
+    expect(validWithRefresh.value).toEqual({
+      citationIds: ['A.1.1:4.1'],
+      forceRefresh: true,
+    });
   });
 
   it('follows explicit references for same-entity rewrite and comparative reading', async () => {
