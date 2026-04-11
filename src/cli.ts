@@ -1,0 +1,113 @@
+import { getMastraLogger } from './mastra/logger.js';
+import { FpfRuntime } from './runtime/runtime.js';
+import type { AnswerMode } from './runtime/types.js';
+
+const logger = getMastraLogger();
+const runtime = new FpfRuntime();
+
+const args = process.argv.slice(2);
+const command = args[0] ?? 'help';
+
+try {
+  logger.info('CLI command start', { command, args: args.slice(1) });
+
+  switch (command) {
+    case 'refresh':
+      await print(runtime.refresh(flag(args, '--force')));
+      break;
+    case 'status':
+      await print(runtime.status());
+      break;
+    case 'query':
+      await runQuery(args.slice(1));
+      break;
+    case 'inspect':
+      await runInspect(args.slice(1));
+      break;
+    case 'trace':
+      await runTrace(args.slice(1));
+      break;
+    default:
+      printHelp();
+      process.exitCode = command === 'help' ? 0 : 1;
+  }
+
+  logger.info('CLI command finished', { command, exitCode: process.exitCode ?? 0 });
+} catch (error) {
+  logger.error('CLI command failed', {
+    command,
+    error: error instanceof Error ? error.message : 'Unknown CLI error',
+  });
+  throw error;
+}
+
+async function runQuery(queryArgs: string[]): Promise<void> {
+  const mode = (value(queryArgs, '--mode') ?? 'compact') as AnswerMode;
+  const forceRefresh = flag(queryArgs, '--force');
+  const sessionId = value(queryArgs, '--session');
+  const question =
+    value(queryArgs, '--question') ??
+    queryArgs.filter((argument) => !argument.startsWith('--')).join(' ').trim();
+
+  if (!question) {
+    throw new Error('query requires --question "<text>" or trailing question text.');
+  }
+
+  await print(runtime.query(question, mode, forceRefresh, sessionId));
+}
+
+async function runInspect(commandArgs: string[]): Promise<void> {
+  const selector =
+    value(commandArgs, '--selector') ??
+    commandArgs.filter((argument) => !argument.startsWith('--')).join(' ').trim();
+  const kind = (value(commandArgs, '--kind') ?? 'auto') as 'auto' | 'id' | 'route' | 'lexeme';
+  const forceRefresh = flag(commandArgs, '--force');
+
+  if (!selector) {
+    throw new Error('inspect requires --selector "<id|route|lexeme>" or trailing selector text.');
+  }
+
+  await print(runtime.inspect(selector, kind, forceRefresh));
+}
+
+async function runTrace(commandArgs: string[]): Promise<void> {
+  const mode = (value(commandArgs, '--mode') ?? 'compact') as AnswerMode;
+  const forceRefresh = flag(commandArgs, '--force');
+  const sessionId = value(commandArgs, '--session');
+  const question =
+    value(commandArgs, '--question') ??
+    commandArgs.filter((argument) => !argument.startsWith('--')).join(' ').trim();
+
+  if (!question) {
+    throw new Error('trace requires --question "<text>" or trailing question text.');
+  }
+
+  await print(runtime.trace(question, mode, forceRefresh, sessionId));
+}
+
+function flag(argsList: string[], flagName: string): boolean {
+  return argsList.includes(flagName);
+}
+
+function value(argsList: string[], flagName: string): string | undefined {
+  const index = argsList.indexOf(flagName);
+  if (index < 0) {
+    return undefined;
+  }
+  return argsList[index + 1];
+}
+
+async function print(valueToPrint: Promise<unknown> | unknown): Promise<void> {
+  const resolved = await valueToPrint;
+  process.stdout.write(`${JSON.stringify(resolved, null, 2)}\n`);
+}
+
+function printHelp(): void {
+  process.stdout.write(`Usage:
+  npm run cli -- status
+  npm run cli -- refresh [--force]
+  npm run cli -- query --question "What is U.BoundedContext?" [--mode compact|verbose|proof] [--session s1] [--force]
+  npm run cli -- inspect --selector "A.1.1" [--kind auto|id|route|lexeme] [--force]
+  npm run cli -- trace --question "How do routes work?" [--mode compact|verbose|proof] [--session s1] [--force]
+`);
+}

@@ -1,0 +1,36 @@
+{
+  "name": "fpf-memory",
+  "version": "1.0.0",
+  "description": "Local vectorless FPF spec runtime exposed as a Mastra CLI and MCP server.",
+  "private": true,
+  "scripts": {
+    "dev": "mastra dev",
+    "build": "npm_config_cache=.runtime/npm-cache mastra build",
+    "start": "mastra start",
+    "check": "tsc --noEmit",
+    "cli": "tsx src/cli.ts",
+    "mcp": "tsx src/mcp-stdio.ts",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@mastra/core": "^1.24.1",
+    "@mastra/loggers": "^1.1.1",
+    "@mastra/mcp": "^1.4.2",
+    "@mastra/observability": "^1.9.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "mastra": "^1.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}

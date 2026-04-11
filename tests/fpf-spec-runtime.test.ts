@@ -1,0 +1,291 @@
+import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { ARTIFACT_FILENAMES } from '../src/runtime/constants.js';
+import { FpfRuntime } from '../src/runtime/runtime.js';
+
+describe('FpfRuntime', () => {
+  const canonicalSourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  let tempRoot: string;
+  let sourcePath: string;
+  let artifactDir: string;
+  let runtime: FpfRuntime;
+
+  beforeEach(async () => {
+    tempRoot = await mkdtemp(resolve(tmpdir(), 'fpf-runtime-'));
+    artifactDir = resolve(tempRoot, 'artifacts');
+    sourcePath = resolve(tempRoot, 'FPF-spec.md');
+    await copyFile(canonicalSourcePath, sourcePath);
+    runtime = new FpfRuntime({
+      artifactDir,
+      sourcePath,
+    });
+  });
+
+  afterEach(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  async function readArtifact<T>(filename: string): Promise<T> {
+    return JSON.parse(await readFile(resolve(artifactDir, filename), 'utf8')) as T;
+  }
+
+  it('builds a local artifact set and reuses the snapshot when the source hash is unchanged', async () => {
+    const first = await runtime.refresh();
+    expect(first.rebuilt).toBe(true);
+    expect(first.reason).toBe('missing_snapshot');
+    expect(first.compiler.mode).toBe('local_vectorless');
+    expect(first.validation.parsedPatterns).toBeGreaterThan(50);
+    expect(first.validation.parsedRoutes).toBeGreaterThan(0);
+    expect(first.validation.parsedLexiconEntries).toBeGreaterThan(0);
+
+    for (const filename of Object.values(ARTIFACT_FILENAMES)) {
+      const content = await readFile(resolve(artifactDir, filename), 'utf8');
+      expect(content.length).toBeGreaterThan(0);
+    }
+
+    const indexMap = await readArtifact<{
+      roots: string[];
+      nodes: Record<
+        string,
+        {
+          description: string;
+          metadata: {
+            patternId?: string;
+            role: string;
+            routeBearing: boolean;
+          };
+        }
+      >;
+    }>(ARTIFACT_FILENAMES.indexMap);
+    expect(indexMap.nodes['A.1.1']?.description.length).toBeGreaterThan(0);
+    expect(indexMap.nodes['A.1.1']?.metadata.patternId).toBe('A.1.1');
+    expect(indexMap.nodes['J.4']?.metadata.routeBearing).toBe(true);
+
+    const snapshot = await readArtifact<{
+      relationGraph: Array<{ from: string; relation: string; to: string }>;
+    }>(ARTIFACT_FILENAMES.snapshot);
+    expect(
+      snapshot.relationGraph.some(
+        (edge) => edge.from === 'A.15' && edge.relation === 'outline_child' && edge.to === 'A.15.2',
+      ),
+    ).toBe(true);
+    expect(
+      snapshot.relationGraph.some((edge) => edge.relation === 'explicit_reference'),
+    ).toBe(true);
+
+    const second = await runtime.refresh();
+    expect(second.rebuilt).toBe(false);
+    expect(second.reason).toBe('snapshot_current');
+
+    await writeFile(sourcePath, `${await readFile(sourcePath, 'utf8')}\n<!-- hash-shift -->\n`);
+    const third = await runtime.refresh();
+    expect(third.rebuilt).toBe(true);
+    expect(third.reason).toBe('source_hash_changed');
+
+    const forced = await runtime.refresh(true);
+    expect(forced.rebuilt).toBe(true);
+    expect(forced.reason).toBe('forced');
+  }, 20_000);
+
+  it('does not depend on any remote indexing path', async () => {
+    const originalFetch = globalThis.fetch;
+    let fetchCalled = false;
+    globalThis.fetch = (async () => {
+      fetchCalled = true;
+      throw new Error('refresh should stay local');
+    }) as typeof fetch;
+
+    try {
+      const audit = await runtime.refresh();
+      expect(audit.rebuilt).toBe(true);
+      expect(fetchCalled).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('builds a snapshot and keeps the key use-case IDs queryable', async () => {
+    const audit = await runtime.refresh();
+    expect(audit.rebuilt).toBe(true);
+    expect(audit.validation.parsedPatterns).toBeGreaterThan(50);
+
+    const boundedContext = await runtime.query(
+      'What is the authoritative definition of U.BoundedContext and when should it be used?',
+      'verbose',
+    );
+    expect(boundedContext.status).toBe('ok');
+    expect(boundedContext.ids).toContain('A.1.1');
+    expect(boundedContext.citations.some((citation) => citation.startsWith('A.1.1'))).toBe(true);
+    expect(boundedContext.constraints.length).toBeGreaterThanOrEqual(2);
+
+    const roleWorkflow = await runtime.query(
+      'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?',
+      'verbose',
+    );
+    expect(roleWorkflow.ids).toEqual(
+      expect.arrayContaining(['A.2.1', 'A.1.1', 'A.2.5']),
+    );
+
+    const deterministicOnly = new FpfRuntime({
+      artifactDir: resolve(tempRoot, 'deterministic-artifacts'),
+      sourcePath,
+      synthesizer: {
+        isAvailable: async () => false,
+        synthesize: async () => {
+          throw new Error('deterministic fallback should skip unavailable synthesis');
+        },
+      },
+    });
+    const deterministicAnswer = await deterministicOnly.query(
+      'What is U.BoundedContext?',
+      'compact',
+    );
+    expect(deterministicAnswer.status).toBe('ok');
+    expect(deterministicAnswer.ids).toContain('A.1.1');
+
+    const creativity = await runtime.query(
+      'How is creativity and open-ended search represented in FPF?',
+      'verbose',
+    );
+    expect(creativity.ids).toEqual(
+      expect.arrayContaining(['C.17', 'C.18', 'C.19']),
+    );
+
+    const boundedContextTrace = await runtime.trace('What is U.BoundedContext?', 'compact');
+    expect(boundedContextTrace.status).toBe('ok');
+    expect(boundedContextTrace.selectedNodeIds[0]).toBe('A.1.1');
+  }, 20_000);
+
+  it('returns the project-alignment route from the preface and J.4 route surfaces', async () => {
+    await runtime.refresh();
+    const route = await runtime.query(
+      'What is the recommended first route when vocabulary is overloaded across teams?',
+      'proof',
+    );
+
+    expect(route.status).toBe('ok');
+    expect(route.ids[0]).toBe('A.1.1');
+    expect(route.ids[1]).toBe('A.15');
+    expect(route.ids.slice(0, 5)).toContain('B.5.1');
+    expect(route.ids.slice(0, 5).some((id) => id === 'A.15.2' || id === 'A.15.3')).toBe(
+      true,
+    );
+    expect(route.ids).toContain('F.17');
+    expect(route.citations).toEqual(
+      expect.arrayContaining(['Preface/Where to start', 'J.4']),
+    );
+
+    const trace = await runtime.trace(
+      'What is the recommended first route when vocabulary is overloaded across teams?',
+      'proof',
+    );
+    expect(trace.selectedNodeIds).toContain('route:project-alignment');
+    expect(trace.frontierCandidates.some((candidate) => candidate.origin === 'route_expansion')).toBe(
+      true,
+    );
+    expect(trace.retrievalHops.length).toBeGreaterThan(0);
+    expect(trace.sufficient).toBe(true);
+  });
+
+  it('supports inspect, trace, and status surfaces over the compiled local index', async () => {
+    await runtime.refresh();
+
+    const inspectById = await runtime.inspect('A.1.1', 'id');
+    expect(inspectById.status).toBe('ok');
+    expect(inspectById.resolvedAs).toBe('id');
+    expect(inspectById.node?.kind).toBe('pattern');
+    expect(inspectById.anchors.length).toBeGreaterThan(0);
+
+    const inspectLexeme = await runtime.inspect('U.BoundedContext', 'lexeme');
+    expect(inspectLexeme.status).toBe('ok');
+    expect(inspectLexeme.resolvedAs).toBe('lexeme');
+    expect(inspectLexeme.node?.kind).toBe('lexeme');
+    expect(inspectLexeme.node?.neighborEdges.some((edge) => edge.to === 'A.1.1')).toBe(true);
+
+    const trace = await runtime.trace(
+      'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?',
+      'proof',
+    );
+    expect(trace.status).toBe('ok');
+    expect(trace.selectedNodeIds).toEqual(
+      expect.arrayContaining(['A.2.1', 'A.1.1', 'A.2.5']),
+    );
+    expect(trace.candidateScores.length).toBeGreaterThan(0);
+    expect(trace.frontierCandidates.length).toBeGreaterThan(0);
+    expect(trace.selectedAnchorIds.length).toBeGreaterThan(0);
+
+    const status = await runtime.status();
+    expect(status.snapshotExists).toBe(true);
+    expect(status.compilerMode).toBe('local_vectorless');
+    expect(status.fresh).toBe(true);
+    expect(status.synthesizer.configured).toBe(false);
+    expect(status.observability.configured).toBe(true);
+    expect(status.observability.filePath.endsWith('mastra-observability.json')).toBe(true);
+    expect(status.sessionCache.enabled).toBe(true);
+    for (const key of Object.keys(ARTIFACT_FILENAMES)) {
+      expect(status.artifacts[key]).toBe(true);
+    }
+  });
+
+  it('follows explicit references for same-entity rewrite and comparative reading', async () => {
+    await runtime.refresh();
+
+    const query = await runtime.query(
+      'How does same-entity rewrite relate to comparative reading?',
+      'verbose',
+    );
+    expect(query.ids).toEqual(
+      expect.arrayContaining(['A.6.3.CR', 'A.6.3.RT', 'E.17.ID.CR']),
+    );
+
+    const trace = await runtime.trace(
+      'How does same-entity rewrite relate to comparative reading?',
+      'proof',
+    );
+    expect(trace.selectedNodeIds).toEqual(
+      expect.arrayContaining(['A.6.3.CR', 'A.6.3.RT', 'E.17.ID.CR']),
+    );
+    expect(
+      trace.frontierCandidates.some(
+        (candidate) => candidate.targetId === 'E.17.ID.CR' && candidate.origin === 'lexical',
+      ),
+    ).toBe(true);
+  });
+
+  it('reuses short-lived session context for follow-up retrieval without persisting to disk', async () => {
+    await runtime.refresh();
+
+    const first = await runtime.trace('What is U.BoundedContext?', 'compact', false, 's1');
+    expect(first.selectedNodeIds).toContain('A.1.1');
+
+    const second = await runtime.trace(
+      'How does it connect to role assignment?',
+      'proof',
+      false,
+      's1',
+    );
+    expect(second.sessionApplied).toBe(true);
+    expect(second.sessionReusedNodeIds).toContain('A.1.1');
+    expect(second.selectedNodeIds).toEqual(
+      expect.arrayContaining(['A.1.1', 'A.2.1', 'A.2.5']),
+    );
+  });
+
+  it('lists every Draft pattern in Part C grouped by cluster', async () => {
+    await runtime.refresh();
+    const drafts = await runtime.query(
+      'List all Draft patterns in Part C and what family each belongs to.',
+      'verbose',
+    );
+
+    expect(drafts.status).toBe('ok');
+    expect(drafts.answer).toContain('Cluster C.I - Core CALs / LOGs / CHRs:');
+    expect(drafts.answer).toContain('C.4 - Method‑CAL');
+    expect(drafts.answer).toContain('Cluster C.IV - Composite & Macro-Scale:');
+    expect(drafts.ids).toContain('C.15');
+  });
+});
