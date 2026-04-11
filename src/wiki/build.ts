@@ -170,6 +170,33 @@ function collectPatternChildren(
   }
 }
 
+function collectDescendantSections(
+  node: IndexMapNode,
+  indexMap: Record<string, IndexMapNode>,
+  anchorMap: Record<string, AnchorRef>,
+  knownIds: Set<string>,
+  sections: PatternSection[],
+): void {
+  for (const childId of node.childIds) {
+    const childNode = indexMap[childId];
+    if (!childNode) continue;
+    const anchor = anchorMap[childNode.anchorId || childNode.id];
+    if (anchor && anchor.text.trim()) {
+      let html = renderMarkdownToHtml(anchor.text);
+      html = autoLinkPatternIds(html, knownIds);
+      sections.push({
+        heading: cleanSectionHeading(childNode.title),
+        role: childNode.metadata?.role ?? 'other',
+        html,
+      });
+    }
+    // Recurse into deeper subsections
+    if (childNode.childIds.length > 0) {
+      collectDescendantSections(childNode, indexMap, anchorMap, knownIds, sections);
+    }
+  }
+}
+
 function buildPatternPage(
   patternId: string,
   snapshot: Snapshot,
@@ -180,20 +207,13 @@ function buildPatternPage(
   const sections: PatternSection[] = [];
 
   if (indexNode) {
-    for (const childId of indexNode.childIds) {
-      const childNode = snapshot.indexMap[childId];
-      if (!childNode) continue;
-      const anchor = snapshot.anchorMap[childNode.anchorId || childNode.id];
-      if (!anchor || !anchor.text.trim()) continue;
-
-      let html = renderMarkdownToHtml(anchor.text);
-      html = autoLinkPatternIds(html, knownIds);
-      sections.push({
-        heading: cleanSectionHeading(childNode.title),
-        role: childNode.metadata?.role ?? 'other',
-        html,
-      });
-    }
+    collectDescendantSections(
+      indexNode,
+      snapshot.indexMap,
+      snapshot.anchorMap,
+      knownIds,
+      sections,
+    );
   }
 
   // If no sections from index, try the anchor directly
