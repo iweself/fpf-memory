@@ -386,7 +386,7 @@ No “workflow” required in the Description.
 
 **Is used by.**
 
-* **Part C Extention Patterns.** Sys‑CAL, KD‑CAL, Kind-CAL, Method‑CAL cite `…Description/…Spec` epistemes explicitly and consume **state attestations** from `U.Evaluation`.
+* **Part C Extension Patterns.** Sys‑CAL, KD‑CAL, Kind-CAL, Method‑CAL cite `…Description/…Spec` epistemes explicitly and consume **state attestations** from `U.Evaluation`.
 * **Part B trust calculus.** Uses the presence/absence of harnessed Specs and the windowed nature of attestations in confidence roll‑ups.
 ## Migration notes (conceptual refactor playbook)
 

@@ -30,7 +30,11 @@ CPM is the CHR comparison kernel: it compares two admitted profiles under an exp
 - ComparatorSet
 - set-valued comparison outcome
 - partial order
-- tri-state admissibility (`pass
+- tri-state admissibility (pass|degrade|abstain)
+- MinimalEvidence
+- “no hidden scalarization/totalization”
+- Bridge+CL transport
+- penalties→R_eff only.
 
 ## Relations
 

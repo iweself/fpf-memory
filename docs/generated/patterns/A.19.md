@@ -82,8 +82,8 @@ description: "Part A - Kernel Architecture Cluster"
   * `A.19.CHR:4.1` (published objects),
   * `A.19.CHR:4.2.1` (CHR SlotKind lexicon),
   * `A.19.CHR:4.2.2` (canonical mechanism targets),
-  * `A.19.CHR:4.5` (suite protocols — order/optionality live here, not in `mechanisms[]`),
-  * `A.19.CHR:4.6–4.7.2` (P2W planned-baseline hook and the plan-item shape),
+  * `A.19.CHR:4.3–4.5` (suite obligations, contract pins, and protocols — order/optionality live here, not in `mechanisms[]`),
+  * `A.19.CHR:4.6` (P2W planned-baseline hook) and `A.19.CHR:4.7.2` (the plan-item shape),
   * `A.19.CHR:7` (suite conformance checklist).
 * **A.15.3** — `SlotFillingsPlanItem` (planned baseline discipline: planning vs enactment).
 * **E.18 (E.TGA)** — how to express the actual pipeline/flow graph (including crossings) while keeping suite and plan artefacts refs‑only.
@@ -105,7 +105,7 @@ Each mechanism below owns its `U.Mechanism.Intension` card and assumes the measu
 
 **Fast review entry points.**
 
-* If you are reviewing a plan: start from **A.19.CHR:4.6–4.7.2** (planned baseline hook + plan item shape) and **A.15.3** (what a planned baseline may/may not contain).
+* If you are reviewing a plan: start from **A.19.CHR:4.6** (planned baseline hook), **A.19.CHR:4.7.2** (plan item shape), and **A.15.3** (what a planned baseline may/may not contain).
 * If you are reviewing semantic drift: start from **A.19.CHR:4.2.2** (canonical targets), then use **E.10** (suffix discipline) and **F.18** (alias docking) to preserve public continuity while fixing terminology.
 * If you are reviewing conformance: start from **A.19.CHR:7** (suite checklist), then consult the relevant **A.19.<MechId>** checklist(s) for mechanism-level conformance; use **E.19** for the review protocol.
 

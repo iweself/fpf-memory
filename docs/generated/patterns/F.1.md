@@ -310,7 +310,7 @@ A.11 **Ontological Parsimony** — motivates the small cut.
 **F.9** (Alignment & Bridge): only F.9 may relate Contexts; never F.1–F.4.
 
 **Used by.**
-Extention patterns in Part C (Sys‑CAL, KD‑CAL, Kind-CAL, Method‑CAL, LCA‑CAL) as the *lexical starting grid* for their examples and definitions.
+Extension patterns in Part C (Sys‑CAL, KD‑CAL, Kind-CAL, Method‑CAL, LCA‑CAL) as the *lexical starting grid* for their examples and definitions.
 ## Migration notes (conceptual)
 
 1. **New edition appears.** Keep the old Card; add a new Card with the new edition. If the sense shifts, treat it as a **new Context**; if it is strictly editorial, mark recency but keep one context.

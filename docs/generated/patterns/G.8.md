@@ -22,7 +22,13 @@ Method families compete within a `CG‑Frame`, but dispatch is only lawful if (i
 - SoS-LOG
 - rule ids
 - admissibility ledger
-- tri-state `{pass
+- tri-state {pass|degrade|abstain}
+- maturity ladder (poset/ordinal)
+- selector-facing bundle
+- evidence path pins (PathId/PathSliceId)
+- Bridge/CL/Φ policy pins
+- portfolio/archive telemetry
+- RSCRTriggerKindId.
 
 ## Relations
 

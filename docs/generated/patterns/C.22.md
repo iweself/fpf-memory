@@ -9,7 +9,7 @@ description: "Part C - Kernel Extension Specifications"
 
 **Purpose.** Give FPF a **lawful, minimal, and portable** way to speak about “the problem we face” so that the **selector** (G.5) can legally admit/abstain without prose or guesswork. We do this by (i) **typing problems** with CHR‑grounded traits and (ii) **attaching** them to a **TaskSignature (S2)** record that downstream patterns can consume. The Standard is **Context‑local**, evidence‑anchored, tri‑state‑aware, and bridge‑savvy. TaskSignature is *minimal* but sufficient for **eligibility**, **acceptance**, and **policy‑governed** choice.
 
-**Status & placement.** Part C (Kernel Extentions Specifications) → Cluster C.I (Core CHRs/CALs).
+**Status & placement.** Part C (Kernel Extension Specifications) → Cluster C.I (Core CHRs/CALs).
 **Depends on:** **C.16 MM‑CHR** (measurement legality), **G.5** (selector S2/S3), **G.0** (CG‑Spec invariants).
 **Coordinates with:** **G.4** (Acceptance/Evidence profiles), **C.23** (MethodFamily admissibility & maturity), **C.18 NQD‑CAL** (QD/illumination), **C.19 E/E‑LOG** (emitters/policies), **E.10** (LEX).
 

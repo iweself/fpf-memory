@@ -495,7 +495,7 @@ Implementation steps (Domain Families):
 
    as a health signal; target ≤ 0.05 (not a bureaucratic gate).
 
-*Rule of thumb for busy managers:* “**One idea, three worlds.** If you can’t point to the trio, park it in a Extention Pattern.”
+*Rule of thumb for busy managers:* “**One idea, three worlds.** If you can’t point to the trio, park it in an Extension Pattern.”
 ### Archetypal Grounding (System / Episteme)
 
 | Universal `U.Type` | **Domain 1 - Physics**                  | **Domain 2 - Life Sci.**            | **Domain 3 - Tech & Soc.**       | Congruent Role                |
@@ -520,7 +520,7 @@ These juxtapositions give engineer‑managers an immediate sense of *why* each p
 | Benefit                                                                                                    | Trade‑off                                     | Mitigation                                                 |
 | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
 | **Lean, trusted kernel** – every primitive earns its place by real work in three worlds.                   | Authoring effort for projections.             | Patterns A 5/A 6 provide templates and exemplar libraries. |
-| **Cross‑disciplinary uptake** – physicists, managers, and biologists see their own language reflected.     | Some novel ideas wait to gather evidence.     | They live safely in Extention Patterns until mature.                 |
+| **Cross‑disciplinary uptake** – physicists, managers, and biologists see their own language reflected.     | Some novel ideas wait to gather evidence.     | They live safely in Extension Patterns until mature.                 |
 | **Resilience to domain drift** – if one field’s jargon changes, the other two anchors preserve continuity. | Possible oversimplification of niche nuances. | Domain‑specific elaborations belong in FPF patterns.      |
 ### Rationale
 
@@ -646,7 +646,7 @@ Packaging these insights as one memorisable quintet → **Cognitive Elegance** w
 * **Distributed ML training** ‑ MONO guaranteed optimiser swaps never reduced accuracy, cutting iteration time by 20 %.
 ### Open Questions for expert panel
 
-1. **Order‑sensitive physics** – Should quantum‑circuit folds live in a Extention Patterns with a relaxed invariant set?
+1. **Order‑sensitive physics** – Should quantum-circuit folds live in Extension Patterns with a relaxed invariant set?
 2. **Synergistic redundancy** – Can WLNK be reframed using an “effective minimum” when true redundancy lifts the floor?
 3. **Didactic tooling** – Which visual cues best alert non‑formal audiences to an approaching Meta‑Holon Transition?
 4. **Layer depth** — In an LCA (layered control architectures, https://arxiv.org/abs/2401.15185) stack every Planner is external to its Regulator; should FPF limit the number of nested layers, or is indefinite chaining acceptable?
@@ -811,7 +811,7 @@ Result: steep learning curves, fragile integrations, eroded trust in “first‑
 | **Expressiveness vs Simplicity** | Fine granularity helps static checks ↔ fewer nouns aid cognition.  |
 | **Inclusivity vs Purity**        | New domains want vocabulary ↔ kernel must not be a dumping ground. |
 | **Evolution vs Stability**       | Framework grows ↔ users depend on a stable core.                   |
-| **Prestige vs Utility**          | Authors enjoy naming things ↔ every name tcharacteristics everyone else.      |
+| **Prestige vs Utility**          | Authors enjoy naming things ↔ every name taxes everyone else.      |
 ### Solution — Four‑Gate Minimal‑Sufficiency Protocol
 
 A proposal to add a `U.Type` or core relation **MUST** clear **all four gates** before admission and survives under a **Sunset Timer** thereafter.
@@ -824,7 +824,7 @@ A proposal to add a `U.Type` or core relation **MUST** clear **all four gates** 
 | **G‑4 Sharp Boundary**    | *Is there a one‑sentence litmus test that unambiguously includes or excludes any candidate instance?* | Ensures crisp taxonomy edges.                         |
 
 **Lifecycle — Sunset Timer**
-A cleared type enters the kernel **provisionally** with a timer (default = 4 quarters). If usage count remains zero at expiry, the type faces *Sunset Review*: delete, demote to Extention Pattern, or renew with fresh evidence.
+A cleared type enters the kernel **provisionally** with a timer (default = 4 quarters). If usage count remains zero at expiry, the type faces *Sunset Review*: delete, demote to Extension Pattern, or renew with fresh evidence.
 
 > *Manager’s mnemonic:* **“Compose, Unique, Functional, Crisp — or sunset.”**
 ### Archetypal Grounding
@@ -850,7 +850,7 @@ A cleared type enters the kernel **provisionally** with a timer (default = 4 qua
 | Benefit                            | Impact for engineer‑managers                                                   | Trade‑off / Mitigation                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | **Lean kernel**                    | Fewer primitives → faster onboarding & clearer mental map.                     | Initial author effort to fill Minimal‑Sufficiency Form; template wizard auto‑fills 70 %. |
-| **Reduced tool churn**             | Stable set of nouns keeps dashboards, linters, reasoners in sync for years.    | Occasionally slows acceptance of niche concepts; Extention Patterns layer absorbs urgency.          |
+| **Reduced tool churn**             | Stable set of nouns keeps dashboards, linters, reasoners in sync for years.    | Occasionally slows acceptance of niche concepts; Extension Patterns layer absorbs urgency.          |
 | **Automatic house‑cleaning**       | Sunset cycle prevents accrual of deadwood.                                     | Rare risk of deleting a sleeper hit; renewal path allows appeal.                         |
 | **Encultured composition mindset** | Teams default to roles & attributes, boosting reuse and cross‑domain dialogue. | Requires role libraries and attribute taxonomies; provided in Part C.                    |
 ### Rationale
@@ -1091,7 +1091,7 @@ The universal pattern of agency, defined as a `Contextual Role Assignment` and m
 | **Knowledge Artifact** | `ISO_26262_Standard.pdf` (`U.Episteme`) | **N/A** (Cannot be a holder of an `AgentialRole`) | N/A | **Grade 0 (Non-Agential)** |
 
 **Key takeaway from grounding:**
-This table makes the abstract model concrete. It shows that the FPF agency model can precisely differentiate between simple controllers and complex learning systems. It also reinforces the **Strict Distinction** principle: the ISO standard (`U.Episteme`) is a crucial **justification (`justification?`)** for the actions of an agent (like the DevOps team), but it is never an agent itself.
+This table makes the abstract model concrete. It shows that the FPF agency model can precisely differentiate between simple controllers and complex learning systems. It also reinforces the **Strict Distinction** principle: the ISO standard (`U.Episteme`) is a crucial **justification** for the actions of an agent (like the DevOps team), but it is never an agent itself.
 ### Conformance Checklist
 
 To ensure the agency model is applied rigorously and consistently, all FPF artifacts must adhere to the following normative checks.
@@ -3887,8 +3887,8 @@ In essence, A.18 is the _infrastructure of meaning_ for metrics. It may appear a
   * `A.19.CHR:4.1` (published objects),
   * `A.19.CHR:4.2.1` (CHR SlotKind lexicon),
   * `A.19.CHR:4.2.2` (canonical mechanism targets),
-  * `A.19.CHR:4.5` (suite protocols — order/optionality live here, not in `mechanisms[]`),
-  * `A.19.CHR:4.6–4.7.2` (P2W planned-baseline hook and the plan-item shape),
+  * `A.19.CHR:4.3–4.5` (suite obligations, contract pins, and protocols — order/optionality live here, not in `mechanisms[]`),
+  * `A.19.CHR:4.6` (P2W planned-baseline hook) and `A.19.CHR:4.7.2` (the plan-item shape),
   * `A.19.CHR:7` (suite conformance checklist).
 * **A.15.3** — `SlotFillingsPlanItem` (planned baseline discipline: planning vs enactment).
 * **E.18 (E.TGA)** — how to express the actual pipeline/flow graph (including crossings) while keeping suite and plan artefacts refs‑only.
@@ -3910,7 +3910,7 @@ Each mechanism below owns its `U.Mechanism.Intension` card and assumes the measu
 
 **Fast review entry points.**
 
-* If you are reviewing a plan: start from **A.19.CHR:4.6–4.7.2** (planned baseline hook + plan item shape) and **A.15.3** (what a planned baseline may/may not contain).
+* If you are reviewing a plan: start from **A.19.CHR:4.6** (planned baseline hook), **A.19.CHR:4.7.2** (plan item shape), and **A.15.3** (what a planned baseline may/may not contain).
 * If you are reviewing semantic drift: start from **A.19.CHR:4.2.2** (canonical targets), then use **E.10** (suffix discipline) and **F.18** (alias docking) to preserve public continuity while fixing terminology.
 * If you are reviewing conformance: start from **A.19.CHR:7** (suite checklist), then consult the relevant **A.19.<MechId>** checklist(s) for mechanism-level conformance; use **E.19** for the review protocol.
 

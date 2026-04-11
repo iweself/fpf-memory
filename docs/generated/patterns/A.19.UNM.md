@@ -28,13 +28,17 @@ description: "Part A - Kernel Architecture Cluster"
 
 - normalization
 - CV→NCV
-- ≡_UNM
+- ≡UNM
 - NormalizationMethodId
 - NormalizationMethodInstanceId
-- NormalizationInvariant[*]
+- NormalizationInvariant[]
 - NormalizationFixSpec
 - validity window (no implicit “latest”)
-- fail-closed tri-state guard (`pass
+- fail-closed tri-state guard (pass|degrade|abstain)
+- CN-Spec.normalization
+- CN-Spec.comparability.mode
+- Bridge-only transport + ReferencePlane/CL pins
+- penalties→R/Reff only.
 
 ## Relations
 

@@ -379,7 +379,7 @@ Conceptually, the Intellect Stack is formalized as a non-normative **Characteriz
 
 Every layer remains **physically grounded**: an abstract *method* references a *material Transformer* (Pattern D.1) such as a laboratory rig or CI runner that proves the method can exist.  Without that anchor, the skill is rhetoric, not capability.
 
-The stack mirrors software’s architecture layer stacks. **A.5 Open‑Ended Kernel & Extention Layering** lets new layers emerge via **Design Rationale Records (E.9)**, keeping the map alive.
+The stack mirrors software’s architecture layer stacks. **A.5 Open‑Ended Kernel & Extension Layering** lets new layers emerge via **Design Rationale Records (E.9)**, keeping the map alive.
 
 A full description of the Intellect Stack and its layers resides in the Pedagogical Companion.
 

@@ -126,7 +126,7 @@ The universal pattern of agency, defined as a `Contextual Role Assignment` and m
 | **Knowledge Artifact** | `ISO_26262_Standard.pdf` (`U.Episteme`) | **N/A** (Cannot be a holder of an `AgentialRole`) | N/A | **Grade 0 (Non-Agential)** |
 
 **Key takeaway from grounding:**
-This table makes the abstract model concrete. It shows that the FPF agency model can precisely differentiate between simple controllers and complex learning systems. It also reinforces the **Strict Distinction** principle: the ISO standard (`U.Episteme`) is a crucial **justification (`justification?`)** for the actions of an agent (like the DevOps team), but it is never an agent itself.
+This table makes the abstract model concrete. It shows that the FPF agency model can precisely differentiate between simple controllers and complex learning systems. It also reinforces the **Strict Distinction** principle: the ISO standard (`U.Episteme`) is a crucial **justification** for the actions of an agent (like the DevOps team), but it is never an agent itself.
 ## Conformance Checklist
 
 To ensure the agency model is applied rigorously and consistently, all FPF artifacts must adhere to the following normative checks.

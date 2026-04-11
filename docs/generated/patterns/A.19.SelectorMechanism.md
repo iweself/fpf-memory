@@ -44,7 +44,17 @@ description: "Part A - Kernel Architecture Cluster"
 - set-returning selection
 - portfolio set
 - SelectEligibility
-- tri-state guard (`pass
+- tri-state guard (pass|degrade|abstain)
+- no hidden thresholds
+- no hidden scalarization
+- CriteriaSlot
+- ComparisonResultSlot
+- TaskSignatureSlot
+- evidence gating
+- CG-Spec.MinimalEvidence
+- CHR suite stage select
+- Bridge+CL/ReferencePlane transport
+- penalties→R_eff only.
 
 ## Relations
 

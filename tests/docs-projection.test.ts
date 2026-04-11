@@ -76,6 +76,15 @@ describe('docs projection', () => {
     );
   });
 
+  it('preserves keyword cells that contain pipes inside code spans', () => {
+    const projection = buildDocsProjection(snapshot);
+    const comparisonPage =
+      projection.pagesByMarkdownPath['docs/generated/patterns/A.19.CPM.md']?.markdown ?? '';
+
+    expect(comparisonPage).toContain('- tri-state admissibility (pass|degrade|abstain)');
+    expect(comparisonPage).not.toContain('- tri-state admissibility (`pass');
+  });
+
   it('deduplicates repeated relation lines and exposes grouped navigation', () => {
     const projection = buildDocsProjection(snapshot);
     const navigation = buildDocsNavigation(snapshot);

@@ -304,7 +304,7 @@ F.1 **Domain‑Family Landscape Survey** (Contexts fixed); F.2 **Term Harvesting
 * **F.9 Alignment & Bridge.** Bridges connect **SenseCell ↔ SenseCell** across Contexts; F.3 provides the stable endpoints.
 
 **Is used by.**
-Part C Extention Patterns to ground examples and invariants in **Context‑true** language.
+Part C Extension Patterns to ground examples and invariants in **Context‑true** language.
 ## Migration notes (conceptual)
 
 1. **Usage clarifies → merge.** If two Local‑Senses never lead to different conclusions in the Context’s canon, **merge** and keep the narrower sense line.

@@ -39,7 +39,7 @@ Result: steep learning curves, fragile integrations, eroded trust in “first‑
 | **Expressiveness vs Simplicity** | Fine granularity helps static checks ↔ fewer nouns aid cognition.  |
 | **Inclusivity vs Purity**        | New domains want vocabulary ↔ kernel must not be a dumping ground. |
 | **Evolution vs Stability**       | Framework grows ↔ users depend on a stable core.                   |
-| **Prestige vs Utility**          | Authors enjoy naming things ↔ every name tcharacteristics everyone else.      |
+| **Prestige vs Utility**          | Authors enjoy naming things ↔ every name taxes everyone else.      |
 ## Solution — Four‑Gate Minimal‑Sufficiency Protocol
 
 A proposal to add a `U.Type` or core relation **MUST** clear **all four gates** before admission and survives under a **Sunset Timer** thereafter.
@@ -52,7 +52,7 @@ A proposal to add a `U.Type` or core relation **MUST** clear **all four gates** 
 | **G‑4 Sharp Boundary**    | *Is there a one‑sentence litmus test that unambiguously includes or excludes any candidate instance?* | Ensures crisp taxonomy edges.                         |
 
 **Lifecycle — Sunset Timer**
-A cleared type enters the kernel **provisionally** with a timer (default = 4 quarters). If usage count remains zero at expiry, the type faces *Sunset Review*: delete, demote to Extention Pattern, or renew with fresh evidence.
+A cleared type enters the kernel **provisionally** with a timer (default = 4 quarters). If usage count remains zero at expiry, the type faces *Sunset Review*: delete, demote to Extension Pattern, or renew with fresh evidence.
 
 > *Manager’s mnemonic:* **“Compose, Unique, Functional, Crisp — or sunset.”**
 ## Archetypal Grounding
@@ -78,7 +78,7 @@ A cleared type enters the kernel **provisionally** with a timer (default = 4 qua
 | Benefit                            | Impact for engineer‑managers                                                   | Trade‑off / Mitigation                                                                   |
 | ---------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | **Lean kernel**                    | Fewer primitives → faster onboarding & clearer mental map.                     | Initial author effort to fill Minimal‑Sufficiency Form; template wizard auto‑fills 70 %. |
-| **Reduced tool churn**             | Stable set of nouns keeps dashboards, linters, reasoners in sync for years.    | Occasionally slows acceptance of niche concepts; Extention Patterns layer absorbs urgency.          |
+| **Reduced tool churn**             | Stable set of nouns keeps dashboards, linters, reasoners in sync for years.    | Occasionally slows acceptance of niche concepts; Extension Patterns layer absorbs urgency.          |
 | **Automatic house‑cleaning**       | Sunset cycle prevents accrual of deadwood.                                     | Rare risk of deleting a sleeper hit; renewal path allows appeal.                         |
 | **Encultured composition mindset** | Teams default to roles & attributes, boosting reuse and cross‑domain dialogue. | Requires role libraries and attribute taxonomies; provided in Part C.                    |
 ## Rationale

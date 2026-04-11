@@ -36,7 +36,10 @@ description: "Part A - Kernel Architecture Cluster"
 - ScaleComplianceProfile (SCP)
 - CSLC-lawful transforms
 - CG-Spec.MinimalEvidence
-- tri-state admissibility (`pass
+- tri-state admissibility (pass|degrade|abstain)
+- “no implicit UNM”
+- vector scores by default
+- CHR suite stage score.
 
 ## Relations
 

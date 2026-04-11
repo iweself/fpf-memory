@@ -42,7 +42,10 @@ Such stubs MUST NOT restate SlotIndex / OperationAlgebra / LawSet / Admissibilit
 - CG-Spec.Γfold
 - CG-Spec.SCP
 - MinimalEvidence
-- tri-state guard (`pass
+- tri-state guard (pass|degrade|abstain)
+- contributor set
+- no hidden aggregation
+- penalties→Reff only.
 
 ## Relations
 

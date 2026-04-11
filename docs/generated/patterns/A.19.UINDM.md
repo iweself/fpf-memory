@@ -36,7 +36,10 @@ description: "Part A - Kernel Architecture Cluster"
 - IndicatorChoicePolicy
 - CN-Spec.indicator_policy
 - CHR suite stage indicatorize
-- tri-state admissibility (`pass
+- tri-state admissibility (pass|degrade|abstain)
+- evidence-gated indicator choice
+- Bridge+CL transport visibility
+- “no NCV⇒indicator”.
 
 ## Relations
 
