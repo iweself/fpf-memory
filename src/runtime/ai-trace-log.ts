@@ -3,6 +3,7 @@ import { appendFile } from 'node:fs/promises';
 
 import { resolveLogPath } from '../logging/file-paths.js';
 import type { AnswerMode, TraceResult } from './types.js';
+import type { LmStudioApiStyle } from './lm-studio-synthesizer.js';
 
 export interface AiTraceRequestLog {
   traceId: string;
@@ -10,6 +11,7 @@ export interface AiTraceRequestLog {
   phase: 'request';
   provider: 'lm_studio';
   endpoint: string;
+  apiStyle?: LmStudioApiStyle;
   model: string;
   question: string;
   mode: AnswerMode;
@@ -32,6 +34,7 @@ export interface AiTraceResponseLog {
   phase: 'response';
   provider: 'lm_studio';
   endpoint: string;
+  apiStyle?: LmStudioApiStyle;
   model: string;
   durationMs: number;
   httpStatus: number;
@@ -45,6 +48,7 @@ export interface AiTraceErrorLog {
   phase: 'error';
   provider: 'lm_studio';
   endpoint: string;
+  apiStyle?: LmStudioApiStyle;
   model: string;
   durationMs: number;
   error: {
@@ -52,7 +56,6 @@ export interface AiTraceErrorLog {
   };
 }
 
-type AiTraceLogRecord = AiTraceRequestLog | AiTraceResponseLog | AiTraceErrorLog;
 type AiTraceLogInput =
   | Omit<AiTraceRequestLog, 'traceId' | 'timestamp'>
   | Omit<AiTraceResponseLog, 'traceId' | 'timestamp'>

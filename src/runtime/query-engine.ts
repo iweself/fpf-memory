@@ -24,10 +24,13 @@ import type {
   AnswerMode,
   AnswerSlice,
   CompiledNode,
+  ExpandedCitation,
+  ExpandCitationsResult,
   FollowedReference,
   FrontierCandidate,
   FrontierOrigin,
   GraphExpansion,
+  InspectAnchorResult,
   InspectNeighbor,
   InspectResult,
   LocalAnswerSynthesizer,
@@ -60,6 +63,8 @@ interface GroundingResult {
 }
 
 export class QueryEngine {
+  private anchorOwnerNodeMap?: Map<string, CompiledNode>;
+
   constructor(
     private readonly snapshot: Snapshot,
     private readonly rebuilt: boolean,
@@ -514,6 +519,32 @@ export class QueryEngine {
       title: docTarget.title,
       docRef: docTarget.docRef,
       markdown: page.markdown,
+      snapshot: {
+        sourceHash: this.snapshot.sourceHash,
+        builtAt: this.snapshot.builtAt,
+      },
+    };
+  }
+
+  inspectAnchor(anchorId: string): InspectAnchorResult {
+    const expanded = this.expandCitation(anchorId);
+    return {
+      anchorId,
+      status: expanded.status,
+      anchor: expanded.anchor,
+      ownerNode: expanded.ownerNode,
+      neighbors: expanded.neighbors,
+      snapshot: {
+        sourceHash: this.snapshot.sourceHash,
+        builtAt: this.snapshot.builtAt,
+      },
+    };
+  }
+
+  expandCitations(citationIds: string[]): ExpandCitationsResult {
+    return {
+      citationIds,
+      items: citationIds.map((citationId) => this.expandCitation(citationId)),
       snapshot: {
         sourceHash: this.snapshot.sourceHash,
         builtAt: this.snapshot.builtAt,
@@ -1473,6 +1504,73 @@ export class QueryEngine {
       score += 2;
     }
     return score;
+  }
+
+  private findOwnerNodeForAnchor(anchor: AnchorRef): CompiledNode | undefined {
+    if (anchor.nodeId && this.snapshot.compiledNodes[anchor.nodeId]) {
+      return this.snapshot.compiledNodes[anchor.nodeId];
+    }
+
+    return this.getAnchorOwnerNodeMap().get(anchor.id);
+  }
+
+  private getAnchorOwnerNodeMap(): Map<string, CompiledNode> {
+    if (this.anchorOwnerNodeMap) {
+      return this.anchorOwnerNodeMap;
+    }
+
+    const ownerMap = new Map<string, CompiledNode>();
+    for (const node of Object.values(this.snapshot.compiledNodes)) {
+      for (const anchorId of node.anchorIds) {
+        if (!ownerMap.has(anchorId)) {
+          ownerMap.set(anchorId, node);
+        }
+      }
+    }
+
+    this.anchorOwnerNodeMap = ownerMap;
+    return ownerMap;
+  }
+
+  private expandCitation(citationId: string): ExpandedCitation {
+    const anchor = this.snapshot.anchorMap[citationId];
+    if (!anchor) {
+      return {
+        citationId,
+        status: 'not_found',
+        neighbors: [],
+      };
+    }
+
+    const ownerNode = this.findOwnerNodeForAnchor(anchor);
+    return {
+      citationId,
+      status: 'ok',
+      anchor,
+      ownerNode,
+      neighbors: this.neighborsForNode(ownerNode),
+    };
+  }
+
+  private neighborsForNode(node?: CompiledNode): InspectNeighbor[] {
+    if (!node) {
+      return [];
+    }
+
+    return node.neighborEdges
+      .map((edge): InspectNeighbor | undefined => {
+        const target = this.snapshot.compiledNodes[edge.to];
+        if (!target) {
+          return undefined;
+        }
+        return {
+          id: target.id,
+          kind: target.kind,
+          title: target.title,
+          relation: edge.relation,
+        };
+      })
+      .filter((neighbor): neighbor is InspectNeighbor => Boolean(neighbor));
   }
 
   private isAmbiguous(question: string, candidates: TraceCandidate[]): boolean {

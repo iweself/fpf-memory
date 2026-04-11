@@ -1,12 +1,12 @@
-import { getMastraLogger } from './mastra/logger.js';
-import { fpfSpecRuntimeMcpServer } from './mastra/mcp/fpf-spec-server.js';
+import { getRuntimeLogger } from './logging/runtime-logger.js';
+import { startStdioMcpServer } from './mcp/server.js';
 
-const logger = getMastraLogger();
+const logger = getRuntimeLogger();
 
 logger.info('MCP stdio server start');
 
 try {
-  await fpfSpecRuntimeMcpServer.startStdio();
+  await startStdioMcpServer();
 } catch (error) {
   logger.error('MCP stdio server failed', {
     error: error instanceof Error ? error.message : 'Unknown MCP stdio error',

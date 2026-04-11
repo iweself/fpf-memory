@@ -21,7 +21,7 @@ interface PersistedExporterOptions {
   format: ObservabilityFileFormat;
 }
 
-export interface MastraObservabilitySummary {
+export interface RuntimeObservabilitySummary {
   configured: boolean;
   filePath: string;
   format: ObservabilityFileFormat;
@@ -30,7 +30,7 @@ export interface MastraObservabilitySummary {
   excludeModelChunks: boolean;
 }
 
-interface MastraObservabilityHandle extends MastraObservabilitySummary {
+interface RuntimeObservabilityHandle extends RuntimeObservabilitySummary {
   observability: Observability;
 }
 
@@ -97,13 +97,13 @@ class PersistedTestExporter extends TestExporter {
   }
 }
 
-let cachedHandle: MastraObservabilityHandle | undefined;
+let cachedHandle: RuntimeObservabilityHandle | undefined;
 let cachedKey: string | undefined;
 
-export function getMastraObservability(
+export function getRuntimeObservability(
   env: NodeJS.ProcessEnv = process.env,
-): MastraObservabilityHandle {
-  const summary = resolveMastraObservabilitySummary(env);
+): RuntimeObservabilityHandle {
+  const summary = resolveRuntimeObservabilitySummary(env);
   const cacheKey = JSON.stringify(summary);
 
   if (cachedHandle && cachedKey === cacheKey) {
@@ -147,13 +147,13 @@ export function getMastraObservability(
   return cachedHandle;
 }
 
-export function getMastraObservabilitySummary(
+export function getRuntimeObservabilitySummary(
   env: NodeJS.ProcessEnv = process.env,
-): MastraObservabilitySummary {
-  return resolveMastraObservabilitySummary(env);
+): RuntimeObservabilitySummary {
+  return resolveRuntimeObservabilitySummary(env);
 }
 
-export async function withMastraSpan<TType extends SpanType, TResult>(options: {
+export async function withRuntimeSpan<TType extends SpanType, TResult>(options: {
   env?: NodeJS.ProcessEnv;
   type: TType;
   name: string;
@@ -163,7 +163,7 @@ export async function withMastraSpan<TType extends SpanType, TResult>(options: {
   mapOutput?: (result: TResult) => unknown;
   operation: () => Promise<TResult>;
 }): Promise<TResult> {
-  const handle = getMastraObservability(options.env);
+  const handle = getRuntimeObservability(options.env);
   const instance = handle.observability.getDefaultInstance();
   if (!instance) {
     return options.operation();
@@ -195,15 +195,15 @@ export async function withMastraSpan<TType extends SpanType, TResult>(options: {
   }
 }
 
-export async function resetMastraObservabilityForTests(): Promise<void> {
+export async function resetRuntimeObservabilityForTests(): Promise<void> {
   await cachedHandle?.observability.shutdown().catch(() => undefined);
   cachedHandle = undefined;
   cachedKey = undefined;
 }
 
-function resolveMastraObservabilitySummary(
+function resolveRuntimeObservabilitySummary(
   env: NodeJS.ProcessEnv,
-): MastraObservabilitySummary {
+): RuntimeObservabilitySummary {
   return {
     configured: true,
     filePath: resolveLogPath(env.FPF_MASTRA_OBSERVABILITY_PATH, DEFAULT_LOG_FILE),

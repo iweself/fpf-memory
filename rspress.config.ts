@@ -57,14 +57,12 @@ export default defineConfig({
               text: 'Pattern Catalog',
               link: '/generated/patterns/index',
             },
-            {
-              text: 'Route Catalog',
-              link: '/generated/routes/index',
-            },
-            {
-              text: 'Preface Catalog',
-              link: '/generated/preface/index',
-            },
+            ...navigation.patterns.map((group) => ({
+              text: group.text,
+              collapsible: true,
+              collapsed: false,
+              items: group.items,
+            })),
           ],
         },
       ],
@@ -118,9 +116,36 @@ export default defineConfig({
             })),
           ],
         },
+        {
+          text: 'Additional',
+          collapsible: true,
+          collapsed: true,
+          items: [
+            {
+              text: 'MCP Interface',
+              link: '/mcp-interface/',
+            },
+          ],
+        },
+      ],
+      '/mcp-interface/': [
+        {
+          text: 'Additional',
+          items: [
+            {
+              text: 'MCP Interface',
+              link: '/mcp-interface/',
+            },
+          ],
+        },
       ],
     },
     search: true,
     outlineTitle: 'ON THIS PAGE',
+    lastUpdated: true,
+    enableScrollToTop: true,
+    footer: {
+      message: 'Built from the local FPF compiler snapshot.',
+    },
   },
 });

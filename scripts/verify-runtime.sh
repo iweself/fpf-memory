@@ -18,12 +18,12 @@ AI_LOG="${FPF_AI_TRACE_LOG_PATH:-.runtime/logs/ai-traces.jsonl}"
 mkdir -p "$(dirname "$MAS_LOG")"
 
 printf '==> Running type-check\n'
-npm run check
+bun run check
 
 mas_before_size="$([[ -f "$MAS_LOG" ]] && wc -c <"$MAS_LOG" | tr -d ' ' || printf '0')"
 
 printf '==> Running CLI status\n'
-npm run cli -- status >/dev/null
+bun run cli -- status >/dev/null
 
 mas_after_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
 (( mas_after_size > mas_before_size ))
@@ -31,7 +31,7 @@ grep -q '"msg":"CLI command start"' "$MAS_LOG"
 grep -q '"msg":"CLI command finished"' "$MAS_LOG"
 
 printf '==> Starting MCP stdio server briefly\n'
-npm run mcp >/dev/null 2>&1 &
+bun run mcp >/dev/null 2>&1 &
 mcp_pid="$!"
 trap 'kill "$mcp_pid" 2>/dev/null || true; wait "$mcp_pid" 2>/dev/null || true' EXIT
 sleep 2
@@ -41,15 +41,41 @@ trap - EXIT
 
 grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
-printf '==> CLI and MCP logging verified\n'
-printf '    mastra log: %s\n' "$MAS_LOG"
+printf '==> Starting hosted Hono runtime briefly\n'
+hosted_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
+FPF_VERIFY_PORT="${FPF_VERIFY_PORT:-42111}"
+PORT="$FPF_VERIFY_PORT" bun run start >/dev/null 2>&1 &
+hosted_pid="$!"
+trap 'kill "$hosted_pid" 2>/dev/null || true; wait "$hosted_pid" 2>/dev/null || true' EXIT
+deadline=$((SECONDS + 15))
+until [[ "$(wc -c <"$MAS_LOG" | tr -d ' ')" -gt "$hosted_before_size" ]] \
+  && tail -c +"$((hosted_before_size + 1))" "$MAS_LOG" | grep -q '"msg":"Mastra Hono server start"'; do
+  if ! kill -0 "$hosted_pid" 2>/dev/null; then
+    printf 'Hosted runtime exited before emitting startup log\n' >&2
+    exit 1
+  fi
+  (( SECONDS < deadline )) || {
+    printf 'Timed out waiting for hosted runtime startup log\n' >&2
+    exit 1
+  }
+  sleep 0.2
+done
+kill "$hosted_pid" 2>/dev/null || true
+wait "$hosted_pid" 2>/dev/null || true
+trap - EXIT
 
-if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" && -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
+hosted_after_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
+(( hosted_after_size > hosted_before_size ))
+
+printf '==> CLI, MCP, and hosted runtime logging verified\n'
+printf '    runtime log: %s\n' "$MAS_LOG"
+
+if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" || -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
   printf '==> Running LM Studio-backed query\n'
   obs_before_size="$([[ -f "$OBS_LOG" ]] && wc -c <"$OBS_LOG" | tr -d ' ' || printf '0')"
   ai_before_size="$([[ -f "$AI_LOG" ]] && wc -c <"$AI_LOG" | tr -d ' ' || printf '0')"
 
-  npm run cli -- query --question "$QUERY_TEXT" --mode "$CLI_MODE" >/dev/null
+  bun run cli -- query --question "$QUERY_TEXT" --mode "$CLI_MODE" >/dev/null
 
   obs_after_size="$(wc -c <"$OBS_LOG" | tr -d ' ')"
   ai_after_size="$(wc -c <"$AI_LOG" | tr -d ' ')"
@@ -65,7 +91,7 @@ if [[ -n "${FPF_LOCAL_LLM_BASE_URL:-}" && -n "${FPF_LOCAL_LLM_MODEL:-}" ]]; then
   printf '    observability log: %s\n' "$OBS_LOG"
   printf '    ai trace log: %s\n' "$AI_LOG"
 else
-  printf '==> Skipping LM Studio verification because FPF_LOCAL_LLM_BASE_URL and FPF_LOCAL_LLM_MODEL are not both set\n'
+  printf '==> Skipping LM Studio verification because neither FPF_LOCAL_LLM_BASE_URL nor FPF_LOCAL_LLM_MODEL is set\n'
 fi
 
 printf '==> Verification complete\n'

@@ -2,8 +2,18 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
+import {
+  renderAskFpfResult,
+  resolveDefaultQueryMode,
+} from '../src/mcp/tools.js';
+import {
+  askFpfInputSchema,
+  expandFpfCitationsInputSchema,
+  getFpfIndexStatusInputSchema,
+  queryFpfSpecInputSchema,
+} from '../src/mcp/tool-contracts.js';
 import { ARTIFACT_FILENAMES } from '../src/runtime/constants.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
@@ -89,7 +99,7 @@ describe('FpfRuntime', () => {
     const forced = await runtime.refresh(true);
     expect(forced.rebuilt).toBe(true);
     expect(forced.reason).toBe('forced');
-  }, 20_000);
+  });
 
   it('does not depend on any remote indexing path', async () => {
     const originalFetch = globalThis.fetch;
@@ -97,7 +107,7 @@ describe('FpfRuntime', () => {
     globalThis.fetch = (async () => {
       fetchCalled = true;
       throw new Error('refresh should stay local');
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     try {
       const audit = await runtime.refresh();
@@ -158,7 +168,7 @@ describe('FpfRuntime', () => {
     const boundedContextTrace = await runtime.trace('What is U.BoundedContext?', 'compact');
     expect(boundedContextTrace.status).toBe('ok');
     expect(boundedContextTrace.selectedNodeIds[0]).toBe('A.1.1');
-  }, 20_000);
+  });
 
   it('returns the project-alignment route from the preface and J.4 route surfaces', async () => {
     await runtime.refresh();
@@ -234,6 +244,16 @@ describe('FpfRuntime', () => {
     expect(readByLexeme.docRef?.markdownPath).toBe('docs/generated/patterns/A.1.1.md');
     expect(readByLexeme.markdown).toContain('# U.BoundedContext: The Semantic Frame');
 
+    const inspectAnchor = await runtime.inspectAnchor(inspectById.anchors[0]!.id);
+    expect(inspectAnchor.status).toBe('ok');
+    expect(inspectAnchor.anchor?.id).toBe(inspectById.anchors[0]!.id);
+    expect(inspectAnchor.ownerNode?.id).toBe('A.1.1');
+    expect(inspectAnchor.neighbors).toEqual(inspectById.neighbors);
+
+    const inspectSyntheticAnchor = await runtime.inspectAnchor('Preface/Where to start');
+    expect(inspectSyntheticAnchor.status).toBe('ok');
+    expect(inspectSyntheticAnchor.ownerNode?.kind).toBe('route');
+
     const trace = await runtime.trace(
       'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?',
       'proof',
@@ -257,6 +277,131 @@ describe('FpfRuntime', () => {
     for (const key of Object.keys(ARTIFACT_FILENAMES)) {
       expect(status.artifacts[key]).toBe(true);
     }
+  });
+
+  it('expands citations in batch without changing single-anchor semantics', async () => {
+    await runtime.refresh();
+
+    const inspectById = await runtime.inspect('A.1.1', 'id');
+    const citationId = inspectById.anchors[0]!.id;
+    const syntheticCitationId = 'Preface/Where to start';
+
+    const originalRefresh = runtime.refresh.bind(runtime);
+    let refreshCalls = 0;
+    (runtime as { refresh: typeof runtime.refresh }).refresh = async (...args) => {
+      refreshCalls += 1;
+      return originalRefresh(...args);
+    };
+    const expanded = await runtime.expandCitations([
+      citationId,
+      syntheticCitationId,
+      citationId,
+      'missing-citation',
+    ]);
+
+    expect(refreshCalls).toBe(1);
+    expect(expanded.citationIds).toEqual([
+      citationId,
+      syntheticCitationId,
+      citationId,
+      'missing-citation',
+    ]);
+    expect(expanded.items.map((item) => item.citationId)).toEqual(expanded.citationIds);
+    expect(expanded.items[0]?.status).toBe('ok');
+    expect(expanded.items[1]?.status).toBe('ok');
+    expect(expanded.items[2]?.status).toBe('ok');
+    expect(expanded.items[3]).toEqual({
+      citationId: 'missing-citation',
+      status: 'not_found',
+      neighbors: [],
+    });
+    expect(expanded.items[0]).toEqual({
+      citationId,
+      status: 'ok',
+      anchor: expect.objectContaining({ id: citationId }),
+      ownerNode: expect.objectContaining({ id: 'A.1.1' }),
+      neighbors: inspectById.neighbors,
+    });
+    expect(expanded.items[1]?.ownerNode?.kind).toBe('route');
+    expect(expanded.items[2]).toEqual(expanded.items[0]);
+    expect(expanded.snapshot.sourceHash.length).toBeGreaterThan(0);
+
+    const single = await runtime.inspectAnchor(citationId);
+    expect(expanded.items[0]).toEqual({
+      citationId,
+      status: single.status,
+      anchor: single.anchor,
+      ownerNode: single.ownerNode,
+      neighbors: single.neighbors,
+    });
+  });
+
+  it('exports the batch citation expansion tool with a non-empty citation schema', async () => {
+    const empty = expandFpfCitationsInputSchema.safeParse({ citationIds: [] });
+    const valid = expandFpfCitationsInputSchema.safeParse({ citationIds: ['A.1.1:4.1'] });
+    const validWithRefresh = expandFpfCitationsInputSchema.safeParse({
+      citationIds: ['A.1.1:4.1'],
+      forceRefresh: true,
+    });
+
+    expect(empty.success).toBe(false);
+    expect(valid.success).toBe(true);
+    expect(valid.data).toEqual({ citationIds: ['A.1.1:4.1'] });
+    expect(validWithRefresh.success).toBe(true);
+    expect(validWithRefresh.data).toEqual({
+      citationIds: ['A.1.1:4.1'],
+      forceRefresh: true,
+    });
+  });
+
+  it('defaults query and ask tools to the configured verbose mode only', async () => {
+    expect(resolveDefaultQueryMode({ FPF_QUERY_DEFAULT_MODE: 'proof' } as NodeJS.ProcessEnv)).toBe(
+      'proof',
+    );
+    expect(resolveDefaultQueryMode({ FPF_QUERY_DEFAULT_MODE: 'invalid' } as NodeJS.ProcessEnv)).toBe(
+      'verbose',
+    );
+
+    const queryInput = queryFpfSpecInputSchema.safeParse({
+      question: 'What is U.BoundedContext?',
+    });
+    const askInput = askFpfInputSchema.safeParse({
+      question: 'What is U.BoundedContext?',
+    });
+
+    expect(queryInput.success).toBe(true);
+    expect(queryInput.data).toEqual({
+      question: 'What is U.BoundedContext?',
+    });
+    expect(askInput.success).toBe(true);
+    expect(askInput.data).toEqual({
+      question: 'What is U.BoundedContext?',
+    });
+  });
+
+  it('renders ask_fpf results as markdown with grounding sections', async () => {
+    const query = await runtime.query('What is U.BoundedContext?', 'verbose', true);
+    const result = renderAskFpfResult(query);
+
+    expect(result.mode).toBe('verbose');
+    expect(result.question).toBe(query.question);
+    expect(result.markdown).toContain('## Result');
+    expect(result.markdown).toContain('## Grounding');
+    expect(result.markdown).toContain('`A.1.1`');
+    expect(result.ids).toContain('A.1.1');
+    expect(result.citations.some((citation) => citation.startsWith('A.1.1'))).toBe(true);
+  });
+
+  it('exports the status tool with an explicit object input schema', async () => {
+    const empty = getFpfIndexStatusInputSchema.safeParse({});
+
+    expect(empty.success).toBe(true);
+    expect(empty.data).toEqual({});
+  });
+
+  it('keeps trace mode default compact instead of inheriting the query default', async () => {
+    const trace = await runtime.trace('What is U.BoundedContext?', undefined, true);
+    expect(trace.mode).toBe('compact');
   });
 
   it('follows explicit references for same-entity rewrite and comparative reading', async () => {
