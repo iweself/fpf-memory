@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { compileFpfSource } from '../runtime/compiler.js';
 import { createHash } from 'node:crypto';
@@ -25,6 +26,7 @@ const OUTPUT_DIR = resolve(process.cwd(), 'dist/wiki');
 
 export interface TreeNode {
   id: string;
+  fileId: string;
   title: string;
   patternId?: string;
   indexId?: string;
@@ -40,6 +42,7 @@ export interface PatternSection {
 
 export interface PatternPage {
   id: string;
+  fileId: string;
   title: string;
   status?: string;
   part?: string;
@@ -54,6 +57,7 @@ export interface PatternPage {
 
 export interface SearchEntry {
   id: string;
+  fileId: string;
   title: string;
   keywords: string[];
   aliases: string[];
@@ -136,6 +140,7 @@ function buildTreeData(snapshot: Snapshot): TreeNode[] {
           if (!child) continue;
           children.push({
             id: child.anchorId || child.id,
+            fileId: sanitizeFilename(child.anchorId || child.id),
             indexId: child.id,
             title: cleanTitle(child.title),
             patternId: child.metadata?.patternId,
@@ -149,7 +154,12 @@ function buildTreeData(snapshot: Snapshot): TreeNode[] {
     }
 
     if (children.length > 0) {
-      groups.push({ id: rootId, title, children });
+      groups.push({
+        id: rootId,
+        fileId: sanitizeFilename(rootId),
+        title,
+        children,
+      });
     }
   }
 
@@ -170,6 +180,7 @@ function collectPatternChildren(
       const pattern = patternNodes[child.metadata.patternId];
       out.push({
         id: child.metadata.patternId,
+        fileId: sanitizeFilename(child.metadata.patternId),
         title: cleanTitle(child.title),
         patternId: child.metadata.patternId,
         status: pattern?.status,
@@ -270,6 +281,7 @@ function buildPatternPage(
 
   return {
     id: patternId,
+    fileId: sanitizeFilename(patternId),
     title: pattern?.title ?? indexNode?.title ?? patternId,
     status: pattern?.status,
     part: pattern?.part,
@@ -323,6 +335,7 @@ function buildPrefacePage(
 
   return {
     id: nodeId,
+    fileId: sanitizeFilename(nodeId),
     title: indexNode?.title ?? anchor?.heading ?? nodeId,
     sections,
     keywords: [],
@@ -336,6 +349,7 @@ function buildSearchIndex(snapshot: Snapshot): SearchEntry[] {
   for (const [id, pattern] of Object.entries(snapshot.patternGraph.nodes)) {
     entries.push({
       id,
+      fileId: sanitizeFilename(id),
       title: pattern.title,
       keywords: pattern.keywords,
       aliases: pattern.aliases,
@@ -470,7 +484,9 @@ function sanitizeFilename(id: string): string {
   return id.replace(/[^A-Za-z0-9._-]/g, '_');
 }
 
-buildWiki().catch((err: unknown) => {
-  console.error('Wiki build failed:', err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  buildWiki().catch((err: unknown) => {
+    console.error('Wiki build failed:', err);
+    process.exit(1);
+  });
+}

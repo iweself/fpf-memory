@@ -603,6 +603,7 @@ function getScript(): string {
   let searchIndex = [];
   let routesData = [];
   let patternCache = {};
+  let idToFileId = {};
   let activePatternRequest = 0;
 
   async function fetchJson(url) {
@@ -619,6 +620,27 @@ function getScript(): string {
       throw err;
     }
     return r.json();
+  }
+
+  function safeFileId(id) {
+    return String(id || '').replace(/[^A-Za-z0-9._-]/g, '_');
+  }
+
+  function buildFileIdMap(tree, search) {
+    var map = {};
+    function record(id, fileId) {
+      if (!id) return;
+      map[id] = fileId || safeFileId(id);
+    }
+    (tree || []).forEach(function(group) {
+      (group.children || []).forEach(function(child) {
+        record(child.id, child.fileId);
+      });
+    });
+    (search || []).forEach(function(entry) {
+      record(entry.id, entry.fileId);
+    });
+    return map;
   }
 
   // --- Tree ---
@@ -716,12 +738,12 @@ function getScript(): string {
   async function loadPattern(id) {
     var requestId = ++activePatternRequest;
     try {
-      var safeId = id.replace(/[^A-Za-z0-9._-]/g, '_');
-      if (!patternCache[safeId]) {
-        patternCache[safeId] = await fetchJson('data/patterns/' + encodeURIComponent(safeId) + '.json');
+      var fileId = idToFileId[id] || safeFileId(id);
+      if (!patternCache[fileId]) {
+        patternCache[fileId] = await fetchJson('data/patterns/' + encodeURIComponent(fileId) + '.json');
       }
       if (requestId !== activePatternRequest) return;
-      var p = patternCache[safeId];
+      var p = patternCache[fileId];
       renderPatternPage(p);
       highlightActive(id);
     } catch(e) {
@@ -871,6 +893,7 @@ function getScript(): string {
       treeData = tree;
       searchIndex = search;
       routesData = routes;
+      idToFileId = buildFileIdMap(treeData, searchIndex);
       renderTree(treeData);
       initSearch();
       window.addEventListener('hashchange', onHashChange);
