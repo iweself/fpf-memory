@@ -10,7 +10,9 @@
     "check": "tsc --noEmit",
     "cli": "tsx src/cli.ts",
     "mcp": "tsx src/mcp-stdio.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "wiki": "tsx src/wiki/build.ts",
+    "wiki:serve": "serve dist/wiki"
   },
   "keywords": [],
   "author": "",
@@ -27,10 +29,13 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/marked": "^5.0.2",
     "@types/node": "^25.6.0",
+    "marked": "^18.0.0",
     "mastra": "^1.5.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
+    "serve": "^14.2.4",
     "vitest": "^4.1.4"
   }
 }
