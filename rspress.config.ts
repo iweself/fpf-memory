@@ -33,6 +33,13 @@ export default defineConfig({
   route: {
     cleanUrls: true,
   },
+  markdown: {
+    link: {
+      checkDeadLinks: {
+        excludes: ['/drr/DRR-0001-mcp-first-class-interface/'],
+      },
+    },
+  },
   themeConfig: {
     nav: [
       {
