@@ -190,6 +190,8 @@ The verification script also checks the direct Codex launcher:
 node --import tsx src/mcp-stdio.ts
 ```
 
+This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation.
+
 If this repo is registered as a Codex MCP server, restart Codex after changes and then test with a forced tool-use prompt such as:
 
 ```text
