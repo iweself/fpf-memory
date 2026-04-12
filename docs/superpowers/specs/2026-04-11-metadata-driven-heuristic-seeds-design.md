@@ -108,7 +108,7 @@ Patterns tagged with `+initial` also serve as initial entry nodes for that categ
 
 The `project alignment` row gets:
 
-```
+```text
 Add F.11 and F.9 only when method/work vocabulary itself must be aligned across contexts.; Land on F.17 early rather than escalating directly into heavier governance or assurance surfaces.
 ```
 
@@ -116,12 +116,21 @@ Semicolon-delimited constraint strings. Other routes get an empty cell.
 
 ### 2. Type Changes
 
+**`PatternSeedAssignment`** — new type for structured seed tags:
+
+```typescript
+export interface PatternSeedAssignment {
+  category: string;   // 'creative-search'
+  initial: boolean;   // true if this pattern is an initial entry node for the category
+}
+```
+
 **`PatternRecord`** — new field:
 
 ```typescript
 export interface PatternRecord {
   // ... existing fields
-  seedCategories: string[];  // e.g. ['creative-search', 'creative-search+initial']
+  seedCategories: PatternSeedAssignment[];  // e.g. [{ category: 'creative-search', initial: true }]
 }
 ```
 
@@ -173,15 +182,15 @@ export interface CompiledIndexes {
 
 **`addHeuristicSeeds()`** — replace entire body:
 
-```
+```text
 for each [name, category] in snapshot.indexes.seedCategoryIndex:
   if all trigger keyword groups match normalizedQuestion:
     // Find patterns tagged with this category
     for each pattern in snapshot.patternGraph.nodes:
-      if pattern.seedCategories includes name (with or without +initial):
+      if pattern.seedCategories has any entry where entry.category === name:
         addCandidate(pattern.id, category.score, name, 'lexical')
     // Boost route if configured
-    if category.routeId:
+    if category.routeId && category.routeScore !== undefined:
       addCandidate(category.routeId, category.routeScore, 'burden:' + name, 'route_expansion')
 ```
 
@@ -189,16 +198,17 @@ No hard-coded IDs. The engine iterates compiled metadata.
 
 **`heuristicInitialNodeIds()`** — replace entire body:
 
-```
+```text
 for each [name, category] in snapshot.indexes.seedCategoryIndex:
   if all trigger keyword groups match normalizedQuestion:
-    return patterns tagged with name+initial, filtered to those existing in snapshot
+    return patterns where seedCategories has entry with category === name AND initial === true,
+           filtered to those existing in snapshot
 return []
 ```
 
 **`buildRouteAnswer()`** — replace the `route.name === 'project alignment'` block:
 
-```
+```typescript
 if (route.constraints && route.constraints.length > 0) {
   constraints.push(...route.constraints);
 }
@@ -221,13 +231,13 @@ The `addHeuristicSeeds` replacement iterates all patterns for each matching cate
   - `heuristicInitialNodeIds()` — same initial nodes produced
   - `buildRouteAnswer()` — constraints applied from metadata
 
-### 7. Acceptance Criteria (from issue)
+### 7. Target Acceptance Criteria (for follow-up implementation PRs)
 
-- [x] No hard-coded FPF node IDs in `query-engine.ts` heuristic methods
-- [x] No route-name string checks in `buildRouteAnswer()`
-- [x] Seed rules driven from compiled metadata (spec-authored seed categories + pattern tags)
-- [x] Route constraints stored in `RouteRecord` metadata (compiled from J.4 table)
-- [x] All existing tests pass
+- [ ] No hard-coded FPF node IDs in `query-engine.ts` heuristic methods
+- [ ] No route-name string checks in `buildRouteAnswer()`
+- [ ] Seed rules driven from compiled metadata (spec-authored seed categories + pattern tags)
+- [ ] Route constraints stored in `RouteRecord` metadata (compiled from J.4 table)
+- [ ] All existing tests pass
 
 ---
 
