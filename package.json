@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "bun --watch src/server.ts",
     "build": "bun build ./src/cli.ts ./src/server.ts --outdir dist --target bun",
-    "build:mcp": "tsup src/mastra/stdio.ts --format esm,cjs --no-splitting && chmod +x dist/stdio.js",
+    "build:mcp": "tsup src/mastra/stdio.ts --format esm,cjs --out-dir dist --no-splitting && node -e \"const fs=require('node:fs');const path='dist/stdio.js';const data=fs.readFileSync(path,'utf8');const shebang='#!/usr/bin/env node';if(!data.startsWith(shebang))fs.writeFileSync(path, shebang + '\\\\n' + data);\" && chmod +x dist/stdio.js",
     "start": "bun src/server.ts",
     "lint": "rslint --type-check src tests scripts/generate-docs.ts *.config.ts",
     "check": "tsc --noEmit",

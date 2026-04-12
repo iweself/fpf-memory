@@ -178,7 +178,7 @@ Run the end-to-end verification script for the real CLI, MCP stdio, and hosted H
 ./scripts/verify-runtime.sh
 ```
 
-The verification script also checks the direct stdio launcher:
+The verification script also checks the direct stdio launcher (same entry as `bun run mcp`):
 
 ```bash
 bun src/mastra/stdio.ts

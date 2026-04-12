@@ -41,7 +41,7 @@ trap - EXIT
 
 grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
-printf '==> Starting MCP stdio server via Node/tsx briefly\n'
+printf '==> Starting MCP stdio server directly via stdio entry briefly\n'
 node_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
 node_fifo="$(mktemp -u "${TMPDIR:-/tmp}/fpf-node-mcp.XXXXXX")"
 mkfifo "$node_fifo"
