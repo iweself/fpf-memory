@@ -9,4 +9,5 @@ doc_build
 output.txt
 *.db
 *.db-*
+.mastra-project.json
 .DS_Store
