@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { defineConfig } from 'rspress/config';
+import { defineConfig } from '@rspress/core';
 
 import { buildDocsNavigation } from './src/docs/projection.js';
 import { compileFpfSource } from './src/runtime/compiler.js';
@@ -169,7 +169,6 @@ export default defineConfig({
       ],
     },
     search: true,
-    outlineTitle: 'ON THIS PAGE',
     lastUpdated: true,
     enableScrollToTop: true,
     footer: {
