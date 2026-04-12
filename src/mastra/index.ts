@@ -2,18 +2,22 @@ import { Mastra } from '@mastra/core/mastra';
 import { HonoBindings, HonoVariables, MastraServer } from '@mastra/hono';
 import { Hono } from 'hono';
 
-import { getRuntimeLogger } from './logging/runtime-logger.js';
-import { fpfMcpServer } from './mcp/server.js';
-import { getRuntimeObservability } from './observability/runtime-observability.js';
+import { getRuntimeLogger } from '../logging/runtime-logger.js';
+import { fpfMcpServer, fpfPublicMcpServer } from '../mcp/server.js';
+import { getRuntimeObservability } from '../observability/runtime-observability.js';
 
 export function createMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
   const logger = getRuntimeLogger(env);
   const observability = getRuntimeObservability(env);
+  const mcpServer = env.FPF_MCP_SURFACE === 'public' ? fpfPublicMcpServer : fpfMcpServer;
   const mastra = new Mastra({
     logger,
     observability: observability.observability,
     mcpServers: {
-      fpf_memory: fpfMcpServer,
+      fpf_memory: mcpServer,
+    },
+    server: {
+      mcpOptions: { serverless: true },
     },
   });
 
@@ -23,6 +27,12 @@ export function createMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
     mastra,
   };
 }
+
+/**
+ * Direct Mastra instance export required by `mastra build` / `mastra deploy`.
+ * Deployed server sets FPF_MCP_SURFACE=public to restrict to 3 public tools.
+ */
+export const mastra = createMastraRuntime().mastra;
 
 export async function createHonoMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
   const runtime = createMastraRuntime(env);

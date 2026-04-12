@@ -2,10 +2,15 @@
 
 Use the `fpf_memory` MCP server whenever the task requires grounded answers, exact FPF IDs, canonical generated docs, or deterministic retrieval provenance from the local `FPF-spec.md` runtime.
 
-Prefer these tools:
+Public tools (deployed MCP surface):
 
 - `ask_fpf` for markdown-first answers
 - `query_fpf_spec` for structured answer envelopes
+- `get_fpf_index_status` for runtime freshness checks
+
+Expert tools (local stdio only, via `bun run mcp`):
+
 - `read_fpf_doc` for exact generated markdown pages
 - `trace_fpf_path` for retrieval evidence and provenance
-- `get_fpf_index_status` or `refresh_fpf_index` for runtime freshness checks
+- `inspect_fpf_node`, `inspect_fpf_anchor`, `expand_fpf_citations` for deep inspection
+- `refresh_fpf_index` to rebuild the local artifact set

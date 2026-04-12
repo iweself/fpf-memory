@@ -7,10 +7,13 @@ cwd = "."
 enabled_tools = [
   "ask_fpf",
   "query_fpf_spec",
-  "read_fpf_doc",
-  "trace_fpf_path",
   "get_fpf_index_status",
   "refresh_fpf_index",
+  "read_fpf_doc",
+  "trace_fpf_path",
+  "inspect_fpf_node",
+  "inspect_fpf_anchor",
+  "expand_fpf_citations",
 ]
 required = false
 startup_timeout_sec = 15

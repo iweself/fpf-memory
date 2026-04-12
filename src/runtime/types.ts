@@ -407,7 +407,7 @@ export interface RuntimeStatus {
     provider?: string;
     model?: string;
     baseUrl?: string;
-    apiStyle?: 'responses' | 'lmstudio_chat';
+    apiStyle?: 'responses' | 'lmstudio_chat' | 'chat_completions';
   };
   observability: {
     configured: boolean;
@@ -456,7 +456,7 @@ export interface LocalAnswerSynthesizerInfo {
   provider: string;
   model?: string;
   baseUrl?: string;
-  apiStyle?: 'responses' | 'lmstudio_chat';
+  apiStyle?: 'responses' | 'lmstudio_chat' | 'chat_completions';
 }
 
 export interface LocalAnswerSynthesizer {

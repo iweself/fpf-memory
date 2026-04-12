@@ -140,10 +140,13 @@ cwd = "/absolute/path/to/fpf-memory"
 enabled_tools = [
   "ask_fpf",
   "query_fpf_spec",
-  "read_fpf_doc",
-  "trace_fpf_path",
   "get_fpf_index_status",
   "refresh_fpf_index",
+  "read_fpf_doc",
+  "trace_fpf_path",
+  "inspect_fpf_node",
+  "inspect_fpf_anchor",
+  "expand_fpf_citations",
 ]
 required = false
 startup_timeout_sec = 15
@@ -161,9 +164,13 @@ bun run mcp
 Recommended Codex tasks:
 
 - answer a question: `Use only the fpf_memory MCP server. Call ask_fpf with question: "What is U.PromiseContent?"`
+- structured query: `Use only the fpf_memory MCP server. Call query_fpf_spec with question: "What is an FPF pattern?"`
+- check runtime freshness: `Use only the fpf_memory MCP server. Call get_fpf_index_status`
+
+Expert tasks (local stdio only):
+
 - read a generated page: `Use only the fpf_memory MCP server. Call read_fpf_doc with selector: "A.1.1"`
 - inspect retrieval evidence: `Use only the fpf_memory MCP server. Call trace_fpf_path with question: "How do U.RoleAssignment and U.BoundedContext connect?"`
-- check runtime freshness: `Use only the fpf_memory MCP server. Call get_fpf_index_status`
 - rebuild the local index: `Use only the fpf_memory MCP server. Call refresh_fpf_index`
 
 Smoke-test the same runtime surface locally before wiring it into Codex:
@@ -247,17 +254,22 @@ Call trace_fpf_path with:
 
 ## MCP tool roles
 
-- `refresh_fpf_index`: rebuild the local artifact set
-- `get_fpf_index_status`: inspect runtime freshness, artifact presence, and runtime configuration
-- `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
+### Public tools (deployed HTTP surface)
+
 - `ask_fpf`: return the grounded answer as markdown with IDs, citations, constraints, gaps, and snapshot metadata
+- `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
+- `get_fpf_index_status`: inspect runtime freshness, artifact presence, and runtime configuration
+
+### Expert tools (local stdio only)
+
+- `refresh_fpf_index`: rebuild the local artifact set
 - `trace_fpf_path`: return deterministic retrieval evidence only
 - `inspect_fpf_node`: expand one node into its anchors, neighboring relations, and stable doc references
 - `read_fpf_doc`: return the canonical generated markdown page plus stable markdown/static paths
 - `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
 - `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
 
-Only `query_fpf_spec` and `ask_fpf` can use the optional LM Studio synthesizer. All other MCP tools stay deterministic.
+Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=public` on the deployed server to restrict to public tools only.
 
 ## Runtime behavior
 

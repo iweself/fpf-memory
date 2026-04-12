@@ -1,5 +1,5 @@
 import { getRuntimeLogger } from './logging/runtime-logger.js';
-import { createHonoMastraRuntime } from './mastra.js';
+import { createHonoMastraRuntime } from './mastra/index.js';
 import { parsePort } from './server-config.js';
 
 const logger = getRuntimeLogger();

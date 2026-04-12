@@ -10,7 +10,7 @@ import type {
 } from './types.js';
 import { createAiTraceRecorder } from './ai-trace-log.js';
 
-export type LmStudioApiStyle = 'responses' | 'lmstudio_chat';
+export type LmStudioApiStyle = 'responses' | 'lmstudio_chat' | 'chat_completions';
 export type FetchLike = (
   input: URL | RequestInfo,
   init?: RequestInit,
@@ -76,6 +76,9 @@ export function normalizeLmStudioApiStyle(value: string | undefined): LmStudioAp
     case 'lmstudio_chat':
     case 'chat':
       return 'lmstudio_chat';
+    case 'chat_completions':
+    case 'completions':
+      return 'chat_completions';
     default:
       return undefined;
   }
@@ -96,6 +99,12 @@ interface LmStudioChatPayload {
   output?: Array<{
     type?: string;
     content?: string;
+  }>;
+}
+
+interface ChatCompletionsPayload {
+  choices?: Array<{
+    message?: { content?: string };
   }>;
 }
 
@@ -240,7 +249,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
           );
         }
 
-        const payload = (await response.json()) as ResponsesApiPayload | LmStudioChatPayload;
+        const payload = (await response.json()) as ResponsesApiPayload | LmStudioChatPayload | ChatCompletionsPayload;
         const text = extractGenerationText(payload);
         await traceRecorder.append({
           phase: 'response',
@@ -287,7 +296,8 @@ export function createSynthesizerFromEnv(
     baseUrl,
     model,
     apiStyle,
-    apiKey: env.FPF_LOCAL_LLM_API_KEY?.trim(),
+    apiKey: env.FPF_LOCAL_LLM_API_KEY?.trim()
+      || (isGeminiHost(baseUrl) ? env.GEMINI_AI_API_KEY?.trim() : undefined),
     timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : DEFAULT_LM_STUDIO_TIMEOUT_MS,
     fetchImpl,
     env,
@@ -303,7 +313,9 @@ export async function runLmStudioHealthCheck(
     ?? DEFAULT_LM_STUDIO_API_STYLE;
   const baseUrl = options.baseUrl?.trim() || env.FPF_LOCAL_LLM_BASE_URL?.trim() || DEFAULT_LM_STUDIO_BASE_URL;
   const model = options.model?.trim() || env.FPF_LOCAL_LLM_MODEL?.trim() || DEFAULT_LM_STUDIO_MODEL;
-  const apiKey = options.apiKey?.trim() || env.FPF_LOCAL_LLM_API_KEY?.trim();
+  const apiKey = options.apiKey?.trim()
+    || env.FPF_LOCAL_LLM_API_KEY?.trim()
+    || (isGeminiHost(baseUrl) ? env.GEMINI_AI_API_KEY?.trim() : undefined);
   const timeoutMs = Number.isFinite(options.timeoutMs)
     ? Number(options.timeoutMs)
     : Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? `${DEFAULT_LM_STUDIO_TIMEOUT_MS}`);
@@ -347,7 +359,7 @@ export async function runLmStudioHealthCheck(
     });
 
     const text = response.ok
-      ? extractGenerationText((await response.json()) as ResponsesApiPayload | LmStudioChatPayload)
+      ? extractGenerationText((await response.json()) as ResponsesApiPayload | LmStudioChatPayload | ChatCompletionsPayload)
       : await response.text();
 
     return {
@@ -460,18 +472,28 @@ function buildTraceSummary(input: AnswerSynthesizerInput): string {
 }
 
 function extractGenerationText(
-  payload: ResponsesApiPayload | LmStudioChatPayload,
+  payload: ResponsesApiPayload | LmStudioChatPayload | ChatCompletionsPayload,
 ): string | undefined {
+  // Chat Completions format: { choices: [{ message: { content } }] }
+  if ('choices' in payload && Array.isArray(payload.choices)) {
+    const first = payload.choices[0];
+    if (first?.message?.content && typeof first.message.content === 'string') {
+      return first.message.content.trim();
+    }
+  }
+
   if ('output_text' in payload && typeof payload.output_text === 'string' && payload.output_text.trim()) {
     return payload.output_text.trim();
   }
 
-  const preferredMessage = findStructuredMessageText(payload.output ?? []);
+  const output = 'output' in payload ? (payload.output ?? []) : [];
+
+  const preferredMessage = findStructuredMessageText(output);
   if (preferredMessage) {
     return preferredMessage;
   }
 
-  return findAnyGenerationText(payload.output ?? []);
+  return findAnyGenerationText(output);
 }
 
 function findStructuredMessageText(
@@ -539,6 +561,17 @@ function buildGenerationRequestPayload(
     };
   }
 
+  if (apiStyle === 'chat_completions') {
+    return {
+      model,
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    };
+  }
+
   return {
     model,
     temperature: 0.1,
@@ -567,6 +600,21 @@ function buildGenerationRequestPayload(
 
 function buildGenerationEndpoint(baseUrl: string, apiStyle: LmStudioApiStyle): string {
   const trimmed = baseUrl.replace(/\/$/, '');
+
+  if (apiStyle === 'chat_completions') {
+    if (trimmed.endsWith('/chat/completions')) {
+      return trimmed;
+    }
+    const url = safeUrl(trimmed);
+    if (!url) {
+      return `${trimmed}/chat/completions`;
+    }
+    if (url.pathname === '/' || url.pathname === '') {
+      return `${url.origin}/v1/chat/completions`;
+    }
+    return `${trimmed}/chat/completions`;
+  }
+
   if (apiStyle === 'lmstudio_chat') {
     if (trimmed.endsWith('/chat')) {
       return trimmed;
@@ -607,7 +655,22 @@ function buildModelsEndpoint(baseUrl: string, apiStyle: LmStudioApiStyle): strin
   const trimmed = baseUrl.replace(/\/$/, '');
   const url = safeUrl(trimmed);
   if (!url) {
-    return apiStyle === 'lmstudio_chat' ? `${trimmed}/models` : `${trimmed}/models`;
+    return `${trimmed}/models`;
+  }
+
+  if (apiStyle === 'chat_completions') {
+    if (trimmed.endsWith('/chat/completions')) {
+      const base = trimmed.replace(/\/chat\/completions$/, '');
+      const sanitizedBase = safeUrl(base);
+      if (sanitizedBase && (sanitizedBase.pathname === '/' || sanitizedBase.pathname === '')) {
+        return `${sanitizedBase.origin}/v1/models`;
+      }
+      return `${base}/models`;
+    }
+    if (url.pathname === '/' || url.pathname === '') {
+      return `${url.origin}/v1/models`;
+    }
+    return `${trimmed}/models`;
   }
 
   if (apiStyle === 'lmstudio_chat') {
@@ -671,6 +734,11 @@ async function runHealthRequest<T extends { httpStatus?: number; ok: boolean }>(
       error: error instanceof Error ? error.message : 'Unknown LM Studio health-check error',
     } as T & { durationMs: number; error?: string };
   }
+}
+
+function isGeminiHost(baseUrl: string): boolean {
+  const url = safeUrl(baseUrl);
+  return url?.hostname?.endsWith('.googleapis.com') === true;
 }
 
 function safeUrl(value: string): URL | undefined {
