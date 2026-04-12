@@ -656,6 +656,14 @@ function buildModelsEndpoint(baseUrl: string, apiStyle: LmStudioApiStyle): strin
   }
 
   if (apiStyle === 'chat_completions') {
+    if (trimmed.endsWith('/chat/completions')) {
+      const base = trimmed.replace(/\/chat\/completions$/, '');
+      const sanitizedBase = safeUrl(base);
+      if (sanitizedBase && (sanitizedBase.pathname === '/' || sanitizedBase.pathname === '')) {
+        return `${sanitizedBase.origin}/v1/models`;
+      }
+      return `${base}/models`;
+    }
     if (url.pathname === '/' || url.pathname === '') {
       return `${url.origin}/v1/models`;
     }

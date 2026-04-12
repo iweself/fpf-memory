@@ -201,6 +201,56 @@ describe('LmStudioSynthesizer', () => {
     expect(requestBody).toContain('"input"');
   });
 
+  it('supports the OpenAI chat_completions endpoint when api style is configured', async () => {
+    let requestUrl = '';
+    let requestBody: Record<string, unknown> | undefined;
+
+    const runtime = new FpfRuntime({
+      sourcePath,
+      artifactDir,
+      synthesizer: new LmStudioSynthesizer({
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        model: 'gemini-3.1-flash-lite',
+        apiStyle: 'chat_completions',
+        fetchImpl: async (url, init) => {
+          requestUrl = String(url);
+          requestBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+          return new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      answer: 'Gemini chat completion answer.',
+                      constraints: ['Use only provided bounded slices.'],
+                      confidence: 0.77,
+                    }),
+                  },
+                },
+              ],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        },
+      }),
+    });
+
+    const result = await runtime.query('What is U.BoundedContext?', 'compact');
+
+    expect(result.answer).toBe('Gemini chat completion answer.');
+    expect(result.constraints).toEqual(['Use only provided bounded slices.']);
+    expect(result.confidence).toBe(0.77);
+    expect(requestUrl).toBe('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');
+    expect(requestBody?.model).toBe('gemini-3.1-flash-lite');
+    expect(requestBody?.messages).toEqual([
+      expect.objectContaining({ role: 'system', content: expect.any(String) }),
+      expect.objectContaining({ role: 'user', content: expect.any(String) }),
+    ]);
+  });
+
   it('reports model-list and generation health for the configured api style', async () => {
     let requestedUrls: string[] = [];
 
@@ -291,6 +341,47 @@ describe('LmStudioSynthesizer', () => {
     expect(requestedUrls).toEqual([
       'http://localhost:1234/v1/models',
       'http://localhost:1234/v1/responses',
+    ]);
+  });
+
+  it('maps a chat_completions generation endpoint back to a models endpoint', async () => {
+    const requestedUrls: string[] = [];
+
+    const result = await runLmStudioHealthCheck({
+      baseUrl: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-4o-mini',
+      apiStyle: 'chat_completions',
+      fetchImpl: async (url, init) => {
+        requestedUrls.push(String(url));
+        if ((init?.method ?? 'GET') === 'GET') {
+          return new Response(
+            JSON.stringify({
+              data: [{ id: 'gpt-4o-mini' }],
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            choices: [{ message: { content: 'Health check response.' } }],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      },
+    });
+
+    expect(result.endpoints.models).toBe('https://api.openai.com/v1/models');
+    expect(result.endpoints.generation).toBe('https://api.openai.com/v1/chat/completions');
+    expect(requestedUrls).toEqual([
+      'https://api.openai.com/v1/models',
+      'https://api.openai.com/v1/chat/completions',
     ]);
   });
 
