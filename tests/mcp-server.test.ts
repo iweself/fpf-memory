@@ -6,7 +6,7 @@ import readline from 'node:readline';
 
 import { afterEach, describe, expect, it } from '@rstest/core';
 
-import { createHonoMastraRuntime } from '../src/mastra/index.js';
+import { createMastraRuntime } from '../src/mastra/index.js';
 
 interface JsonRpcResponse {
   jsonrpc: '2.0';
@@ -134,10 +134,11 @@ describe('Mastra MCP server', () => {
     const tempDir = await mkdtemp(resolve(tmpdir(), 'fpf-mcp-stdio-'));
     tempDirs.push(tempDir);
 
-    const child = spawn('bun', ['src/mcp-stdio.ts'], {
+    const child = spawn('bun', ['src/mastra/stdio.ts'], {
       cwd: process.cwd(),
       env: {
         ...process.env,
+        FPF_MCP_SURFACE: 'full',
         FPF_MASTRA_LOG_PATH: resolve(tempDir, 'mastra.log'),
         FPF_MASTRA_OBSERVABILITY_PATH: resolve(tempDir, 'mastra-observability.json'),
       },
@@ -269,12 +270,9 @@ describe('Mastra MCP server', () => {
     expect(askPayload.markdown).toContain('## Grounding');
   });
 
-  it('initializes the hosted Mastra runtime on the Hono engine', async () => {
-    const runtime = await createHonoMastraRuntime();
-
-    expect(typeof runtime.app.fetch).toBe('function');
-    expect(runtime.mastra).toBeDefined();
-    expect(runtime.server).toBeDefined();
+  it('initializes the Mastra runtime', () => {
+    const mastra = createMastraRuntime();
+    expect(mastra).toBeDefined();
   });
 });
 

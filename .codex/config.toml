@@ -1,20 +1,9 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 [mcp_servers.fpf_memory]
-command = "node"
-args = ["--import", "tsx", "src/mcp-stdio.ts"]
+command = "bun"
+args = ["src/mastra/stdio.ts"]
 cwd = "."
-enabled_tools = [
-  "ask_fpf",
-  "query_fpf_spec",
-  "get_fpf_index_status",
-  "refresh_fpf_index",
-  "read_fpf_doc",
-  "trace_fpf_path",
-  "inspect_fpf_node",
-  "inspect_fpf_anchor",
-  "expand_fpf_citations",
-]
 required = false
 startup_timeout_sec = 15
 tool_timeout_sec = 60

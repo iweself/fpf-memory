@@ -122,31 +122,19 @@ Decision record for this interface choice:
 
 - [DRR-0001: MCP As The First-Class Codex Interface](docs/drr/DRR-0001-mcp-first-class-interface.md)
 
-For Codex registration, use the direct Node stdio entry point instead of the Bun script wrapper:
+For Codex registration:
 
-- Command: `node`
-- Arguments: `--import`, `tsx`, `src/mcp-stdio.ts`
+- Command: `bun`
+- Arguments: `src/mastra/stdio.ts`
 - Working directory: your local `fpf-memory` repo root
-
-The desktop app fields map directly to those values.
 
 Equivalent `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.fpf_memory]
-command = "node"
-args = ["--import", "tsx", "src/mcp-stdio.ts"]
+command = "bun"
+args = ["src/mastra/stdio.ts"]
 cwd = "/absolute/path/to/fpf-memory"
-enabled_tools = [
-  "ask_fpf",
-  "query_fpf_spec",
-  "get_fpf_index_status",
-  "refresh_fpf_index",
-  "read_fpf_doc",
-  "trace_fpf_path",
-  "inspect_fpf_node",
-  "inspect_fpf_anchor",
-  "expand_fpf_citations",
 ]
 required = false
 startup_timeout_sec = 15
@@ -191,10 +179,10 @@ Run the end-to-end verification script for the real CLI, MCP stdio, and hosted H
 ./scripts/verify-runtime.sh
 ```
 
-The verification script also checks the direct Codex launcher:
+The verification script also checks the direct stdio launcher:
 
 ```bash
-node --import tsx src/mcp-stdio.ts
+bun src/mastra/stdio.ts
 ```
 
 This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation.
@@ -239,9 +227,10 @@ Call trace_fpf_path with:
 
 - `src/mcp/tool-contracts.ts`: Zod-authored MCP input and output contracts
 - `src/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
-- `src/mcp/server.ts`: Mastra MCP server boundary for stdio transport
-- `src/mastra.ts`: Mastra runtime registration plus Hono server initialization
-- `src/server.ts`: hosted Hono bootstrap for Bun
+- `src/mastra/mcp/server.ts`: MCPServer definitions (public and full surfaces)
+- `src/mastra/index.ts`: Mastra instance registration
+- `src/mastra/stdio.ts`: stdio entry point for MCP clients
+- `src/server.ts`: Hono HTTP server bootstrap for Bun
 - `src/runtime/`: compiler, retrieval, trace, inspect, and synthesis logic
 - `src/logging/runtime-logger.ts`: Mastra-backed structured runtime/MCP log writer
 - `src/observability/runtime-observability.ts`: Mastra-backed observability wrapper for local synthesis
@@ -254,7 +243,7 @@ Call trace_fpf_path with:
 
 ## MCP tool roles
 
-### Public tools (deployed HTTP surface)
+### Public tools (default surface)
 
 - `ask_fpf`: return the grounded answer as markdown with IDs, citations, constraints, gaps, and snapshot metadata
 - `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
