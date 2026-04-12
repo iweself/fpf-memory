@@ -41,6 +41,31 @@ trap - EXIT
 
 grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
+printf '==> Starting MCP stdio server via Node/tsx briefly\n'
+node_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
+node_fifo="$(mktemp -u "${TMPDIR:-/tmp}/fpf-node-mcp.XXXXXX")"
+mkfifo "$node_fifo"
+exec 3<>"$node_fifo"
+rm -f "$node_fifo"
+node --import tsx src/mcp-stdio.ts <&3 >/dev/null 2>&1 &
+node_mcp_pid="$!"
+trap 'kill "$node_mcp_pid" 2>/dev/null || true; wait "$node_mcp_pid" 2>/dev/null || true' EXIT
+sleep 2
+if ! kill -0 "$node_mcp_pid" 2>/dev/null; then
+  wait "$node_mcp_pid" 2>/dev/null || true
+  exec 3>&-
+  printf 'Node/tsx MCP runtime exited before verification completed\n' >&2
+  exit 1
+fi
+kill "$node_mcp_pid" 2>/dev/null || true
+wait "$node_mcp_pid" 2>/dev/null || true
+exec 3>&-
+trap - EXIT
+
+node_after_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
+(( node_after_size > node_before_size ))
+tail -c +"$((node_before_size + 1))" "$MAS_LOG" | grep -q '"msg":"MCP stdio server start"'
+
 printf '==> Starting hosted Hono runtime briefly\n'
 hosted_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
 FPF_VERIFY_PORT="${FPF_VERIFY_PORT:-42111}"
