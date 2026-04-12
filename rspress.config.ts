@@ -27,6 +27,7 @@ const navigation = buildDocsNavigation(snapshot);
 export default defineConfig({
   root: docsRoot,
   outDir,
+  base: '/fpf-memory/',
   title: 'FPF Reference',
   description: 'Compiler-backed FPF reference docs generated from FPF-spec.md.',
   globalStyles: resolve(process.cwd(), 'src/docs/density.css'),
