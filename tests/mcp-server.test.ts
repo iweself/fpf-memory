@@ -6,7 +6,7 @@ import readline from 'node:readline';
 
 import { afterEach, describe, expect, it } from '@rstest/core';
 
-import { createHonoMastraRuntime } from '../src/mastra/index.js';
+import { createMastraRuntime } from '../src/mastra/index.js';
 
 interface JsonRpcResponse {
   jsonrpc: '2.0';
@@ -130,14 +130,15 @@ describe('Mastra MCP server', () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
 
-  async function startHarness(): Promise<StdioMcpHarness> {
+  async function startHarness(surface: 'public' | 'full' = 'full'): Promise<StdioMcpHarness> {
     const tempDir = await mkdtemp(resolve(tmpdir(), 'fpf-mcp-stdio-'));
     tempDirs.push(tempDir);
 
-    const child = spawn('bun', ['src/mcp-stdio.ts'], {
+    const child = spawn('bun', ['src/mastra/stdio.ts'], {
       cwd: process.cwd(),
       env: {
         ...process.env,
+        ...(surface === 'full' ? { FPF_MCP_SURFACE: 'full' } : {}),
         FPF_MASTRA_LOG_PATH: resolve(tempDir, 'mastra.log'),
         FPF_MASTRA_OBSERVABILITY_PATH: resolve(tempDir, 'mastra-observability.json'),
       },
@@ -269,12 +270,22 @@ describe('Mastra MCP server', () => {
     expect(askPayload.markdown).toContain('## Grounding');
   });
 
-  it('initializes the hosted Mastra runtime on the Hono engine', async () => {
-    const runtime = await createHonoMastraRuntime();
+  it('defaults to public tools when FPF_MCP_SURFACE is unset', async () => {
+    const harness = await startHarness('public');
+    await initializeHarness(harness);
 
-    expect(typeof runtime.app.fetch).toBe('function');
-    expect(runtime.mastra).toBeDefined();
-    expect(runtime.server).toBeDefined();
+    const toolsList = await harness.request('tools/list');
+    const tools = (toolsList.result?.tools ?? []) as Array<{ name: string }>;
+    expect(tools.map((tool) => tool.name)).toEqual([
+      'ask_fpf',
+      'query_fpf_spec',
+      'get_fpf_index_status',
+    ]);
+  });
+
+  it('initializes the Mastra runtime', () => {
+    const mastra = createMastraRuntime();
+    expect(mastra).toBeDefined();
   });
 });
 

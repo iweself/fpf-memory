@@ -1,11 +1,11 @@
 {
   "name": "fpf_memory",
   "version": "1.0.0",
-  "description": "Local vectorless FPF-spec runtime for Codex and other MCP clients.",
+  "description": "Local vectorless FPF-spec runtime for MCP clients.",
   "transport": "stdio",
-  "command": "node",
+  "command": "bun",
   "cwd": ".",
-  "args": ["--import", "tsx", "src/mcp-stdio.ts"],
+  "args": ["src/mastra/stdio.ts"],
   "env": {
     "FPF_SPEC_SOURCE_PATH": "FPF-spec.md",
     "FPF_RUNTIME_ARTIFACT_DIR": ".runtime/fpf-index"

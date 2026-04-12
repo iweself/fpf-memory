@@ -41,13 +41,13 @@ trap - EXIT
 
 grep -q '"msg":"MCP stdio server start"' "$MAS_LOG"
 
-printf '==> Starting MCP stdio server via Node/tsx briefly\n'
+printf '==> Starting MCP stdio server directly via stdio entry briefly\n'
 node_before_size="$(wc -c <"$MAS_LOG" | tr -d ' ')"
 node_fifo="$(mktemp -u "${TMPDIR:-/tmp}/fpf-node-mcp.XXXXXX")"
 mkfifo "$node_fifo"
 exec 3<>"$node_fifo"
 rm -f "$node_fifo"
-node --import tsx src/mcp-stdio.ts <&3 >/dev/null 2>&1 &
+bun src/mastra/stdio.ts <&3 >/dev/null 2>&1 &
 node_mcp_pid="$!"
 trap 'kill "$node_mcp_pid" 2>/dev/null || true; wait "$node_mcp_pid" 2>/dev/null || true' EXIT
 sleep 2

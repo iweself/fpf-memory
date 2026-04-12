@@ -30,7 +30,7 @@ The decision includes these commitments:
 2. The CLI remains an operator/debug surface, not the primary semantic boundary for agent use.
 3. Hosted HTTP remains a transport/hosting option, not the first interface to optimize for in this repo slice.
 4. The Codex registration path is documented and packaged around the stdio entry point:
-   `node --import tsx src/mcp-stdio.ts`
+   `bun src/mastra/stdio.ts`
 5. This decision is recorded as a DRR outside the normative FPF core, consistent with `E.9`.
 
 ## Rationale

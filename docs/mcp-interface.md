@@ -20,52 +20,38 @@ The runtime itself is compiler-backed and local:
 
 ## Transport
 
-- stdio (local): `bun run mcp` or `node --import tsx src/mcp-stdio.ts`
-- HTTP (deployed): `https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp`
-- SSE (deployed): `https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/sse`
+- stdio (local): `bun run mcp`
+- HTTP (local): `http://localhost:4111/api/mcp/fpf_memory/mcp` via `mastra dev`
 - server name: `fpf_memory`
 - protocol version: `2024-11-05`
 
-The deployed HTTP surface exposes public tools only. The stdio transport exposes all tools.
+Both stdio and HTTP default to the public tool surface (3 tools). Set `FPF_MCP_SURFACE=full` for all 9 tools.
 
 ## Codex Setup
 
 Codex desktop app fields:
 
-- command: `node`
-- arguments: `--import`, `tsx`, `src/mcp-stdio.ts`
+- command: `bun`
+- arguments: `src/mastra/stdio.ts`
 - working directory: absolute path to the local repo root
 
 Equivalent `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.fpf_memory]
-command = "node"
-args = ["--import", "tsx", "src/mcp-stdio.ts"]
+command = "bun"
+args = ["src/mastra/stdio.ts"]
 cwd = "/absolute/path/to/fpf-memory"
-enabled_tools = [
-  "ask_fpf",
-  "query_fpf_spec",
-  "get_fpf_index_status",
-  "refresh_fpf_index",
-  "read_fpf_doc",
-  "trace_fpf_path",
-  "inspect_fpf_node",
-  "inspect_fpf_anchor",
-  "expand_fpf_citations",
-]
 required = false
 startup_timeout_sec = 15
 tool_timeout_sec = 60
 ```
 
-`enabled_tools` is optional. The list above gives Codex all tools locally. The deployed HTTP surface only exposes the public subset (`ask_fpf`, `query_fpf_spec`, `get_fpf_index_status`).
-
 This repo also ships the same project-scoped configuration at `.codex/config.toml`. Codex will load that file after the project is trusted.
 
 ## Tool Catalog
 
-### Public tools (deployed HTTP surface)
+### Public tools (default surface)
 
 #### `ask_fpf`
 
@@ -79,7 +65,7 @@ Answer a question with deterministic grounding, citations, constraints, and fres
 
 Report whether the local index exists, whether it is fresh against the current source hash, and which artifacts are present.
 
-### Expert tools (local stdio only)
+### Expert tools (FPF_MCP_SURFACE=full)
 
 #### `refresh_fpf_index`
 
@@ -125,5 +111,4 @@ bun run test
 bun run docs:build
 bun run cli -- read-doc --selector "A.1.1"
 bun run mcp
-node --import tsx src/mcp-stdio.ts
 ```
