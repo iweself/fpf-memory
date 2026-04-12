@@ -13,9 +13,13 @@
     "inspect_fpf_anchor",
     "expand_fpf_citations"
   ],
-  "transport": "stdio",
+  "transport": ["stdio", "http"],
   "runtime": {
     "bun": "bun src/mcp-stdio.ts",
     "node": "node --import tsx src/mcp-stdio.ts"
+  },
+  "http": {
+    "path": "/api/mcp/fpf_memory/mcp",
+    "sse_path": "/api/mcp/fpf_memory/sse"
   }
 }

@@ -6,7 +6,7 @@ import readline from 'node:readline';
 
 import { afterEach, describe, expect, it } from '@rstest/core';
 
-import { createHonoMastraRuntime } from '../src/mastra.js';
+import { createHonoMastraRuntime } from '../src/mastra/index.js';
 
 interface JsonRpcResponse {
   jsonrpc: '2.0';
