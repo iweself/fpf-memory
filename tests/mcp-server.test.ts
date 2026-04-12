@@ -130,7 +130,7 @@ describe('Mastra MCP server', () => {
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
   });
 
-  async function startHarness(): Promise<StdioMcpHarness> {
+  async function startHarness(surface: 'public' | 'full' = 'full'): Promise<StdioMcpHarness> {
     const tempDir = await mkdtemp(resolve(tmpdir(), 'fpf-mcp-stdio-'));
     tempDirs.push(tempDir);
 
@@ -138,7 +138,7 @@ describe('Mastra MCP server', () => {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        FPF_MCP_SURFACE: 'full',
+        ...(surface === 'full' ? { FPF_MCP_SURFACE: 'full' } : {}),
         FPF_MASTRA_LOG_PATH: resolve(tempDir, 'mastra.log'),
         FPF_MASTRA_OBSERVABILITY_PATH: resolve(tempDir, 'mastra-observability.json'),
       },
@@ -268,6 +268,19 @@ describe('Mastra MCP server', () => {
     expect(askPayload.mode).toBe('verbose');
     expect(askPayload.markdown).toContain('## Result');
     expect(askPayload.markdown).toContain('## Grounding');
+  });
+
+  it('defaults to public tools when FPF_MCP_SURFACE is unset', async () => {
+    const harness = await startHarness('public');
+    await initializeHarness(harness);
+
+    const toolsList = await harness.request('tools/list');
+    const tools = (toolsList.result?.tools ?? []) as Array<{ name: string }>;
+    expect(tools.map((tool) => tool.name)).toEqual([
+      'ask_fpf',
+      'query_fpf_spec',
+      'get_fpf_index_status',
+    ]);
   });
 
   it('initializes the Mastra runtime', () => {

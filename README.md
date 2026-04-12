@@ -135,7 +135,6 @@ Equivalent `~/.codex/config.toml` entry:
 command = "bun"
 args = ["src/mastra/stdio.ts"]
 cwd = "/absolute/path/to/fpf-memory"
-]
 required = false
 startup_timeout_sec = 15
 tool_timeout_sec = 60
