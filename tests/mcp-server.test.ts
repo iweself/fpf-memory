@@ -189,15 +189,15 @@ describe('Mastra MCP server', () => {
     }>;
 
     expect(tools.map((tool) => tool.name)).toEqual([
-      'refresh_fpf_index',
-      'get_fpf_index_status',
+      'ask_fpf',
       'query_fpf_spec',
+      'get_fpf_index_status',
+      'refresh_fpf_index',
       'trace_fpf_path',
       'inspect_fpf_node',
       'read_fpf_doc',
       'inspect_fpf_anchor',
       'expand_fpf_citations',
-      'ask_fpf',
     ]);
 
     for (const tool of tools) {

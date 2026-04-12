@@ -121,16 +121,27 @@ export const traceFpfPathTool = createTool({
     runtime.trace(question, mode ?? 'compact', forceRefresh ?? false, sessionId),
 });
 
-export const fpfMcpTools = {
-  refresh_fpf_index: refreshFpfIndexTool,
-  get_fpf_index_status: getFpfIndexStatusTool,
+/** Public tools — safe for deployed MCP surface. */
+export const fpfPublicTools = {
+  ask_fpf: askFpfTool,
   query_fpf_spec: queryFpfSpecTool,
+  get_fpf_index_status: getFpfIndexStatusTool,
+} as const;
+
+/** Expert/debug tools — local use only. */
+export const fpfExpertTools = {
+  refresh_fpf_index: refreshFpfIndexTool,
   trace_fpf_path: traceFpfPathTool,
   inspect_fpf_node: inspectFpfNodeTool,
   read_fpf_doc: readFpfDocTool,
   inspect_fpf_anchor: inspectFpfAnchorTool,
   expand_fpf_citations: expandFpfCitationsTool,
-  ask_fpf: askFpfTool,
+} as const;
+
+/** All tools — used by local stdio and Hono server. */
+export const fpfMcpTools = {
+  ...fpfPublicTools,
+  ...fpfExpertTools,
 } as const;
 
 export function resolveDefaultQueryMode(env: NodeJS.ProcessEnv = process.env): AnswerMode {

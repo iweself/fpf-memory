@@ -3,17 +3,18 @@ import { HonoBindings, HonoVariables, MastraServer } from '@mastra/hono';
 import { Hono } from 'hono';
 
 import { getRuntimeLogger } from '../logging/runtime-logger.js';
-import { fpfMcpServer } from '../mcp/server.js';
+import { fpfMcpServer, fpfPublicMcpServer } from '../mcp/server.js';
 import { getRuntimeObservability } from '../observability/runtime-observability.js';
 
 export function createMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
   const logger = getRuntimeLogger(env);
   const observability = getRuntimeObservability(env);
+  const mcpServer = env.FPF_MCP_SURFACE === 'full' ? fpfMcpServer : fpfPublicMcpServer;
   const mastra = new Mastra({
     logger,
     observability: observability.observability,
     mcpServers: {
-      fpf_memory: fpfMcpServer,
+      fpf_memory: mcpServer,
     },
     server: {
       mcpOptions: { serverless: true },
