@@ -9,7 +9,7 @@ import { getRuntimeObservability } from '../observability/runtime-observability.
 export function createMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
   const logger = getRuntimeLogger(env);
   const observability = getRuntimeObservability(env);
-  const mcpServer = env.FPF_MCP_SURFACE === 'full' ? fpfMcpServer : fpfPublicMcpServer;
+  const mcpServer = env.FPF_MCP_SURFACE === 'public' ? fpfPublicMcpServer : fpfMcpServer;
   const mastra = new Mastra({
     logger,
     observability: observability.observability,
@@ -30,6 +30,7 @@ export function createMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
 
 /**
  * Direct Mastra instance export required by `mastra build` / `mastra deploy`.
+ * Deployed server sets FPF_MCP_SURFACE=public to restrict to 3 public tools.
  */
 export const mastra = createMastraRuntime().mastra;
 

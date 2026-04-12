@@ -269,7 +269,7 @@ Call trace_fpf_path with:
 - `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
 - `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
 
-Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=full` to expose all tools on the HTTP surface.
+Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=public` on the deployed server to restrict to public tools only.
 
 ## Runtime behavior
 
