@@ -296,7 +296,8 @@ export function createSynthesizerFromEnv(
     baseUrl,
     model,
     apiStyle,
-    apiKey: env.FPF_LOCAL_LLM_API_KEY?.trim() || env.GEMINI_AI_API_KEY?.trim(),
+    apiKey: env.FPF_LOCAL_LLM_API_KEY?.trim()
+      || (isGeminiHost(baseUrl) ? env.GEMINI_AI_API_KEY?.trim() : undefined),
     timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : DEFAULT_LM_STUDIO_TIMEOUT_MS,
     fetchImpl,
     env,
@@ -312,7 +313,9 @@ export async function runLmStudioHealthCheck(
     ?? DEFAULT_LM_STUDIO_API_STYLE;
   const baseUrl = options.baseUrl?.trim() || env.FPF_LOCAL_LLM_BASE_URL?.trim() || DEFAULT_LM_STUDIO_BASE_URL;
   const model = options.model?.trim() || env.FPF_LOCAL_LLM_MODEL?.trim() || DEFAULT_LM_STUDIO_MODEL;
-  const apiKey = options.apiKey?.trim() || env.FPF_LOCAL_LLM_API_KEY?.trim() || env.GEMINI_AI_API_KEY?.trim();
+  const apiKey = options.apiKey?.trim()
+    || env.FPF_LOCAL_LLM_API_KEY?.trim()
+    || (isGeminiHost(baseUrl) ? env.GEMINI_AI_API_KEY?.trim() : undefined);
   const timeoutMs = Number.isFinite(options.timeoutMs)
     ? Number(options.timeoutMs)
     : Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? `${DEFAULT_LM_STUDIO_TIMEOUT_MS}`);
@@ -483,14 +486,14 @@ function extractGenerationText(
     return payload.output_text.trim();
   }
 
-  const preferredMessage = findStructuredMessageText(
-    'output' in payload ? (payload.output ?? []) : [],
-  );
+  const output = 'output' in payload ? (payload.output ?? []) : [];
+
+  const preferredMessage = findStructuredMessageText(output);
   if (preferredMessage) {
     return preferredMessage;
   }
 
-  return findAnyGenerationText('output' in payload ? (payload.output ?? []) : []);
+  return findAnyGenerationText(output);
 }
 
 function findStructuredMessageText(
@@ -731,6 +734,11 @@ async function runHealthRequest<T extends { httpStatus?: number; ok: boolean }>(
       error: error instanceof Error ? error.message : 'Unknown LM Studio health-check error',
     } as T & { durationMs: number; error?: string };
   }
+}
+
+function isGeminiHost(baseUrl: string): boolean {
+  const url = safeUrl(baseUrl);
+  return url?.hostname?.endsWith('.googleapis.com') === true;
 }
 
 function safeUrl(value: string): URL | undefined {
