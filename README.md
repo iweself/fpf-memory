@@ -116,6 +116,56 @@ Start the hosted Mastra runtime on the Hono engine:
 bun run start
 ```
 
+## Codex Setup
+
+Decision record for this interface choice:
+
+- [DRR-0001: MCP As The First-Class Codex Interface](docs/drr/DRR-0001-mcp-first-class-interface.md)
+
+For Codex registration, use the direct Node stdio entry point instead of the Bun script wrapper:
+
+- Command: `node`
+- Arguments: `--import`, `tsx`, `src/mcp-stdio.ts`
+- Working directory: your local `fpf-memory` repo root
+
+The desktop app fields map directly to those values.
+
+Equivalent `~/.codex/config.toml` entry:
+
+```toml
+[mcp_servers.fpf_memory]
+command = "node"
+args = ["--import", "tsx", "src/mcp-stdio.ts"]
+cwd = "/absolute/path/to/fpf-memory"
+enabled_tools = [
+  "ask_fpf",
+  "query_fpf_spec",
+  "read_fpf_doc",
+  "trace_fpf_path",
+  "get_fpf_index_status",
+  "refresh_fpf_index",
+]
+required = false
+startup_timeout_sec = 15
+tool_timeout_sec = 60
+```
+
+This repo now also ships the same project-scoped configuration at `.codex/config.toml`. Once the project is trusted, Codex can load the `fpf_memory` server directly from the repo without copying the snippet into your user config.
+
+Local development can keep using the Bun shortcut:
+
+```bash
+bun run mcp
+```
+
+Recommended Codex tasks:
+
+- answer a question: `Use only the fpf_memory MCP server. Call ask_fpf with question: "What is U.PromiseContent?"`
+- read a generated page: `Use only the fpf_memory MCP server. Call read_fpf_doc with selector: "A.1.1"`
+- inspect retrieval evidence: `Use only the fpf_memory MCP server. Call trace_fpf_path with question: "How do U.RoleAssignment and U.BoundedContext connect?"`
+- check runtime freshness: `Use only the fpf_memory MCP server. Call get_fpf_index_status`
+- rebuild the local index: `Use only the fpf_memory MCP server. Call refresh_fpf_index`
+
 Smoke-test the same runtime surface locally before wiring it into Codex:
 
 ```bash
@@ -133,6 +183,14 @@ Run the end-to-end verification script for the real CLI, MCP stdio, and hosted H
 ```bash
 ./scripts/verify-runtime.sh
 ```
+
+The verification script also checks the direct Codex launcher:
+
+```bash
+node --import tsx src/mcp-stdio.ts
+```
+
+This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation.
 
 If this repo is registered as a Codex MCP server, restart Codex after changes and then test with a forced tool-use prompt such as:
 

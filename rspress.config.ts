@@ -47,6 +47,10 @@ export default defineConfig({
         text: 'Preface',
         link: '/generated/preface/index',
       },
+      {
+        text: 'Decision Records',
+        link: '/drr/DRR-0001-mcp-first-class-interface/',
+      },
     ],
     sidebar: {
       '/': [
@@ -129,6 +133,30 @@ export default defineConfig({
         },
       ],
       '/mcp-interface/': [
+        {
+          text: 'Additional',
+          items: [
+            {
+              text: 'MCP Interface',
+              link: '/mcp-interface/',
+            },
+            {
+              text: 'DRR-0001',
+              link: '/drr/DRR-0001-mcp-first-class-interface/',
+            },
+          ],
+        },
+      ],
+      '/drr/': [
+        {
+          text: 'Decision Records',
+          items: [
+            {
+              text: 'DRR-0001',
+              link: '/drr/DRR-0001-mcp-first-class-interface/',
+            },
+          ],
+        },
         {
           text: 'Additional',
           items: [
