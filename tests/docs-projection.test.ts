@@ -158,7 +158,7 @@ describe('docs projection', () => {
 
       await execFileAsync(
         'node',
-        ['./node_modules/rspress/bin/rspress.js', 'build'],
+        ['./node_modules/@rspress/core/bin/rspress.js', 'build'],
         {
           cwd: process.cwd(),
           env: {
