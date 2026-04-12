@@ -10,4 +10,5 @@ output.txt
 *.db
 *.db-*
 .mastra-project.json
+package-lock.json
 .DS_Store
