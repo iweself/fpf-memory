@@ -230,7 +230,7 @@ Artifacts are stored under `.runtime/fpf-index/`.
 - `docs/generated/**`: canonical generated markdown collection
 - `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
 
-The docs pipeline does not use an LLM step. `npm run docs:generate` writes the canonical markdown collection, and `npm run docs:build` builds the static viewer from that collection.
+The docs pipeline does not use an LLM step. `bun run docs:generate` writes the canonical markdown collection, and `bun run docs:build` builds the static viewer from that collection.
 
 ## Log Files
 
