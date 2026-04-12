@@ -7,6 +7,10 @@ description: "Spec-oriented interface contract for the local FPF stdio MCP serve
 
 This page documents the public MCP surface implemented by `fpf_memory`.
 
+Decision record:
+
+- [DRR-0001: MCP As The First-Class Codex Interface](/drr/DRR-0001-mcp-first-class-interface/)
+
 The runtime itself is compiler-backed and local:
 
 - authored source: `FPF-spec.md`
@@ -19,9 +23,42 @@ The runtime itself is compiler-backed and local:
 - transport: stdio
 - server name: `fpf_memory`
 - protocol version: `2024-11-05`
-- local entry point: `bun run mcp`
+- Codex entry point: `node --import tsx src/mcp-stdio.ts`
+- local dev shortcut: `bun run mcp`
 
 Hosted/server surfaces still use the Mastra Hono adapter under `src/mastra.ts` and `src/server.ts`.
+
+## Codex Setup
+
+Codex desktop app fields:
+
+- command: `node`
+- arguments: `--import`, `tsx`, `src/mcp-stdio.ts`
+- working directory: absolute path to the local repo root
+
+Equivalent `~/.codex/config.toml` entry:
+
+```toml
+[mcp_servers.fpf_memory]
+command = "node"
+args = ["--import", "tsx", "src/mcp-stdio.ts"]
+cwd = "/absolute/path/to/fpf-memory"
+enabled_tools = [
+  "ask_fpf",
+  "query_fpf_spec",
+  "read_fpf_doc",
+  "trace_fpf_path",
+  "get_fpf_index_status",
+  "refresh_fpf_index",
+]
+required = false
+startup_timeout_sec = 15
+tool_timeout_sec = 60
+```
+
+`enabled_tools` is optional. The list above gives Codex the default answer, doc-read, evidence, status, and refresh flows without exposing every debug tool by default.
+
+This repo also ships the same project-scoped configuration at `.codex/config.toml`. Codex will load that file after the project is trusted.
 
 ## Tool Catalog
 
@@ -86,4 +123,5 @@ bun run test
 bun run docs:build
 bun run cli -- read-doc --selector "A.1.1"
 bun run mcp
+node --import tsx src/mcp-stdio.ts
 ```

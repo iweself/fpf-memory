@@ -3,6 +3,7 @@ dist
 doc_build
 .mastra
 .runtime
+.claude
 .env
 .env.development
 output.txt
