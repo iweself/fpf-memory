@@ -545,3 +545,51 @@ export interface LocalAnswerSynthesizer {
   ): Promise<AnswerSynthesizerOutput> | AnswerSynthesizerOutput;
   describe?(): LocalAnswerSynthesizerInfo;
 }
+
+// ---------------------------------------------------------------------------
+// Discovery layer types (browse / search)
+// ---------------------------------------------------------------------------
+
+export interface CatalogEntry {
+  id: string;
+  kind: NodeKind;
+  title: string;
+  status?: string;
+  part?: string;
+  cluster?: string;
+  description: string;
+}
+
+export interface BrowseCatalogResult {
+  entries: CatalogEntry[];
+  total: number;
+  filters: {
+    part?: string;
+    status?: string;
+    kind?: NodeKind;
+  };
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}
+
+export interface SearchHit {
+  id: string;
+  kind: NodeKind;
+  title: string;
+  status?: string;
+  part?: string;
+  score: number;
+  snippet: string;
+}
+
+export interface SearchResult {
+  query: string;
+  hits: SearchHit[];
+  total: number;
+  snapshot: {
+    sourceHash: string;
+    builtAt: string;
+  };
+}

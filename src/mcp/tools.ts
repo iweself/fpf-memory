@@ -1,10 +1,12 @@
 import { createTool } from '@mastra/core/tools';
 
 import { FpfRuntime } from '../runtime/runtime.js';
-import type { AnswerMode, AskFpfResult, QueryResult } from '../runtime/types.js';
+import type { AnswerMode, AskFpfResult, NodeKind, QueryResult } from '../runtime/types.js';
 import {
   askFpfInputSchema,
   askFpfResultSchema,
+  browseFpfCatalogInputSchema,
+  browseFpfCatalogResultSchema,
   expandCitationsResultSchema,
   expandFpfCitationsInputSchema,
   getFpfIndexStatusInputSchema,
@@ -19,6 +21,8 @@ import {
   refreshFpfIndexInputSchema,
   runtimeStatusSchema,
   buildAuditSchema,
+  searchFpfInputSchema,
+  searchFpfResultSchema,
   traceFpfPathInputSchema,
   traceResultSchema,
 } from './tool-contracts.js';
@@ -121,27 +125,63 @@ export const traceFpfPathTool = createTool({
     runtime.trace(question, mode ?? 'compact', forceRefresh ?? false, sessionId),
 });
 
+export const browseFpfCatalogTool = createTool({
+  id: 'browse_fpf_catalog',
+  description:
+    'Browse the FPF catalog of compiled patterns, routes, and lexicon entries. Filter by part, status, or kind to discover relevant material before drilling into individual nodes.',
+  inputSchema: browseFpfCatalogInputSchema,
+  outputSchema: browseFpfCatalogResultSchema,
+  execute: async ({ part, status, kind, forceRefresh }) =>
+    runtime.browse({
+      part,
+      status,
+      kind: kind as NodeKind | undefined,
+      forceRefresh: forceRefresh ?? false,
+    }),
+});
+
+export const searchFpfTool = createTool({
+  id: 'search_fpf',
+  description:
+    'Full-text search across all compiled FPF nodes. Returns ranked hits with contextual snippets. Use this to find patterns, routes, or lexicon entries by keyword or concept.',
+  inputSchema: searchFpfInputSchema,
+  outputSchema: searchFpfResultSchema,
+  execute: async ({ query, kind, limit, forceRefresh }) =>
+    runtime.search(query, {
+      kind: kind as NodeKind | undefined,
+      limit,
+      forceRefresh: forceRefresh ?? false,
+    }),
+});
+
 /** Public tools — safe for deployed MCP surface. */
 export const fpfPublicTools = {
+  browse_fpf_catalog: browseFpfCatalogTool,
+  search_fpf: searchFpfTool,
   ask_fpf: askFpfTool,
   query_fpf_spec: queryFpfSpecTool,
-  get_fpf_index_status: getFpfIndexStatusTool,
+  read_fpf_doc: readFpfDocTool,
 } as const;
 
 /** Expert/debug tools — full-surface runtime only. */
 export const fpfExpertTools = {
-  refresh_fpf_index: refreshFpfIndexTool,
-  trace_fpf_path: traceFpfPathTool,
   inspect_fpf_node: inspectFpfNodeTool,
-  read_fpf_doc: readFpfDocTool,
   inspect_fpf_anchor: inspectFpfAnchorTool,
   expand_fpf_citations: expandFpfCitationsTool,
+  trace_fpf_path: traceFpfPathTool,
+} as const;
+
+/** Admin tools — index management. */
+export const fpfAdminTools = {
+  get_fpf_index_status: getFpfIndexStatusTool,
+  refresh_fpf_index: refreshFpfIndexTool,
 } as const;
 
 /** All tools — used by the full-surface MCP runtime. */
 export const fpfMcpTools = {
   ...fpfPublicTools,
   ...fpfExpertTools,
+  ...fpfAdminTools,
 } as const;
 
 export function resolveDefaultQueryMode(env: NodeJS.ProcessEnv = process.env): AnswerMode {

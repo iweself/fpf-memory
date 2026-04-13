@@ -19,18 +19,24 @@ import {
 } from './session-cache.js';
 import type {
   AnswerMode,
+  BrowseCatalogResult,
   BuildAudit,
+  CatalogEntry,
   ExpandCitationsResult,
   IndexingView,
   InspectAnchorResult,
   InspectResult,
   LocalAnswerSynthesizer,
+  NodeKind,
   QueryResult,
   ReadDocResult,
   RuntimeStatus,
+  SearchHit,
+  SearchResult,
   Snapshot,
   TraceResult,
 } from './types.js';
+import { normalizeForLookup, tokenize, scoreOverlap } from './text.js';
 import { getRuntimeObservabilitySummary } from '../observability/runtime-observability.js';
 
 export interface FpfRuntimeOptions {
@@ -258,6 +264,86 @@ export class FpfRuntime {
     };
   }
 
+  async browse(
+    options: { part?: string; status?: string; kind?: NodeKind; forceRefresh?: boolean } = {},
+  ): Promise<BrowseCatalogResult> {
+    await this.refresh(options.forceRefresh ?? false);
+    const snapshot = await this.requireSnapshot();
+
+    let entries: CatalogEntry[] = Object.values(snapshot.compiledNodes).map((node) =>
+      nodeToCatalogEntry(node, snapshot),
+    );
+
+    if (options.kind) {
+      entries = entries.filter((e) => e.kind === options.kind);
+    }
+    if (options.part) {
+      const partLower = options.part.toLowerCase();
+      entries = entries.filter((e) => e.part?.toLowerCase() === partLower);
+    }
+    if (options.status) {
+      const statusLower = options.status.toLowerCase();
+      entries = entries.filter((e) => e.status?.toLowerCase() === statusLower);
+    }
+
+    entries.sort((a, b) => a.id.localeCompare(b.id));
+
+    return {
+      entries,
+      total: entries.length,
+      filters: {
+        part: options.part,
+        status: options.status,
+        kind: options.kind,
+      },
+      snapshot: { sourceHash: snapshot.sourceHash, builtAt: snapshot.builtAt },
+    };
+  }
+
+  async search(
+    query: string,
+    options: { kind?: NodeKind; limit?: number; forceRefresh?: boolean } = {},
+  ): Promise<SearchResult> {
+    await this.refresh(options.forceRefresh ?? false);
+    const snapshot = await this.requireSnapshot();
+
+    const normalizedQuery = normalizeForLookup(query);
+    const queryTokens = tokenize(normalizedQuery);
+    const limit = Math.min(options.limit ?? 20, 100);
+
+    const hits: SearchHit[] = [];
+    for (const node of Object.values(snapshot.compiledNodes)) {
+      if (options.kind && node.kind !== options.kind) {
+        continue;
+      }
+
+      const score = scoreOverlap(queryTokens, node.searchableText);
+      if (score <= 0) {
+        continue;
+      }
+
+      hits.push({
+        id: node.id,
+        kind: node.kind,
+        title: node.title,
+        status: node.status,
+        part: node.part,
+        score,
+        snippet: extractSnippet(node.searchableText, queryTokens),
+      });
+    }
+
+    hits.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    const trimmed = hits.slice(0, limit);
+
+    return {
+      query,
+      hits: trimmed,
+      total: hits.length,
+      snapshot: { sourceHash: snapshot.sourceHash, builtAt: snapshot.builtAt },
+    };
+  }
+
   private persistSession(sessionId: string | undefined, trace: TraceResult): void {
     if (!sessionId) {
       return;
@@ -375,4 +461,59 @@ function snapshotNeedsRebuild(snapshot: Snapshot): boolean {
       typeof node.metadata.role !== 'string' ||
       typeof node.metadata.routeBearing !== 'boolean',
   );
+}
+
+function nodeToCatalogEntry(
+  node: import('./types.js').CompiledNode,
+  snapshot: Snapshot,
+): CatalogEntry {
+  let description = '';
+  if (node.kind === 'pattern') {
+    const pattern = snapshot.patternGraph.nodes[node.id];
+    description = pattern?.description ?? node.title;
+  } else if (node.kind === 'route') {
+    const route = snapshot.routeGraph.nodes[node.id];
+    description = route?.description ?? node.title;
+  } else if (node.kind === 'lexeme') {
+    const entry = snapshot.lexicon[node.id];
+    description = entry
+      ? `Lexicon: ${entry.canonical}${entry.aliases.length > 0 ? ` (${entry.aliases.join(', ')})` : ''}`
+      : node.title;
+  }
+  return {
+    id: node.id,
+    kind: node.kind,
+    title: node.title,
+    status: node.status,
+    part: node.part,
+    cluster: node.cluster,
+    description,
+  };
+}
+
+const SNIPPET_RADIUS = 80;
+
+function extractSnippet(searchableText: string, queryTokens: string[]): string {
+  const lower = searchableText.toLowerCase();
+  let bestPos = 0;
+  let bestLen = 0;
+
+  for (const token of queryTokens) {
+    const pos = lower.indexOf(token);
+    if (pos !== -1 && token.length > bestLen) {
+      bestPos = pos;
+      bestLen = token.length;
+    }
+  }
+
+  const start = Math.max(0, bestPos - SNIPPET_RADIUS);
+  const end = Math.min(searchableText.length, bestPos + bestLen + SNIPPET_RADIUS);
+  let snippet = searchableText.slice(start, end).replace(/\s+/g, ' ').trim();
+  if (start > 0) {
+    snippet = `…${snippet}`;
+  }
+  if (end < searchableText.length) {
+    snippet = `${snippet}…`;
+  }
+  return snippet;
 }
