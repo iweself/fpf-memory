@@ -4,13 +4,18 @@ Use the `fpf_memory` MCP server whenever the task requires grounded answers, exa
 
 Public tools (deployed MCP surface):
 
+- `browse_fpf_catalog` for task-oriented discovery by part, status, or kind
+- `search_fpf` for full-text search across compiled nodes
 - `ask_fpf` for markdown-first answers
 - `query_fpf_spec` for structured answer envelopes
-- `get_fpf_index_status` for runtime freshness checks
+- `read_fpf_doc` for exact generated markdown pages
 
 Expert tools (local full-surface runtime only, via `FPF_MCP_SURFACE=full bun run mcp`):
 
-- `read_fpf_doc` for exact generated markdown pages
-- `trace_fpf_path` for retrieval evidence and provenance
 - `inspect_fpf_node`, `inspect_fpf_anchor`, `expand_fpf_citations` for deep inspection
+- `trace_fpf_path` for retrieval evidence and provenance
+
+Admin tools (index management):
+
+- `get_fpf_index_status` for runtime freshness checks
 - `refresh_fpf_index` to rebuild the local artifact set

@@ -265,31 +265,29 @@ export class FpfRuntime {
   }
 
   async browse(
-    options: { part?: string; status?: string; kind?: NodeKind; forceRefresh?: boolean } = {},
+    options: { part?: string; status?: string; kind?: NodeKind; limit?: number; forceRefresh?: boolean } = {},
   ): Promise<BrowseCatalogResult> {
     await this.refresh(options.forceRefresh ?? false);
     const snapshot = await this.requireSnapshot();
 
-    let entries: CatalogEntry[] = Object.values(snapshot.compiledNodes).map((node) =>
-      nodeToCatalogEntry(node, snapshot),
-    );
+    const partLower = options.part?.toLowerCase();
+    const statusLower = options.status?.toLowerCase();
+    const limit = Math.min(options.limit ?? 200, 500);
 
-    if (options.kind) {
-      entries = entries.filter((e) => e.kind === options.kind);
-    }
-    if (options.part) {
-      const partLower = options.part.toLowerCase();
-      entries = entries.filter((e) => e.part?.toLowerCase() === partLower);
-    }
-    if (options.status) {
-      const statusLower = options.status.toLowerCase();
-      entries = entries.filter((e) => e.status?.toLowerCase() === statusLower);
-    }
+    const entries = Object.values(snapshot.compiledNodes)
+      .filter((node) => {
+        if (options.kind && node.kind !== options.kind) return false;
+        if (partLower && node.part?.toLowerCase() !== partLower) return false;
+        if (statusLower && node.status?.toLowerCase() !== statusLower) return false;
+        return true;
+      })
+      .map((node) => nodeToCatalogEntry(node, snapshot));
 
     entries.sort((a, b) => a.id.localeCompare(b.id));
+    const trimmed = entries.slice(0, limit);
 
     return {
-      entries,
+      entries: trimmed,
       total: entries.length,
       filters: {
         part: options.part,
@@ -493,21 +491,63 @@ function nodeToCatalogEntry(
 
 const SNIPPET_RADIUS = 80;
 
+function findTokenPosition(
+  searchableText: string,
+  lower: string,
+  token: string,
+): { pos: number; len: number } | undefined {
+  // Try literal substring match first.
+  const literalPos = lower.indexOf(token);
+  if (literalPos !== -1) {
+    return { pos: literalPos, len: token.length };
+  }
+
+  // For collapsed tokens (e.g. "a23" from "A.2.3"), try matching with
+  // optional non-alphanumeric separators between each character.
+  if (token.length > 0) {
+    const escaped = Array.from(token).map((c) =>
+      c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    );
+    const pattern = new RegExp(escaped.join('[^a-z0-9]*'), 'i');
+    const match = pattern.exec(searchableText);
+    if (match && match.index !== undefined) {
+      return { pos: match.index, len: match[0].length };
+    }
+  }
+
+  return undefined;
+}
+
 function extractSnippet(searchableText: string, queryTokens: string[]): string {
   const lower = searchableText.toLowerCase();
   let bestPos = 0;
   let bestLen = 0;
 
   for (const token of queryTokens) {
-    const pos = lower.indexOf(token);
-    if (pos !== -1 && token.length > bestLen) {
-      bestPos = pos;
-      bestLen = token.length;
+    const hit = findTokenPosition(searchableText, lower, token);
+    if (hit && token.length > bestLen) {
+      bestPos = hit.pos;
+      bestLen = hit.len;
     }
   }
 
-  const start = Math.max(0, bestPos - SNIPPET_RADIUS);
-  const end = Math.min(searchableText.length, bestPos + bestLen + SNIPPET_RADIUS);
+  let start = Math.max(0, bestPos - SNIPPET_RADIUS);
+  let end = Math.min(searchableText.length, bestPos + bestLen + SNIPPET_RADIUS);
+
+  // Snap to word boundaries to avoid cutting words in half.
+  if (start > 0) {
+    const nextSpace = searchableText.indexOf(' ', start);
+    if (nextSpace !== -1 && nextSpace < bestPos) {
+      start = nextSpace + 1;
+    }
+  }
+  if (end < searchableText.length) {
+    const prevSpace = searchableText.lastIndexOf(' ', end);
+    if (prevSpace > bestPos + bestLen) {
+      end = prevSpace;
+    }
+  }
+
   let snippet = searchableText.slice(start, end).replace(/\s+/g, ' ').trim();
   if (start > 0) {
     snippet = `…${snippet}`;

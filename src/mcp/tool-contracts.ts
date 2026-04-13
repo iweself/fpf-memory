@@ -507,6 +507,7 @@ export const browseFpfCatalogInputSchema = z
     part: z.string().optional(),
     status: z.string().optional(),
     kind: nodeKindSchema.optional(),
+    limit: z.number().int().min(1).max(500).optional(),
     forceRefresh: z.boolean().optional(),
   })
   .strict();

@@ -131,11 +131,12 @@ export const browseFpfCatalogTool = createTool({
     'Browse the FPF catalog of compiled patterns, routes, and lexicon entries. Filter by part, status, or kind to discover relevant material before drilling into individual nodes.',
   inputSchema: browseFpfCatalogInputSchema,
   outputSchema: browseFpfCatalogResultSchema,
-  execute: async ({ part, status, kind, forceRefresh }) =>
+  execute: async ({ part, status, kind, limit, forceRefresh }) =>
     runtime.browse({
       part,
       status,
       kind: kind as NodeKind | undefined,
+      limit,
       forceRefresh: forceRefresh ?? false,
     }),
 });
