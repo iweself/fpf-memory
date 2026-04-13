@@ -25,6 +25,7 @@ export class SessionCache {
   private readonly persistPath?: string;
   private sourceHash?: string;
   private flushPromise?: Promise<void>;
+  private loadPromise?: Promise<void>;
 
   constructor(options: SessionCacheOptions = {}) {
     this.maxSessions = options.maxSessions ?? 50;
@@ -33,6 +34,7 @@ export class SessionCache {
 
   async load(sourceHash: string): Promise<void> {
     if (this.sourceHash === sourceHash) {
+      await this.loadPromise;
       return;
     }
 
@@ -44,18 +46,24 @@ export class SessionCache {
     if (!this.persistPath) {
       return;
     }
+    this.loadPromise = this.readFromDisk(sourceHash);
+    await this.loadPromise;
+  }
+
+  private async readFromDisk(sourceHash: string): Promise<void> {
     try {
-      const raw = await readFile(this.persistPath, 'utf8');
+      const raw = await readFile(this.persistPath!, 'utf8');
       const data: PersistedSessionCache = JSON.parse(raw);
       if (data.sourceHash !== sourceHash) {
         return;
       }
-      this.entries.clear();
       const tuples = data.entries;
       const start = Math.max(0, tuples.length - this.maxSessions);
       for (let i = start; i < tuples.length; i++) {
         const [key, value] = tuples[i];
-        this.entries.set(key, value);
+        if (!this.entries.has(key)) {
+          this.entries.set(key, value);
+        }
       }
     } catch {
       // File missing or corrupt — start fresh
