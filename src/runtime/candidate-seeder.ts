@@ -221,8 +221,11 @@ function shouldApplySessionContext(
     return false;
   }
 
-  const followUpCue = /\bit\b|\bthat\b|\bthose\b|\bthem\b|\bconnect\b|\brelate\b|\balso\b/.test(
+  if (detectedIds.length === 0) {
+    return true;
+  }
+
+  return /\bit\b|\bthat\b|\bthose\b|\bthem\b|\bconnect\b|\brelate\b|\balso\b/.test(
     normalizedQuestion,
   );
-  return detectedIds.length === 0 && followUpCue;
 }
