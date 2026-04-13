@@ -54,7 +54,7 @@ export class SessionCache {
     try {
       const raw = await readFile(this.persistPath!, 'utf8');
       const data: PersistedSessionCache = JSON.parse(raw);
-      if (data.sourceHash !== sourceHash) {
+      if (data.sourceHash !== sourceHash || this.sourceHash !== sourceHash) {
         return;
       }
       const tuples = data.entries;
