@@ -138,7 +138,7 @@ function parseHeadingSections(lines: string[]): HeadingSection[] {
       path,
       text: rawBody,
       plainText: stripMarkdownToText(rawBody),
-      role: inferSectionRole(current.title, undefined),
+      role: inferSectionRole(current.title, current.fullId),
       level: current.level,
       fullId: current.fullId,
       patternId: current.patternId,
@@ -171,7 +171,7 @@ function buildAnchorMap(
       path: section.path,
       text: section.text,
       plainText: section.plainText,
-      role: inferSectionRole(section.heading, section.fullId),
+      role: section.role,
     };
   }
 
