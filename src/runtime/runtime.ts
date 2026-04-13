@@ -83,6 +83,11 @@ export class FpfRuntime {
         artifacts: this.artifactPaths,
       };
       await this.writeArtifacts(existingSnapshot);
+      const existingView = await this.loadIndexingView();
+      if (!existingView) {
+        const view = buildIndexingView(existingSnapshot);
+        await this.writeJson(this.artifactPaths.indexingView, view);
+      }
       await this.writeAudit(audit);
       return audit;
     }

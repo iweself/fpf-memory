@@ -110,16 +110,7 @@ function inferChangeFamily(
   }
 
   if (changedIds.length === 0) {
-    const anchorsDiffer =
-      previous.anchorIds.length !== current.anchorIds.length ||
-      previous.anchorIds.some((id, i) => id !== current.anchorIds[i]);
-    const lexiconDiffers =
-      previous.lexiconCanonicals.length !== current.lexiconCanonicals.length ||
-      previous.lexiconCanonicals.some((id, i) => id !== current.lexiconCanonicals[i]);
-
-    if (anchorsDiffer || lexiconDiffers) {
-      return 'viewing_change';
-    }
+    // No pattern/route ID changes but edition differs — must be anchor or lexicon change
     return 'viewing_change';
   }
 
@@ -186,7 +177,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'id_continuity',
     passed: missingIds.length === 0,
-    detail: missingIds.length > 0 ? `Removed pattern IDs: ${missingIds.join(', ')}` : undefined,
+    detail: missingIds.length > 0 ? truncateDetail(`Removed pattern IDs: ${missingIds.join(', ')}`) : undefined,
   });
 
   const prevAliases = new Set(
@@ -199,7 +190,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'alias_coverage',
     passed: droppedAliases.length === 0,
-    detail: droppedAliases.length > 0 ? `Dropped aliases: ${droppedAliases.join(', ')}` : undefined,
+    detail: droppedAliases.length > 0 ? truncateDetail(`Dropped aliases: ${droppedAliases.join(', ')}`) : undefined,
   });
 
   const prevAnchorSet = new Set(previous.anchorIds);
@@ -217,7 +208,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'route_closure',
     passed: missingRoutes.length === 0,
-    detail: missingRoutes.length > 0 ? `Missing routes: ${missingRoutes.join(', ')}` : undefined,
+    detail: missingRoutes.length > 0 ? truncateDetail(`Missing routes: ${missingRoutes.join(', ')}`) : undefined,
   });
 
   const allRelationTargets = new Set<string>();
@@ -236,6 +227,14 @@ function runRefreshSentinels(
   });
 
   return sentinels;
+}
+
+const MAX_DETAIL_LENGTH = 500;
+function truncateDetail(detail: string): string {
+  if (detail.length <= MAX_DETAIL_LENGTH) {
+    return detail;
+  }
+  return `${detail.slice(0, MAX_DETAIL_LENGTH)}… (truncated)`;
 }
 
 function entryEqual(
