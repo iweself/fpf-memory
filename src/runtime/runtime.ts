@@ -8,6 +8,7 @@ import {
   DEFAULT_SOURCE_PATH,
 } from './constants.js';
 import { compileFpfSource } from './compiler.js';
+import { buildIndexingView, classifyChange } from './indexing-view.js';
 import { createSynthesizerFromEnv } from './lm-studio-synthesizer.js';
 import { QueryEngine } from './query-engine.js';
 import {
@@ -18,6 +19,7 @@ import type {
   AnswerMode,
   BuildAudit,
   ExpandCitationsResult,
+  IndexingView,
   InspectAnchorResult,
   InspectResult,
   LocalAnswerSynthesizer,
@@ -85,6 +87,7 @@ export class FpfRuntime {
       return audit;
     }
 
+    const previousIndexingView = await this.loadIndexingView();
     const sourceText = await readFile(this.sourcePath, 'utf8');
     const builtAt = new Date().toISOString();
     const { snapshot } = compileFpfSource({
@@ -94,22 +97,29 @@ export class FpfRuntime {
       sourceText,
     });
 
+    const currentIndexingView = buildIndexingView(snapshot);
+    const refreshClassification = previousIndexingView
+      ? classifyChange(previousIndexingView, currentIndexingView)
+      : undefined;
+
     await this.writeArtifacts(snapshot);
+    await this.writeJson(this.artifactPaths.indexingView, currentIndexingView);
 
     const audit: BuildAudit = {
       sourcePath: this.sourcePath,
       sourceHash: currentSourceHash,
       previousSourceHash: existingSnapshot?.sourceHash,
       builtAt,
-        rebuilt: true,
-        reason: force
-          ? 'forced'
-          : existingSnapshot
-            ? compatibleSnapshot
-              ? 'source_hash_changed'
-              : 'missing_snapshot'
-            : 'missing_snapshot',
+      rebuilt: true,
+      reason: force
+        ? 'forced'
+        : existingSnapshot
+          ? compatibleSnapshot
+            ? 'source_hash_changed'
+            : 'missing_snapshot'
+          : 'missing_snapshot',
       validation: snapshot.validation,
+      refreshClassification,
       compiler: buildCompilerSummary(snapshot),
       artifacts: this.artifactPaths,
     };
@@ -235,6 +245,15 @@ export class FpfRuntime {
     try {
       const content = await readFile(this.artifactPaths.snapshot, 'utf8');
       return JSON.parse(content) as Snapshot;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async loadIndexingView(): Promise<IndexingView | undefined> {
+    try {
+      const content = await readFile(this.artifactPaths.indexingView, 'utf8');
+      return JSON.parse(content) as IndexingView;
     } catch {
       return undefined;
     }

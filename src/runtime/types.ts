@@ -187,6 +187,60 @@ export interface Snapshot {
   validation: BuildValidation;
 }
 
+export type ChangeFamily =
+  | 'viewing_change'
+  | 'slot_explicitness_change'
+  | 'editioned_semantic_change'
+  | 'described_entity_retargeting';
+
+export interface IndexingViewEntry {
+  id: string;
+  kind: NodeKind;
+  title: string;
+  status?: string;
+  type?: string;
+  normativity?: string;
+  part?: string;
+  cluster?: string;
+  aliases: string[];
+  anchorIds: string[];
+  relationEdges: Array<{ from: string; relation: RelationKind; to: string }>;
+}
+
+export interface IndexingViewRoute {
+  id: string;
+  name: string;
+  orderedIds: string[];
+  optionalIds: string[];
+  landingIds: string[];
+  routeSurfaces: string[];
+  constraints: string[];
+}
+
+export interface IndexingView {
+  edition: string;
+  sourceHash: string;
+  builtAt: string;
+  patterns: Record<string, IndexingViewEntry>;
+  routes: Record<string, IndexingViewRoute>;
+  anchorIds: string[];
+  lexiconCanonicals: string[];
+}
+
+export interface RefreshSentinel {
+  name: string;
+  passed: boolean;
+  detail?: string;
+}
+
+export interface RefreshClassification {
+  changeFamily: ChangeFamily | 'no_change';
+  sentinels: RefreshSentinel[];
+  addedIds: string[];
+  removedIds: string[];
+  changedIds: string[];
+}
+
 export interface BuildAudit {
   sourcePath: string;
   sourceHash: string;
@@ -199,6 +253,7 @@ export interface BuildAudit {
     | 'source_hash_changed'
     | 'snapshot_current';
   validation: BuildValidation;
+  refreshClassification?: RefreshClassification;
   compiler: {
     mode: 'local_vectorless';
     compiledNodes: number;

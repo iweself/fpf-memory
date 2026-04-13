@@ -118,6 +118,32 @@ export const snapshotWithRebuildSchema = z
   })
   .strict();
 
+export const changeFamilySchema = z.enum([
+  'no_change',
+  'viewing_change',
+  'slot_explicitness_change',
+  'editioned_semantic_change',
+  'described_entity_retargeting',
+]);
+
+export const refreshSentinelSchema = z
+  .object({
+    name: z.string(),
+    passed: z.boolean(),
+    detail: z.string().optional(),
+  })
+  .strict();
+
+export const refreshClassificationSchema = z
+  .object({
+    changeFamily: changeFamilySchema,
+    sentinels: z.array(refreshSentinelSchema),
+    addedIds: z.array(z.string()),
+    removedIds: z.array(z.string()),
+    changedIds: z.array(z.string()),
+  })
+  .strict();
+
 export const buildAuditSchema = z
   .object({
     sourcePath: z.string(),
@@ -139,6 +165,7 @@ export const buildAuditSchema = z
         brokenRoutes: z.array(z.string()),
       })
       .strict(),
+    refreshClassification: refreshClassificationSchema.optional(),
     compiler: z
       .object({
         mode: z.literal('local_vectorless'),

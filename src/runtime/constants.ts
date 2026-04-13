@@ -9,6 +9,7 @@ export const ARTIFACT_FILENAMES = {
   routeGraph: 'route-graph.json',
   lexicon: 'lexicon.json',
   anchorMap: 'anchor-map.json',
+  indexingView: 'indexing-view.json',
 } as const;
 
 export const PREFACE_MARKER = '# **Preface** (non-normative)';
