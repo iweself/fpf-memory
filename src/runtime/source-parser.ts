@@ -5,12 +5,14 @@ import {
 } from './constants.js';
 import {
   cleanMarkdown,
+  extractIds,
   isMarkdownSeparatorRow,
   normalizeForLookup,
   normalizeLabel,
   slugify,
   splitMarkdownRow,
   stripMarkdownToText,
+  unique,
 } from './text.js';
 import type { AnchorRef, RelationEdge, RelationKind, SectionRole } from './types.js';
 
@@ -429,8 +431,6 @@ function normalizeClusterLabel(label: string): string {
   return matched ?? normalized;
 }
 
-// Re-export extractIds so downstream modules can use it without importing text.js directly
-export { extractIds } from './text.js';
 
 export function deriveAliases(title: string, rawHeading: string): string[] {
   const aliases = new Set<string>([title]);
@@ -500,9 +500,8 @@ export function routeKey(name: string): string {
 // Re-export helpers needed by downstream modules
 export {
   cleanMarkdown,
+  extractIds,
   normalizeForLookup,
   normalizeLabel,
   slugify,
 } from './text.js';
-
-import { extractIds, unique } from './text.js';

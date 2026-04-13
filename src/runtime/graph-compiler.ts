@@ -24,6 +24,7 @@ import {
 } from './text.js';
 import type {
   AnchorRef,
+  LexiconEntry,
   PatternRecord,
   RelationEdge,
   RouteRecord,
@@ -273,7 +274,7 @@ export function buildExplicitReferenceRelations(
 }
 
 export function buildLexiconRelations(
-  lexicon: Record<string, import('./types.js').LexiconEntry>,
+  lexicon: Record<string, LexiconEntry>,
 ): RelationEdge[] {
   return uniqueRelations(
     Object.values(lexicon).flatMap((entry) =>
