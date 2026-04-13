@@ -28,7 +28,7 @@ async function getSnapshot(): Promise<Snapshot> {
   const output = compileFpfSource({
     sourcePath,
     sourceHash,
-    builtAt: new Date().toISOString(),
+    builtAt: '2025-01-01T00:00:00.000Z',
     sourceText,
   });
   cachedSnapshot = output.snapshot;
@@ -54,23 +54,25 @@ describe('Query / Normalizer stage', () => {
   it('detects route names when mentioned in the question', async () => {
     const snapshot = await getSnapshot();
     const routeNames = Object.values(snapshot.routeGraph.nodes).map((r) => r.name);
-    const firstRoute = routeNames[0];
 
-    if (firstRoute) {
-      const trace = engine(snapshot).trace(`Tell me about the ${firstRoute} route`);
-      expect(trace.detected.routeNames).toContain(firstRoute);
-    }
+    expect(routeNames.length).toBeGreaterThan(0);
+    const firstRoute = routeNames[0]!;
+    const trace = engine(snapshot).trace(`Tell me about the ${firstRoute} route`);
+    expect(trace.detected.routeNames).toContain(firstRoute);
   });
 
   it('detects status terms present in the status index', async () => {
     const snapshot = await getSnapshot();
-    const statusKeys = Object.keys(snapshot.indexes.statusIndex);
 
-    if (statusKeys.length > 0) {
-      const firstStatus = statusKeys[0]!;
-      const trace = engine(snapshot).trace(`Show me ${firstStatus} patterns`);
-      expect(trace.detected.statusTerms).toContain(firstStatus);
-    }
+    // The normalizer only detects these fixed tokens.
+    const knownTokens = ['draft', 'stable', 'stub', 'transitional'];
+    const matchedToken = knownTokens.find(
+      (t) => snapshot.indexes.statusIndex[t] !== undefined,
+    );
+
+    expect(matchedToken).toBeDefined();
+    const trace = engine(snapshot).trace(`Show me ${matchedToken} patterns`);
+    expect(trace.detected.statusTerms).toContain(matchedToken);
   });
 
   it('returns empty signals for a nonsense question', async () => {
@@ -110,8 +112,10 @@ describe('Query / Seed coverage stage', () => {
       'What is the first practical route when vocabulary is overloaded across teams?',
     );
 
-    const routeCandidates = trace.candidateScores.filter((c) => c.kind === 'route');
-    expect(routeCandidates.length).toBeGreaterThan(0);
+    const routeFrontier = trace.frontierCandidates.filter(
+      (c) => c.origin === 'route_expansion',
+    );
+    expect(routeFrontier.length).toBeGreaterThan(0);
   });
 
   it('produces few or low-scoring candidates for a completely unrelated question', async () => {
@@ -123,7 +127,7 @@ describe('Query / Seed coverage stage', () => {
     // threshold (100) and total count stays low relative to the full catalog.
     const highScoring = trace.candidateScores.filter((c) => c.score >= 100);
     expect(highScoring.length).toBe(0);
-    expect(trace.candidateScores.length).toBeLessThan(
+    expect(trace.frontierCandidates.length).toBeLessThan(
       Object.keys(snapshot.compiledNodes).length / 2,
     );
   });
@@ -185,14 +189,19 @@ describe('Query / Frontier expansion stage', () => {
   it('records hop metadata (iteration, reason, added nodes/anchors)', async () => {
     const snapshot = await getSnapshot();
     const trace = engine(snapshot).trace(
-      'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?',
+      'How do A.1.1, A.15, and B.3 connect in a lawful workflow?',
     );
 
+    // If the engine already considers the grounding sufficient before any
+    // expansion, hops will be empty — that's valid behavior, not a test failure.
     if (trace.retrievalHops.length > 0) {
       const firstHop = trace.retrievalHops[0]!;
       expect(firstHop.iteration).toBe(1);
       expect(firstHop.reason.length).toBeGreaterThan(0);
       expect(typeof firstHop.sufficientAfter).toBe('boolean');
+    } else {
+      // No hops means grounding was already sufficient from initial selection.
+      expect(trace.sufficient).toBe(true);
     }
   });
 
@@ -200,9 +209,8 @@ describe('Query / Frontier expansion stage', () => {
     const snapshot = await getSnapshot();
     const trace = engine(snapshot).trace('What is A.1.1?');
 
-    if (trace.sufficient) {
-      expect(trace.selectedAnchorIds.length).toBeGreaterThan(0);
-    }
+    expect(trace.sufficient).toBe(true);
+    expect(trace.selectedAnchorIds.length).toBeGreaterThan(0);
   });
 });
 

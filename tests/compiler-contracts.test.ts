@@ -26,11 +26,16 @@ async function getCompilerOutput(): Promise<CompilerOutput> {
   cachedOutput = compileFpfSource({
     sourcePath,
     sourceHash,
-    builtAt: new Date().toISOString(),
+    builtAt: '2025-01-01T00:00:00.000Z',
     sourceText,
   });
   return cachedOutput;
 }
+
+/** Minimum thresholds — deliberately loose so spec edits don't break tests. */
+const MIN_SECTIONS = 100;
+const MIN_PATTERNS = 50;
+const MIN_LEXICON_ENTRIES = 5;
 
 // ---------------------------------------------------------------------------
 // Stage 1: Parser resilience
@@ -40,10 +45,10 @@ describe('Compiler / Parser stage', () => {
     const { snapshot } = await getCompilerOutput();
     const { validation } = snapshot;
 
-    expect(validation.parsedSections).toBeGreaterThan(100);
-    expect(validation.parsedPatterns).toBeGreaterThan(50);
+    expect(validation.parsedSections).toBeGreaterThan(MIN_SECTIONS);
+    expect(validation.parsedPatterns).toBeGreaterThan(MIN_PATTERNS);
     expect(validation.parsedRoutes).toBeGreaterThan(0);
-    expect(validation.parsedLexiconEntries).toBeGreaterThan(5);
+    expect(validation.parsedLexiconEntries).toBeGreaterThan(MIN_LEXICON_ENTRIES);
   });
 
   it('assigns IDs to all compiled nodes and none are empty strings', async () => {
@@ -152,6 +157,7 @@ describe('Compiler / Graph closure stage', () => {
     }
 
     // At least 90% of route step IDs should resolve to compiled nodes.
+    expect(total).toBeGreaterThan(0);
     expect(resolved / total).toBeGreaterThan(0.9);
   });
 });
@@ -190,7 +196,7 @@ describe('Compiler / Index round-trip stage', () => {
     }
   });
 
-  it('status index keys partition compiled nodes without overlap', async () => {
+  it('status index entries resolve to existing compiled nodes', async () => {
     const { snapshot } = await getCompilerOutput();
     const statusIndex = snapshot.indexes.statusIndex;
 
