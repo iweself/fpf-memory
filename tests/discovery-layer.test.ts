@@ -138,7 +138,7 @@ describe('Discovery layer', () => {
     });
 
     it('returns zero hits for nonsense query', async () => {
-      const result = await runtime.search('xyzzy_nonexistent_term_12345');
+      const result = await runtime.search('zqqxvwjkf');
       expect(result.hits.length).toBe(0);
       expect(result.total).toBe(0);
     });

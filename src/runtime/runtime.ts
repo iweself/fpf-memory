@@ -36,7 +36,7 @@ import type {
   Snapshot,
   TraceResult,
 } from './types.js';
-import { normalizeForLookup, tokenize, scoreOverlap } from './text.js';
+import { tokenize, scoreOverlap } from './text.js';
 import { getRuntimeObservabilitySummary } from '../observability/runtime-observability.js';
 
 export interface FpfRuntimeOptions {
@@ -305,8 +305,9 @@ export class FpfRuntime {
     await this.refresh(options.forceRefresh ?? false);
     const snapshot = await this.requireSnapshot();
 
-    const normalizedQuery = normalizeForLookup(query);
-    const queryTokens = tokenize(normalizedQuery);
+    // Tokenize the raw query first so camelCase splits (e.g. BoundedContext →
+    // bounded + context) are preserved; tokenize() handles lowercasing internally.
+    const queryTokens = tokenize(query);
     const limit = Math.min(options.limit ?? 20, 100);
 
     const hits: SearchHit[] = [];
@@ -522,12 +523,14 @@ function extractSnippet(searchableText: string, queryTokens: string[]): string {
   const lower = searchableText.toLowerCase();
   let bestPos = 0;
   let bestLen = 0;
+  let bestTokenLen = 0;
 
   for (const token of queryTokens) {
     const hit = findTokenPosition(searchableText, lower, token);
-    if (hit && token.length > bestLen) {
+    if (hit && token.length > bestTokenLen) {
       bestPos = hit.pos;
       bestLen = hit.len;
+      bestTokenLen = token.length;
     }
   }
 
