@@ -32,7 +32,15 @@ export class SessionCache {
   }
 
   async load(sourceHash: string): Promise<void> {
+    if (this.sourceHash === sourceHash) {
+      return;
+    }
+
+    if (this.sourceHash !== undefined) {
+      this.entries.clear();
+    }
     this.sourceHash = sourceHash;
+
     if (!this.persistPath) {
       return;
     }
@@ -97,7 +105,7 @@ export class SessionCache {
       sourceHash: this.sourceHash,
       entries: Object.fromEntries(this.entries),
     };
-    const json = JSON.stringify(data, null, 2);
+    const json = JSON.stringify(data);
     this.flushPromise = (this.flushPromise ?? Promise.resolve())
       .then(async () => {
         await mkdir(dirname(path), { recursive: true });
