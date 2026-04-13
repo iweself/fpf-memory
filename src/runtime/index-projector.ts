@@ -63,7 +63,6 @@ export function buildIndexMap(
         cluster: pattern?.cluster,
         role: section.role,
         routeBearing:
-          section.role === 'route_surface' ||
           section.id === PREFACE_ROUTE_CITATION ||
           section.id === ROUTE_INDEX_CITATION ||
           Boolean(section.patternId && routeBearingPatternIds.has(section.patternId)),

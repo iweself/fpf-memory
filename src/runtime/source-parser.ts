@@ -145,9 +145,9 @@ function parseHeadingSections(lines: string[]): HeadingSection[] {
       parentId,
       childIds: [],
     };
-    if (parentId) {
-      const parent = sections.find((candidate) => candidate.id === parentId);
-      parent?.childIds.push(id);
+    const parentSection = stack.at(-1);
+    if (parentSection) {
+      parentSection.childIds.push(id);
     }
     sections.push(section);
     stack.push(section);
