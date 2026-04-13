@@ -6,6 +6,7 @@ import {
   ARTIFACT_FILENAMES,
   DEFAULT_ARTIFACT_DIR,
   DEFAULT_SOURCE_PATH,
+  SESSION_CACHE_FILENAME,
 } from './constants.js';
 import { compileFpfSource } from './compiler.js';
 import { createSynthesizerFromEnv } from './lm-studio-synthesizer.js';
@@ -64,7 +65,9 @@ export class FpfRuntime {
       options.persistSessionCache ?? process.env.FPF_PERSIST_SESSION_CACHE === 'true';
     this.sessionCache = new SessionCache({
       maxSessions: options.maxSessions ?? 50,
-      persistPath: persistSession ? this.artifactPaths.sessionCache : undefined,
+      persistPath: persistSession
+        ? resolve(this.artifactDir, SESSION_CACHE_FILENAME)
+        : undefined,
     });
   }
 

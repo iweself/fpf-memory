@@ -11,7 +11,7 @@ export interface RetrievalSessionState {
 
 interface PersistedSessionCache {
   sourceHash: string;
-  entries: Record<string, RetrievalSessionState>;
+  entries: Array<[string, RetrievalSessionState]>;
 }
 
 export interface SessionCacheOptions {
@@ -51,11 +51,11 @@ export class SessionCache {
         return;
       }
       this.entries.clear();
-      const keys = Object.keys(data.entries);
-      const start = Math.max(0, keys.length - this.maxSessions);
-      for (let i = start; i < keys.length; i++) {
-        const key = keys[i];
-        this.entries.set(key, data.entries[key]);
+      const tuples = data.entries;
+      const start = Math.max(0, tuples.length - this.maxSessions);
+      for (let i = start; i < tuples.length; i++) {
+        const [key, value] = tuples[i];
+        this.entries.set(key, value);
       }
     } catch {
       // File missing or corrupt — start fresh
@@ -103,7 +103,7 @@ export class SessionCache {
     const path = this.persistPath;
     const data: PersistedSessionCache = {
       sourceHash: this.sourceHash,
-      entries: Object.fromEntries(this.entries),
+      entries: Array.from(this.entries.entries()),
     };
     const json = JSON.stringify(data);
     this.flushPromise = (this.flushPromise ?? Promise.resolve())
