@@ -47,7 +47,7 @@ export function expandGrounding(
 ): GroundingResult {
   const graphExpansions: GraphExpansion[] = [];
   const selectedNodeIds = unique(initialNodeIds);
-  const selectedAnchorIds = unique(initialAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
+  let selectedAnchorIds = unique(initialAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
   const retrievalHops: RetrievalHop[] = [];
   const followedReferences: FollowedReference[] = [];
   const candidateScoreById = new Map(
@@ -83,7 +83,6 @@ export function expandGrounding(
     }
 
     selectedNodeIds.push(...addedNodeIds);
-    selectedAnchorIds.push(...addedAnchorIds);
 
     if (picked.relation) {
       graphExpansions.push({
@@ -102,26 +101,33 @@ export function expandGrounding(
       }
     }
 
-    const boundedAnchorIds = unique(selectedAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
+    const previousAnchorIds = selectedAnchorIds;
+    selectedAnchorIds = unique([...selectedAnchorIds, ...addedAnchorIds]).slice(
+      0,
+      MAX_SELECTED_ANCHORS,
+    );
+    const boundedAddedAnchorIds = selectedAnchorIds.filter(
+      (anchorId) => !previousAnchorIds.includes(anchorId),
+    );
+
     sufficient = isGroundingSufficient(
       question,
       unique(selectedNodeIds),
-      boundedAnchorIds,
+      selectedAnchorIds,
       snapshot,
     );
     retrievalHops.push({
       iteration,
       reason: picked.reason,
       addedNodeIds,
-      addedAnchorIds,
+      addedAnchorIds: boundedAddedAnchorIds,
       sufficientAfter: sufficient,
     });
   }
 
-  const finalAnchorIds = unique(selectedAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
   return {
     selectedNodeIds: unique(selectedNodeIds),
-    selectedAnchorIds: finalAnchorIds,
+    selectedAnchorIds,
     retrievalHops,
     followedReferences,
     graphExpansions,
