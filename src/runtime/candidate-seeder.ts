@@ -211,15 +211,18 @@ function shouldApplySessionContext(
   detectedIds: string[],
   sessionState?: RetrievalSessionState,
 ): boolean {
-  if (!sessionState || sessionState.lastSelectedNodeIds.length === 0) {
+  if (!sessionState) {
     return false;
   }
 
-  if (detectedIds.length === 0) {
-    return true;
+  const hasPriorSelection =
+    sessionState.lastSelectedNodeIds.length > 0 || Boolean(sessionState.lastSelectedRouteId);
+  if (!hasPriorSelection) {
+    return false;
   }
 
-  return /\bit\b|\bthat\b|\bthose\b|\bthem\b|\bconnect\b|\brelate\b|\balso\b/.test(
+  const followUpCue = /\bit\b|\bthat\b|\bthose\b|\bthem\b|\bconnect\b|\brelate\b|\balso\b/.test(
     normalizedQuestion,
   );
+  return detectedIds.length === 0 && followUpCue;
 }

@@ -38,8 +38,9 @@ export function normalizeQuery(
   const familyTerms = Object.keys(snapshot.indexes.familyIndex).filter((key) =>
     normalizedQuestion.includes(key),
   );
-  const statusTerms = ['draft', 'stable', 'stub', 'transitional'].filter((term) =>
-    normalizedQuestion.includes(term),
+  const questionTokens = new Set(normalizedQuestion.split(/\W+/).filter(Boolean));
+  const statusTerms = Object.keys(snapshot.indexes.statusIndex).filter((term) =>
+    questionTokens.has(term),
   );
 
   return {

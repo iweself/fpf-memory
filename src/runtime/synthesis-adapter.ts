@@ -17,12 +17,12 @@ export async function synthesizeAnswer(
   deterministicResult: QueryResult,
   synthesizer: LocalAnswerSynthesizer,
 ): Promise<QueryResult> {
-  const available = await synthesizer.isAvailable();
-  if (!available) {
-    return deterministicResult;
-  }
-
   try {
+    const available = await synthesizer.isAvailable();
+    if (!available) {
+      return deterministicResult;
+    }
+
     const synthesized = await synthesizer.synthesize({
       question,
       mode,

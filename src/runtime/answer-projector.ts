@@ -196,7 +196,10 @@ export function answerPartCDrafts(
       'Only rows whose Part is Part C and whose status is Draft are included.',
       'Cluster labels come from the top-of-file catalog and stay local to the source monolith.',
     ],
-    citations: ['Part C catalog'],
+    citations: unique(ids.flatMap((id) => {
+      const pattern = snapshot.patternGraph.nodes[id];
+      return pattern?.sectionIds ?? [];
+    })),
     confidence: 0.95,
     gaps: [],
     status: 'ok',

@@ -108,11 +108,10 @@ export class QueryEngine {
       });
     }
 
-    const routeNodeId = trace.selectedNodeIds.find(
-      (nodeId) => this.snapshot.compiledNodes[nodeId]?.kind === 'route',
-    );
-    const deterministic = routeNodeId
-      ? buildRouteAnswer(question, mode, routeNodeId, trace, this.snapshot, this.rebuilt)
+    const deterministic = trace.routeWins
+      ? buildRouteAnswer(question, mode, trace.selectedNodeIds.find(
+          (nodeId) => this.snapshot.compiledNodes[nodeId]?.kind === 'route',
+        )!, trace, this.snapshot, this.rebuilt)
       : buildPatternAnswer(question, mode, trace, this.snapshot, this.rebuilt);
 
     if (!this.synthesizer) {
@@ -153,6 +152,7 @@ export class QueryEngine {
         sessionApplied: false,
         sessionReusedNodeIds: [],
         sessionMateriallyChanged: false,
+        routeWins: false,
         sufficient: false,
         status: 'unsupported',
         snapshot: {
@@ -216,6 +216,7 @@ export class QueryEngine {
       sessionMateriallyChanged:
         seeding.sessionApplied && sessionReusedNodeIds.length > 0 && normalized.detected.ids.length === 0,
       sufficient: grounding.sufficient,
+      routeWins: ranking.routeWins,
       status,
       snapshot: {
         sourceHash: this.snapshot.sourceHash,

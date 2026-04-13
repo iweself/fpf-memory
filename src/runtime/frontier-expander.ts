@@ -102,10 +102,11 @@ export function expandGrounding(
       }
     }
 
+    const boundedAnchorIds = unique(selectedAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
     sufficient = isGroundingSufficient(
       question,
       unique(selectedNodeIds),
-      unique(selectedAnchorIds),
+      boundedAnchorIds,
       snapshot,
     );
     retrievalHops.push({
@@ -117,9 +118,10 @@ export function expandGrounding(
     });
   }
 
+  const finalAnchorIds = unique(selectedAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
   return {
     selectedNodeIds: unique(selectedNodeIds),
-    selectedAnchorIds: unique(selectedAnchorIds).slice(0, MAX_SELECTED_ANCHORS),
+    selectedAnchorIds: finalAnchorIds,
     retrievalHops,
     followedReferences,
     graphExpansions,
