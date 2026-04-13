@@ -216,7 +216,7 @@ function shouldApplySessionContext(
   }
 
   const hasPriorSelection =
-    sessionState.lastSelectedNodeIds.length > 0 || Boolean(sessionState.lastSelectedRouteId);
+    sessionState.lastSelectedNodeIds.length > 0;
   if (!hasPriorSelection) {
     return false;
   }
