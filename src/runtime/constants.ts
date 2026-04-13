@@ -15,6 +15,8 @@ export const PREFACE_MARKER = '# **Preface** (non-normative)';
 export const PREFACE_ROUTE_CITATION = 'Preface/Where to start';
 export const ROUTE_INDEX_CITATION = 'J.4';
 
+export const PROJECT_ALIGNMENT_ROUTE_NAME = 'project alignment';
+
 export const PART_C_LABEL = 'Part C - Kernel Extension Specifications';
 
 export const PART_C_CLUSTER_LABELS = [

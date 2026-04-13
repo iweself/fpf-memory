@@ -30,6 +30,7 @@ import type {
   FrontierCandidate,
   FrontierOrigin,
   GraphExpansion,
+  HeuristicSeedRule,
   InspectAnchorResult,
   InspectNeighbor,
   InspectResult,
@@ -597,71 +598,44 @@ export class QueryEngine {
     }
   }
 
+  private matchesSeedRule(normalizedQuestion: string, rule: HeuristicSeedRule): boolean {
+    const matchesGroup = (terms: string): boolean =>
+      terms.split('|').some((term) => term.length > 0 && normalizedQuestion.includes(term));
+    return (
+      rule.allOf.every(matchesGroup) &&
+      rule.anyOf.some(matchesGroup)
+    );
+  }
+
   private addHeuristicSeeds(
     normalizedQuestion: string,
     addCandidate: (nodeId: string, delta: number, reason: string, origin: FrontierOrigin) => void,
   ): void {
-    if (
-      (normalizedQuestion.includes('creativity') || normalizedQuestion.includes('creative')) &&
-      (normalizedQuestion.includes('open-ended') ||
-        normalizedQuestion.includes('open ended') ||
-        normalizedQuestion.includes('search'))
-    ) {
-      for (const nodeId of ['C.17', 'C.18', 'C.19', 'B.5.2.1', 'A.0']) {
-        addCandidate(nodeId, 64, 'creative-search-heuristic', 'lexical');
+    for (const rule of this.snapshot.heuristicSeedRules ?? []) {
+      if (!this.matchesSeedRule(normalizedQuestion, rule)) {
+        continue;
       }
-    }
-
-    if (
-      normalizedQuestion.includes('vocabulary') &&
-      (normalizedQuestion.includes('overloaded') ||
-        normalizedQuestion.includes('across teams') ||
-        normalizedQuestion.includes('across contexts'))
-    ) {
-      addCandidate('route:project-alignment', 80, 'burden:project-alignment', 'route_expansion');
-      for (const nodeId of ['A.1.1', 'A.15', 'B.5.1', 'F.17']) {
-        addCandidate(nodeId, 20, 'project-alignment-route-surface', 'route_expansion');
+      if (rule.routeId !== undefined && rule.routeScore !== undefined) {
+        addCandidate(rule.routeId, rule.routeScore, `burden:${rule.name}`, 'route_expansion');
       }
-    }
-
-    if (
-      normalizedQuestion.includes('role assignment') &&
-      (normalizedQuestion.includes('connect') || normalizedQuestion.includes('relation'))
-    ) {
-      for (const nodeId of ['A.1.1', 'A.2.1', 'A.2.5']) {
-        addCandidate(nodeId, 36, 'role-assignment-connection', 'lexical');
-      }
-    }
-
-    if (
-      (normalizedQuestion.includes('same entity') || normalizedQuestion.includes('same-entity')) &&
-      (normalizedQuestion.includes('rewrite') || normalizedQuestion.includes('comparative'))
-    ) {
-      for (const nodeId of ['A.6.3.CR', 'A.6.3.RT', 'E.17.ID.CR']) {
-        addCandidate(nodeId, 40, 'same-entity-comparative-reading', 'lexical');
+      for (const nodeId of rule.seedNodeIds) {
+        addCandidate(nodeId, rule.seedScore, rule.name, rule.seedOrigin);
       }
     }
   }
 
   private heuristicInitialNodeIds(normalizedQuestion: string): string[] {
-    if (
-      (normalizedQuestion.includes('creativity') || normalizedQuestion.includes('creative')) &&
-      (normalizedQuestion.includes('open-ended') ||
-        normalizedQuestion.includes('open ended') ||
-        normalizedQuestion.includes('search'))
-    ) {
-      return ['C.17', 'C.18', 'C.19'].filter((nodeId) => Boolean(this.snapshot.patternGraph.nodes[nodeId]));
-    }
-
-    if (
-      (normalizedQuestion.includes('same entity') || normalizedQuestion.includes('same-entity')) &&
-      (normalizedQuestion.includes('rewrite') || normalizedQuestion.includes('comparative'))
-    ) {
-      return ['A.6.3.CR', 'A.6.3.RT', 'E.17.ID.CR'].filter((nodeId) =>
+    for (const rule of this.snapshot.heuristicSeedRules ?? []) {
+      if (rule.initialNodeIds.length === 0) {
+        continue;
+      }
+      if (!this.matchesSeedRule(normalizedQuestion, rule)) {
+        continue;
+      }
+      return rule.initialNodeIds.filter((nodeId) =>
         Boolean(this.snapshot.patternGraph.nodes[nodeId]),
       );
     }
-
     return [];
   }
 
@@ -1243,15 +1217,8 @@ export class QueryEngine {
       route.firstHonestBurden
         ? `First honest burden: ${route.firstHonestBurden}.`
         : 'Choose this route only when the stated burden matches the present problem.',
+      ...(route.constraints ?? []),
     ];
-    if (route.name.toLowerCase() === 'project alignment') {
-      constraints.push(
-        'Add F.11 and F.9 only when method/work vocabulary itself must be aligned across contexts.',
-      );
-      constraints.push(
-        'Land on F.17 early rather than escalating directly into heavier governance or assurance surfaces.',
-      );
-    }
     const answer = [
       `${route.name} is the matched first-practical route.`,
       route.firstHonestBurden ? `Burden: ${route.firstHonestBurden}.` : '',
