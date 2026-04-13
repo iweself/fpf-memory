@@ -38,16 +38,26 @@ export function buildIndexingView(snapshot: Snapshot): IndexingView {
       optionalIds: [...route.optionalIds],
       landingIds: [...route.landingIds],
       routeSurfaces: [...route.routeSurfaces],
-      constraints: [],
+      constraints: route.firstHonestBurden ? [route.firstHonestBurden] : [],
     };
   }
 
   const anchorIds = Object.keys(snapshot.anchorMap).sort();
   const lexiconCanonicals = Object.keys(snapshot.lexicon).sort();
+  const lexiconFingerprints: Record<string, { normalizedKeys: string[]; linkedNodeIds: string[] }> = {};
+  for (const [id, entry] of Object.entries(snapshot.lexicon)) {
+    lexiconFingerprints[id] = {
+      normalizedKeys: [...entry.normalizedKeys].sort(),
+      linkedNodeIds: [...entry.linkedNodeIds].sort(),
+    };
+  }
 
   const sortedPatterns = Object.fromEntries(Object.entries(patterns).sort(([a], [b]) => a.localeCompare(b)));
   const sortedRoutes = Object.fromEntries(Object.entries(routes).sort(([a], [b]) => a.localeCompare(b)));
-  const spineContent = JSON.stringify({ patterns: sortedPatterns, routes: sortedRoutes, anchorIds, lexiconCanonicals });
+  const sortedLexiconFingerprints = Object.fromEntries(
+    Object.entries(lexiconFingerprints).sort(([a], [b]) => a.localeCompare(b)),
+  );
+  const spineContent = JSON.stringify({ patterns: sortedPatterns, routes: sortedRoutes, anchorIds, lexiconCanonicals, lexiconFingerprints: sortedLexiconFingerprints });
   const edition = `sha256:${createHash('sha256').update(spineContent).digest('hex').slice(0, 16)}`;
 
   return {
