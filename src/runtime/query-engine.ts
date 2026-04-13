@@ -108,10 +108,13 @@ export class QueryEngine {
       });
     }
 
-    const deterministic = trace.routeWins
-      ? buildRouteAnswer(question, mode, trace.selectedNodeIds.find(
+    const routeNodeId = trace.routeWins
+      ? trace.selectedNodeIds.find(
           (nodeId) => this.snapshot.compiledNodes[nodeId]?.kind === 'route',
-        )!, trace, this.snapshot, this.rebuilt)
+        )
+      : undefined;
+    const deterministic = routeNodeId
+      ? buildRouteAnswer(question, mode, routeNodeId, trace, this.snapshot, this.rebuilt)
       : buildPatternAnswer(question, mode, trace, this.snapshot, this.rebuilt);
 
     if (!this.synthesizer) {
