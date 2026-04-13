@@ -138,6 +138,7 @@ function addIndexDescriptionCandidates(
   addCandidate: (nodeId: string, delta: number, reason: string, origin: FrontierOrigin) => void,
 ): void {
   const queryTokens = tokenize(question);
+  const normalizedQ = normalizeForLookup(question);
   const bestByTarget = new Map<string, { score: number; reason: string }>();
   for (const indexNode of Object.values(snapshot.indexMap)) {
     const targetId = indexNode.metadata?.patternId;
@@ -153,7 +154,7 @@ function addIndexDescriptionCandidates(
     if (
       normalizedDescription &&
       normalizedDescription.length > 8 &&
-      normalizeForLookup(question).includes(normalizedDescription)
+      normalizedQ.includes(normalizedDescription)
     ) {
       score += 18;
     }

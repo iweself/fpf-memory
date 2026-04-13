@@ -17,8 +17,10 @@ import type {
   TraceCandidate,
 } from './types.js';
 
-const MAX_HOPS = 6;
-const MAX_SELECTED_ANCHORS = 12;
+import {
+  MAX_HOPS,
+  MAX_SELECTED_ANCHORS,
+} from './constants.js';
 
 export interface GroundingResult {
   selectedNodeIds: string[];
@@ -173,10 +175,11 @@ function buildFrontier(
   };
 
   for (const nodeId of selectedNodeIds) {
-    for (const edge of snapshot.relationGraph) {
-      if (edge.from !== nodeId) {
-        continue;
-      }
+    const sourceNode = snapshot.compiledNodes[nodeId];
+    if (!sourceNode) {
+      continue;
+    }
+    for (const edge of sourceNode.neighborEdges) {
       const target = snapshot.compiledNodes[edge.to];
       if (!target || target.kind === 'lexeme') {
         continue;

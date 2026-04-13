@@ -15,7 +15,7 @@ import type {
   TraceResult,
 } from './types.js';
 
-const MAX_SYNTHESIS_SLICES = 8;
+import { MAX_SYNTHESIS_SLICES } from './constants.js';
 
 export function buildRouteAnswer(
   question: string,
@@ -27,9 +27,12 @@ export function buildRouteAnswer(
 ): QueryResult {
   const route = snapshot.routeGraph.nodes[routeNodeId]!;
   const ids = unique([...route.orderedIds, ...route.optionalIds, ...route.landingIds]);
-  const relations = snapshot.relationGraph
-    .filter((edge) => ids.includes(edge.from) && ids.includes(edge.to))
-    .map((edge) => ({ from: edge.from, relation: edge.relation, to: edge.to }));
+  const idSet = new Set(ids);
+  const relations = ids.flatMap((id) =>
+    (snapshot.compiledNodes[id]?.neighborEdges ?? [])
+      .filter((edge) => idSet.has(edge.to))
+      .map((edge) => ({ from: edge.from, relation: edge.relation, to: edge.to })),
+  );
   const constraints = [
     route.firstHonestBurden
       ? `First honest burden: ${route.firstHonestBurden}.`
@@ -126,9 +129,12 @@ export function buildPatternAnswer(
     }),
   ).slice(0, mode === 'compact' ? 3 : 6);
 
-  const relations = snapshot.relationGraph
-    .filter((edge) => patternIds.includes(edge.from) && patternIds.includes(edge.to))
-    .map((edge) => ({ from: edge.from, relation: edge.relation, to: edge.to }));
+  const patternIdSet = new Set(patternIds);
+  const relations = patternIds.flatMap((id) =>
+    (snapshot.compiledNodes[id]?.neighborEdges ?? [])
+      .filter((edge) => patternIdSet.has(edge.to))
+      .map((edge) => ({ from: edge.from, relation: edge.relation, to: edge.to })),
+  );
 
   return buildResult(question, mode, rebuilt, snapshot, {
     answer,

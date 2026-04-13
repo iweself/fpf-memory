@@ -17,6 +17,10 @@ import {
   isPartCDraftQuery,
 } from './compiler.js';
 import {
+  MAX_EXCLUDED,
+  MAX_SYNTHESIS_SLICES,
+} from './constants.js';
+import {
   buildDocsProjection,
   resolveDocTarget,
 } from '../docs/projection.js';
@@ -49,9 +53,6 @@ import type {
   Snapshot,
   TraceResult,
 } from './types.js';
-
-const MAX_EXCLUDED = 5;
-const MAX_SYNTHESIS_SLICES = 8;
 
 export class QueryEngine {
   private anchorOwnerNodeMap?: Map<string, CompiledNode>;

@@ -19,7 +19,7 @@ export interface RankingResult {
   initialAnchorIds: string[];
 }
 
-const MAX_SELECTED_ANCHORS = 12;
+import { MAX_SELECTED_ANCHORS } from './constants.js';
 
 export function rankCandidates(
   question: string,
