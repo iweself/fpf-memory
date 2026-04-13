@@ -421,6 +421,7 @@ export interface RuntimeStatus {
     enabled: boolean;
     maxSessions: number;
     activeSessions: number;
+    persistent: boolean;
   };
 }
 

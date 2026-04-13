@@ -34,6 +34,7 @@ export interface FpfRuntimeOptions {
   artifactDir?: string;
   synthesizer?: LocalAnswerSynthesizer;
   maxSessions?: number;
+  persistSessionCache?: boolean;
 }
 
 export class FpfRuntime {
@@ -59,12 +60,18 @@ export class FpfRuntime {
       ]),
     ) as Record<keyof typeof ARTIFACT_FILENAMES, string>;
     this.synthesizer = options.synthesizer ?? createSynthesizerFromEnv();
-    this.sessionCache = new SessionCache(options.maxSessions ?? 50);
+    const persistSession =
+      options.persistSessionCache ?? process.env.FPF_PERSIST_SESSION_CACHE === 'true';
+    this.sessionCache = new SessionCache({
+      maxSessions: options.maxSessions ?? 50,
+      persistPath: persistSession ? this.artifactPaths.sessionCache : undefined,
+    });
   }
 
   async refresh(force = false): Promise<BuildAudit> {
     await mkdir(this.artifactDir, { recursive: true });
     const currentSourceHash = await hashFile(this.sourcePath);
+    await this.sessionCache.load(currentSourceHash);
     const existingSnapshot = await this.loadSnapshot();
     const compatibleSnapshot = existingSnapshot && !snapshotNeedsRebuild(existingSnapshot);
 

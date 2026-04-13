@@ -1,3 +1,6 @@
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
+
 export interface RetrievalSessionState {
   lastNormalizedQuestion: string;
   lastSelectedNodeIds: string[];
@@ -6,10 +9,50 @@ export interface RetrievalSessionState {
   updatedAt: string;
 }
 
+interface PersistedSessionCache {
+  sourceHash: string;
+  entries: Record<string, RetrievalSessionState>;
+}
+
+export interface SessionCacheOptions {
+  maxSessions?: number;
+  persistPath?: string;
+}
+
 export class SessionCache {
   private readonly entries = new Map<string, RetrievalSessionState>();
+  private readonly maxSessions: number;
+  private readonly persistPath?: string;
+  private sourceHash?: string;
+  private flushPromise?: Promise<void>;
 
-  constructor(private readonly maxSessions = 50) {}
+  constructor(options: SessionCacheOptions = {}) {
+    this.maxSessions = options.maxSessions ?? 50;
+    this.persistPath = options.persistPath;
+  }
+
+  async load(sourceHash: string): Promise<void> {
+    this.sourceHash = sourceHash;
+    if (!this.persistPath) {
+      return;
+    }
+    try {
+      const raw = await readFile(this.persistPath, 'utf8');
+      const data: PersistedSessionCache = JSON.parse(raw);
+      if (data.sourceHash !== sourceHash) {
+        return;
+      }
+      this.entries.clear();
+      const keys = Object.keys(data.entries);
+      const start = Math.max(0, keys.length - this.maxSessions);
+      for (let i = start; i < keys.length; i++) {
+        const key = keys[i];
+        this.entries.set(key, data.entries[key]);
+      }
+    } catch {
+      // File missing or corrupt — start fresh
+    }
+  }
 
   get(sessionId: string): RetrievalSessionState | undefined {
     const value = this.entries.get(sessionId);
@@ -33,13 +76,35 @@ export class SessionCache {
       }
       this.entries.delete(oldest);
     }
+    this.scheduleFlush();
   }
 
-  summary(): { enabled: boolean; maxSessions: number; activeSessions: number } {
+  summary(): { enabled: boolean; maxSessions: number; activeSessions: number; persistent: boolean } {
     return {
       enabled: true,
       maxSessions: this.maxSessions,
       activeSessions: this.entries.size,
+      persistent: this.persistPath != null,
     };
+  }
+
+  private scheduleFlush(): void {
+    if (!this.persistPath || !this.sourceHash) {
+      return;
+    }
+    const path = this.persistPath;
+    const data: PersistedSessionCache = {
+      sourceHash: this.sourceHash,
+      entries: Object.fromEntries(this.entries),
+    };
+    const json = JSON.stringify(data, null, 2);
+    this.flushPromise = (this.flushPromise ?? Promise.resolve())
+      .then(async () => {
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, json, 'utf8');
+      })
+      .catch(() => {
+        // Best-effort persistence — don't crash on write failure
+      });
   }
 }
