@@ -261,22 +261,35 @@ describe('Compiler / Snapshot determinism stage', () => {
     expect(firstJson).toBe(secondJson);
   });
 
-  it('produces different sourceHash when source text changes', async () => {
+  it('produces structurally different output when source text changes', async () => {
     const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
     const sourceText = await readFile(sourcePath, 'utf8');
     const builtAt = '2025-01-01T00:00:00.000Z';
 
     const hash1 = createHash('sha256').update(sourceText).digest('hex');
-    const hash2 = createHash('sha256').update(`${sourceText}\n<!-- change -->\n`).digest('hex');
+    // Append a new heading + body — the compiler must parse it as an
+    // additional section, which changes the structural output (not just
+    // the caller-provided hash).
+    const modifiedText = `${sourceText}\n\n## Z.99 Synthetic Test Section\n\nA synthetic section added to verify the compiler processes changed source text.\n`;
+    const hash2 = createHash('sha256').update(modifiedText).digest('hex');
 
     const first = compileFpfSource({ sourcePath, sourceHash: hash1, builtAt, sourceText });
     const second = compileFpfSource({
       sourcePath,
       sourceHash: hash2,
       builtAt,
-      sourceText: `${sourceText}\n<!-- change -->\n`,
+      sourceText: modifiedText,
     });
 
-    expect(first.snapshot.sourceHash).not.toBe(second.snapshot.sourceHash);
+    // Verify a structural difference — the added heading should produce at
+    // least one more parsed section or index-map node than the original.
+    const firstSections = first.snapshot.validation.parsedSections;
+    const firstIndexNodes = Object.keys(first.snapshot.indexMap).length;
+    const secondSections = second.snapshot.validation.parsedSections;
+    const secondIndexNodes = Object.keys(second.snapshot.indexMap).length;
+
+    const structurallyDifferent =
+      secondSections > firstSections || secondIndexNodes > firstIndexNodes;
+    expect(structurallyDifferent).toBe(true);
   });
 });
