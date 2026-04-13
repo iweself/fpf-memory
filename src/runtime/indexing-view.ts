@@ -38,14 +38,16 @@ export function buildIndexingView(snapshot: Snapshot): IndexingView {
       optionalIds: [...route.optionalIds],
       landingIds: [...route.landingIds],
       routeSurfaces: [...route.routeSurfaces],
-      constraints: [...((route as { constraints?: string[] }).constraints ?? [])],
+      constraints: [],
     };
   }
 
   const anchorIds = Object.keys(snapshot.anchorMap).sort();
   const lexiconCanonicals = Object.keys(snapshot.lexicon).sort();
 
-  const spineContent = JSON.stringify({ patterns, routes, anchorIds, lexiconCanonicals });
+  const sortedPatterns = Object.fromEntries(Object.entries(patterns).sort(([a], [b]) => a.localeCompare(b)));
+  const sortedRoutes = Object.fromEntries(Object.entries(routes).sort(([a], [b]) => a.localeCompare(b)));
+  const spineContent = JSON.stringify({ patterns: sortedPatterns, routes: sortedRoutes, anchorIds, lexiconCanonicals });
   const edition = `sha256:${createHash('sha256').update(spineContent).digest('hex').slice(0, 16)}`;
 
   return {
@@ -131,7 +133,10 @@ function inferChangeFamily(
         return (
           prevRoute.name !== currRoute.name ||
           JSON.stringify(prevRoute.orderedIds) !== JSON.stringify(currRoute.orderedIds) ||
-          JSON.stringify(prevRoute.landingIds) !== JSON.stringify(currRoute.landingIds)
+          JSON.stringify(prevRoute.landingIds) !== JSON.stringify(currRoute.landingIds) ||
+          JSON.stringify(prevRoute.optionalIds) !== JSON.stringify(currRoute.optionalIds) ||
+          JSON.stringify(prevRoute.routeSurfaces) !== JSON.stringify(currRoute.routeSurfaces) ||
+          JSON.stringify(prevRoute.constraints) !== JSON.stringify(currRoute.constraints)
         );
       }
       return true;
