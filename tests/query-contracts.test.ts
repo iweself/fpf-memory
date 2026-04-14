@@ -5,15 +5,26 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from '@rstest/core';
 
 import { compileFpfSource } from '../src/runtime/compiler.js';
-import { QueryEngine } from '../src/runtime/query-engine.js';
-import type { LocalAnswerSynthesizer, Snapshot } from '../src/runtime/types.js';
+import { normalizeQuery } from '../src/runtime/query-normalizer.js';
+import { seedCandidates } from '../src/runtime/candidate-seeder.js';
+import { isAmbiguous, rankCandidates } from '../src/runtime/candidate-ranker.js';
+import { expandGrounding } from '../src/runtime/frontier-expander.js';
+import {
+  buildPatternAnswer,
+  confidenceFromTrace,
+  gapsFromTrace,
+  prepareSynthesisSlices,
+} from '../src/runtime/answer-projector.js';
+import { synthesizeAnswer } from '../src/runtime/synthesis-adapter.js';
+import { MAX_EXCLUDED } from '../src/runtime/constants.js';
+import type { CompiledNode, LocalAnswerSynthesizer, Snapshot, TraceResult } from '../src/runtime/types.js';
 
 /**
  * Stage-local contract tests for the query pipeline.
  *
- * Each test targets a specific retrieval stage promise so that a failure
- * pinpoints the broken stage rather than surfacing as a generic
- * "end-to-end answer is wrong."
+ * Each describe block targets a single stage function imported directly
+ * from its module so that a regression in one stage cannot masquerade
+ * as a failure in another.
  *
  * Canonical fixture IDs: `A.1.1`, `A.15`, `B.3` are used as stable spec
  * anchors throughout these tests. If the FPF spec renames or renumbers
@@ -39,20 +50,80 @@ async function getSnapshot(): Promise<Snapshot> {
   return cachedSnapshot;
 }
 
-function engine(snapshot: Snapshot, synthesizer?: LocalAnswerSynthesizer): QueryEngine {
-  return new QueryEngine(snapshot, false, synthesizer);
+/**
+ * Assemble a TraceResult from stage outputs, mirroring QueryEngine.trace().
+ * Used by projection and synthesis tests so they can feed stage outputs
+ * forward without routing through QueryEngine.
+ */
+function assembleTrace(
+  question: string,
+  mode: 'compact' | 'verbose' | 'proof',
+  snapshot: Snapshot,
+): TraceResult {
+  const normalized = normalizeQuery(question, snapshot);
+  const seeding = seedCandidates(normalized, snapshot);
+  const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+  const grounding = expandGrounding(
+    question,
+    ranking.candidates,
+    ranking.initialNodeIds,
+    ranking.initialAnchorIds,
+    seeding.frontierCandidates,
+    seeding.frontierKeys,
+    snapshot,
+  );
+
+  const selectedNodeIds = grounding.selectedNodeIds;
+  const excludedNodeIds = ranking.candidates
+    .map((c) => c.nodeId)
+    .filter((nodeId) => !selectedNodeIds.includes(nodeId))
+    .slice(0, MAX_EXCLUDED);
+  const status =
+    selectedNodeIds.length === 0
+      ? 'not_found'
+      : ranking.routeWins
+        ? 'ok'
+        : isAmbiguous(question, ranking.candidates)
+          ? 'ambiguous'
+          : 'ok';
+
+  return {
+    mode,
+    question,
+    normalizedQuestion: normalized.normalizedQuestion,
+    detected: normalized.detected,
+    candidateScores: ranking.candidates.slice(0, 16),
+    frontierCandidates: seeding.frontierCandidates,
+    graphExpansions: grounding.graphExpansions,
+    selectedNodeIds,
+    selectedAnchorIds: grounding.selectedAnchorIds,
+    excludedNodeIds,
+    followedReferences: grounding.followedReferences,
+    retrievalHops: grounding.retrievalHops,
+    sessionApplied: seeding.sessionApplied,
+    sessionReusedNodeIds: [],
+    sessionMateriallyChanged: false,
+    sufficient: grounding.sufficient,
+    routeWins: ranking.routeWins,
+    status,
+    snapshot: {
+      sourceHash: snapshot.sourceHash,
+      builtAt: snapshot.builtAt,
+      rebuilt: false,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
-// Stage 1: Normalizer
+// Stage 1: Normalizer  (normalizeQuery)
 // ---------------------------------------------------------------------------
 describe('Query / Normalizer stage', () => {
   it('detects explicit IDs in the question', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('What is A.1.1?');
+    const normalized = normalizeQuery('What is A.1.1?', snapshot);
 
-    expect(trace.detected.ids).toContain('A.1.1');
-    expect(trace.normalizedQuestion.length).toBeGreaterThan(0);
+    expect(normalized.detected.ids).toContain('A.1.1');
+    expect(normalized.normalizedQuestion.length).toBeGreaterThan(0);
   });
 
   it('detects route names when mentioned in the question', async () => {
@@ -61,42 +132,42 @@ describe('Query / Normalizer stage', () => {
 
     expect(routeNames.length).toBeGreaterThan(0);
     const firstRoute = routeNames[0]!;
-    const trace = engine(snapshot).trace(`Tell me about the ${firstRoute} route`);
-    expect(trace.detected.routeNames).toContain(firstRoute);
+    const normalized = normalizeQuery(`Tell me about the ${firstRoute} route`, snapshot);
+    expect(normalized.detected.routeNames).toContain(firstRoute);
   });
 
   it('detects status terms present in the status index', async () => {
     const snapshot = await getSnapshot();
 
-    // The normalizer only detects these fixed tokens.
     const knownTokens = ['draft', 'stable', 'stub', 'transitional'];
     const matchedToken = knownTokens.find(
       (t) => snapshot.indexes.statusIndex[t] !== undefined,
     );
 
     expect(matchedToken).toBeDefined();
-    const trace = engine(snapshot).trace(`Show me ${matchedToken} patterns`);
-    expect(trace.detected.statusTerms).toContain(matchedToken);
+    const normalized = normalizeQuery(`Show me ${matchedToken} patterns`, snapshot);
+    expect(normalized.detected.statusTerms).toContain(matchedToken);
   });
 
   it('returns empty signals for a nonsense question', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('__FPFTEST_NONSENSE_999__');
+    const normalized = normalizeQuery('__FPFTEST_NONSENSE_999__', snapshot);
 
-    expect(trace.detected.ids).toEqual([]);
-    expect(trace.detected.routeNames).toEqual([]);
+    expect(normalized.detected.ids).toEqual([]);
+    expect(normalized.detected.routeNames).toEqual([]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Stage 2: Candidate seeder
+// Stage 2: Candidate seeder  (seedCandidates)
 // ---------------------------------------------------------------------------
 describe('Query / Seed coverage stage', () => {
   it('seeds exact-match candidates when explicit IDs are in the question', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('What is A.1.1?');
+    const normalized = normalizeQuery('What is A.1.1?', snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
 
-    const exactCandidate = trace.candidateScores.find((c) => c.nodeId === 'A.1.1');
+    const exactCandidate = seeding.candidateMap.get('A.1.1');
     expect(exactCandidate).toBeDefined();
     expect(exactCandidate!.reasons).toContain('exact-id');
     expect(exactCandidate!.score).toBeGreaterThanOrEqual(100);
@@ -104,19 +175,22 @@ describe('Query / Seed coverage stage', () => {
 
   it('seeds lexical candidates for keyword-rich queries', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('How does bounded context relate to role assignment?');
+    const normalized = normalizeQuery('How does bounded context relate to role assignment?', snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
 
-    const lexicalFrontier = trace.frontierCandidates.filter((c) => c.origin === 'lexical');
+    const lexicalFrontier = seeding.frontierCandidates.filter((c) => c.origin === 'lexical');
     expect(lexicalFrontier.length).toBeGreaterThan(0);
   });
 
   it('seeds route expansion candidates for route-bearing queries', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace(
+    const normalized = normalizeQuery(
       'What is the first practical route when vocabulary is overloaded across teams?',
+      snapshot,
     );
+    const seeding = seedCandidates(normalized, snapshot);
 
-    const routeFrontier = trace.frontierCandidates.filter(
+    const routeFrontier = seeding.frontierCandidates.filter(
       (c) => c.origin === 'route_expansion',
     );
     expect(routeFrontier.length).toBeGreaterThan(0);
@@ -124,46 +198,49 @@ describe('Query / Seed coverage stage', () => {
 
   it('produces few or low-scoring candidates for a completely unrelated question', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('__FPFTEST_NONSENSE_999__');
+    const normalized = normalizeQuery('__FPFTEST_NONSENSE_999__', snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
 
-    // Index description overlap may still surface some weak candidates.
-    // The contract is that no candidate scores above the exact-match
-    // threshold (100) and total count stays low relative to the full catalog.
-    const highScoring = trace.candidateScores.filter((c) => c.score >= 100);
+    const highScoring = Array.from(seeding.candidateMap.values()).filter((c) => c.score >= 100);
     expect(highScoring.length).toBe(0);
-    expect(trace.frontierCandidates.length).toBeLessThan(
+    expect(seeding.frontierCandidates.length).toBeLessThan(
       Object.keys(snapshot.compiledNodes).length / 2,
     );
   });
 });
 
 // ---------------------------------------------------------------------------
-// Stage 3: Candidate ranker
+// Stage 3: Candidate ranker  (rankCandidates)
 // ---------------------------------------------------------------------------
 describe('Query / Ranker stage', () => {
   it('ranks exact-ID matches above lexical matches', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('What is A.1.1?');
+    const normalized = normalizeQuery('What is A.1.1?', snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates('What is A.1.1?', seeding.candidateMap, snapshot);
 
-    const scores = trace.candidateScores;
-    expect(scores.length).toBeGreaterThan(0);
-    expect(scores[0]!.nodeId).toBe('A.1.1');
+    expect(ranking.candidates.length).toBeGreaterThan(0);
+    expect(ranking.candidates[0]!.nodeId).toBe('A.1.1');
   });
 
   it('selects the expected initial node IDs for an explicit ID query', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('What is A.1.1?');
+    const normalized = normalizeQuery('What is A.1.1?', snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates('What is A.1.1?', seeding.candidateMap, snapshot);
 
-    expect(trace.selectedNodeIds).toContain('A.1.1');
+    expect(ranking.initialNodeIds).toContain('A.1.1');
   });
 
   it('selects a route node when route intent is clear', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace(
-      'What is the first practical route when vocabulary is overloaded across teams?',
-    );
+    const question = 'What is the first practical route when vocabulary is overloaded across teams?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
 
-    const routeNodes = trace.selectedNodeIds.filter(
+    expect(ranking.routeWins).toBe(true);
+    const routeNodes = ranking.initialNodeIds.filter(
       (id) => snapshot.compiledNodes[id]?.kind === 'route',
     );
     expect(routeNodes.length).toBeGreaterThan(0);
@@ -171,63 +248,103 @@ describe('Query / Ranker stage', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Stage 4: Frontier expansion bounds
+// Stage 4: Frontier expansion  (expandGrounding)
 // ---------------------------------------------------------------------------
 describe('Query / Frontier expansion stage', () => {
   it('respects the MAX_HOPS budget (≤6 retrieval hops)', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace(
-      'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?',
+    const question = 'How do U.RoleAssignment, U.BoundedContext, and U.RoleStateGraph connect in a lawful workflow?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+    const grounding = expandGrounding(
+      question,
+      ranking.candidates,
+      ranking.initialNodeIds,
+      ranking.initialAnchorIds,
+      seeding.frontierCandidates,
+      seeding.frontierKeys,
+      snapshot,
     );
 
-    expect(trace.retrievalHops.length).toBeLessThanOrEqual(6);
+    expect(grounding.retrievalHops.length).toBeLessThanOrEqual(6);
   });
 
   it('respects the MAX_SELECTED_ANCHORS budget (≤12 anchors)', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('What is A.1.1?');
+    const question = 'What is A.1.1?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+    const grounding = expandGrounding(
+      question,
+      ranking.candidates,
+      ranking.initialNodeIds,
+      ranking.initialAnchorIds,
+      seeding.frontierCandidates,
+      seeding.frontierKeys,
+      snapshot,
+    );
 
-    expect(trace.selectedAnchorIds.length).toBeLessThanOrEqual(12);
+    expect(grounding.selectedAnchorIds.length).toBeLessThanOrEqual(12);
   });
 
   it('records hop metadata (iteration, reason, added nodes/anchors)', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace(
-      'How do A.1.1, A.15, and B.3 connect in a lawful workflow?',
+    const question = 'How do A.1.1, A.15, and B.3 connect in a lawful workflow?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+    const grounding = expandGrounding(
+      question,
+      ranking.candidates,
+      ranking.initialNodeIds,
+      ranking.initialAnchorIds,
+      seeding.frontierCandidates,
+      seeding.frontierKeys,
+      snapshot,
     );
 
-    // If the engine already considers the grounding sufficient before any
-    // expansion, hops will be empty — that's valid behavior, not a test failure.
-    if (trace.retrievalHops.length > 0) {
-      const firstHop = trace.retrievalHops[0]!;
+    if (grounding.retrievalHops.length > 0) {
+      const firstHop = grounding.retrievalHops[0]!;
       expect(firstHop.iteration).toBe(1);
       expect(firstHop.reason.length).toBeGreaterThan(0);
       expect(typeof firstHop.sufficientAfter).toBe('boolean');
     } else {
-      // No hops means grounding was already sufficient from initial selection.
-      expect(trace.sufficient).toBe(true);
+      expect(grounding.sufficient).toBe(true);
     }
   });
 
   it('marks sufficiency correctly — sufficient traces have anchors', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('What is A.1.1?');
+    const question = 'What is A.1.1?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+    const grounding = expandGrounding(
+      question,
+      ranking.candidates,
+      ranking.initialNodeIds,
+      ranking.initialAnchorIds,
+      seeding.frontierCandidates,
+      seeding.frontierKeys,
+      snapshot,
+    );
 
-    expect(trace.sufficient).toBe(true);
-    expect(trace.selectedAnchorIds.length).toBeGreaterThan(0);
+    expect(grounding.sufficient).toBe(true);
+    expect(grounding.selectedAnchorIds.length).toBeGreaterThan(0);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Stage 5: Answer projection stability
+// Stage 5: Answer projection  (buildPatternAnswer / buildRouteAnswer / confidenceFromTrace)
 // ---------------------------------------------------------------------------
 describe('Query / Projection stability stage', () => {
-  it('produces stable support set across repeated queries', async () => {
+  it('produces stable support set across repeated stage invocations', async () => {
     const snapshot = await getSnapshot();
-    const eng = engine(snapshot);
 
-    const trace1 = eng.trace('What is A.1.1?');
-    const trace2 = eng.trace('What is A.1.1?');
+    const trace1 = assembleTrace('What is A.1.1?', 'compact', snapshot);
+    const trace2 = assembleTrace('What is A.1.1?', 'compact', snapshot);
 
     expect(trace1.selectedNodeIds).toEqual(trace2.selectedNodeIds);
     expect(trace1.selectedAnchorIds).toEqual(trace2.selectedAnchorIds);
@@ -238,7 +355,8 @@ describe('Query / Projection stability stage', () => {
 
   it('projects a non-empty answer with citations for a known pattern query', async () => {
     const snapshot = await getSnapshot();
-    const result = await engine(snapshot).query('What is A.1.1?', 'verbose');
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+    const result = buildPatternAnswer('What is A.1.1?', 'verbose', trace, snapshot, false);
 
     expect(result.status).toBe('ok');
     expect(result.answer.length).toBeGreaterThan(0);
@@ -248,37 +366,61 @@ describe('Query / Projection stability stage', () => {
 
   it('projects constraints for verbose mode', async () => {
     const snapshot = await getSnapshot();
-    const result = await engine(snapshot).query('What is A.1.1?', 'verbose');
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+    const result = buildPatternAnswer('What is A.1.1?', 'verbose', trace, snapshot, false);
 
     expect(result.constraints.length).toBeGreaterThanOrEqual(1);
   });
 
   it('projects a grounding chain in proof mode', async () => {
     const snapshot = await getSnapshot();
-    const result = await engine(snapshot).query('What is A.1.1?', 'proof');
+    const trace = assembleTrace('What is A.1.1?', 'proof', snapshot);
+    const result = buildPatternAnswer('What is A.1.1?', 'proof', trace, snapshot, false);
 
     expect(result.groundingChain).toBeDefined();
     expect(result.groundingChain!.length).toBeGreaterThan(0);
   });
 
-  it('returns low-confidence status for completely unresolvable questions', async () => {
+  it('returns low confidence for completely unresolvable questions', async () => {
     const snapshot = await getSnapshot();
-    const result = await engine(snapshot).query('__FPFTEST_NONSENSE_999__', 'compact');
+    const trace = assembleTrace('__FPFTEST_NONSENSE_999__', 'compact', snapshot);
 
-    // Weak index-description overlap may still produce ambiguous candidates,
-    // so the engine may return 'ambiguous' or 'not_found'.  The contract is
-    // that confidence stays below the high-confidence threshold.
-    expect(['not_found', 'ambiguous']).toContain(result.status);
-    expect(result.confidence).toBeLessThan(0.7);
+    expect(['not_found', 'ambiguous']).toContain(trace.status);
+    expect(confidenceFromTrace(trace)).toBeLessThan(0.7);
+  });
+
+  it('computes confidence via confidenceFromTrace without QueryEngine', async () => {
+    const snapshot = await getSnapshot();
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+
+    const confidence = confidenceFromTrace(trace);
+    expect(confidence).toBeGreaterThan(0.5);
+    expect(confidence).toBeLessThanOrEqual(1);
+  });
+
+  it('computes gaps via gapsFromTrace without QueryEngine', async () => {
+    const snapshot = await getSnapshot();
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+
+    const gaps = gapsFromTrace(trace);
+    expect(Array.isArray(gaps)).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Stage 6: Synthesis isolation
+// Stage 6: Synthesis isolation  (synthesizeAnswer)
 // ---------------------------------------------------------------------------
 describe('Query / Synthesis isolation stage', () => {
   it('returns deterministic answer when synthesizer is unavailable', async () => {
     const snapshot = await getSnapshot();
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+    const deterministicResult = buildPatternAnswer('What is A.1.1?', 'verbose', trace, snapshot, false);
+    const nodes = trace.selectedNodeIds
+      .map((nodeId) => snapshot.compiledNodes[nodeId])
+      .filter((node): node is CompiledNode => Boolean(node))
+      .slice(0, 8);
+    const slices = prepareSynthesisSlices(trace, snapshot);
+
     const unavailable: LocalAnswerSynthesizer = {
       isAvailable: async () => false,
       synthesize: async () => {
@@ -286,7 +428,9 @@ describe('Query / Synthesis isolation stage', () => {
       },
     };
 
-    const result = await engine(snapshot, unavailable).query('What is A.1.1?', 'verbose');
+    const result = await synthesizeAnswer(
+      'What is A.1.1?', 'verbose', trace, nodes, slices, deterministicResult, unavailable,
+    );
 
     expect(result.status).toBe('ok');
     expect(result.ids).toContain('A.1.1');
@@ -295,6 +439,14 @@ describe('Query / Synthesis isolation stage', () => {
 
   it('falls back to deterministic answer when synthesizer throws', async () => {
     const snapshot = await getSnapshot();
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+    const deterministicResult = buildPatternAnswer('What is A.1.1?', 'verbose', trace, snapshot, false);
+    const nodes = trace.selectedNodeIds
+      .map((nodeId) => snapshot.compiledNodes[nodeId])
+      .filter((node): node is CompiledNode => Boolean(node))
+      .slice(0, 8);
+    const slices = prepareSynthesisSlices(trace, snapshot);
+
     const failing: LocalAnswerSynthesizer = {
       isAvailable: async () => true,
       synthesize: async () => {
@@ -302,7 +454,9 @@ describe('Query / Synthesis isolation stage', () => {
       },
     };
 
-    const result = await engine(snapshot, failing).query('What is A.1.1?', 'verbose');
+    const result = await synthesizeAnswer(
+      'What is A.1.1?', 'verbose', trace, nodes, slices, deterministicResult, failing,
+    );
 
     expect(result.status).toBe('ok');
     expect(result.ids).toContain('A.1.1');
@@ -311,8 +465,13 @@ describe('Query / Synthesis isolation stage', () => {
 
   it('does not alter deterministic IDs or citations when synthesis fails', async () => {
     const snapshot = await getSnapshot();
-    const eng = engine(snapshot);
-    const deterministicResult = await eng.query('What is A.1.1?', 'verbose');
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+    const deterministicResult = buildPatternAnswer('What is A.1.1?', 'verbose', trace, snapshot, false);
+    const nodes = trace.selectedNodeIds
+      .map((nodeId) => snapshot.compiledNodes[nodeId])
+      .filter((node): node is CompiledNode => Boolean(node))
+      .slice(0, 8);
+    const slices = prepareSynthesisSlices(trace, snapshot);
 
     const failing: LocalAnswerSynthesizer = {
       isAvailable: async () => true,
@@ -320,7 +479,10 @@ describe('Query / Synthesis isolation stage', () => {
         throw new Error('test failure');
       },
     };
-    const failedSynthResult = await engine(snapshot, failing).query('What is A.1.1?', 'verbose');
+
+    const failedSynthResult = await synthesizeAnswer(
+      'What is A.1.1?', 'verbose', trace, nodes, slices, deterministicResult, failing,
+    );
 
     expect(failedSynthResult.ids).toEqual(deterministicResult.ids);
     expect(failedSynthResult.citations).toEqual(deterministicResult.citations);
@@ -329,6 +491,14 @@ describe('Query / Synthesis isolation stage', () => {
 
   it('does not call synthesize when synthesizer reports unavailable', async () => {
     const snapshot = await getSnapshot();
+    const trace = assembleTrace('What is A.1.1?', 'verbose', snapshot);
+    const deterministicResult = buildPatternAnswer('What is A.1.1?', 'verbose', trace, snapshot, false);
+    const nodes = trace.selectedNodeIds
+      .map((nodeId) => snapshot.compiledNodes[nodeId])
+      .filter((node): node is CompiledNode => Boolean(node))
+      .slice(0, 8);
+    const slices = prepareSynthesisSlices(trace, snapshot);
+
     let synthesizeCalled = false;
     const unavailable: LocalAnswerSynthesizer = {
       isAvailable: async () => false,
@@ -338,22 +508,23 @@ describe('Query / Synthesis isolation stage', () => {
       },
     };
 
-    await engine(snapshot, unavailable).query('What is A.1.1?', 'compact');
+    await synthesizeAnswer(
+      'What is A.1.1?', 'compact', trace, nodes, slices, deterministicResult, unavailable,
+    );
 
     expect(synthesizeCalled).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Trace determinism (cross-cutting)
+// Trace determinism (cross-cutting — assembled from stages, not QueryEngine)
 // ---------------------------------------------------------------------------
 describe('Query / Trace determinism', () => {
-  it('same snapshot + same query → identical trace structure', async () => {
+  it('same snapshot + same question → identical assembled trace', async () => {
     const snapshot = await getSnapshot();
-    const eng = engine(snapshot);
 
-    const trace1 = eng.trace('How does bounded context relate to role assignment?', 'verbose');
-    const trace2 = eng.trace('How does bounded context relate to role assignment?', 'verbose');
+    const trace1 = assembleTrace('How does bounded context relate to role assignment?', 'verbose', snapshot);
+    const trace2 = assembleTrace('How does bounded context relate to role assignment?', 'verbose', snapshot);
 
     expect(JSON.stringify(trace1)).toBe(JSON.stringify(trace2));
   });
