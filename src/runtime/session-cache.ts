@@ -50,6 +50,12 @@ export class SessionCache {
     }
 
     if (this.sourceHash !== undefined) {
+      // Cancel any pending flush — entries are about to be cleared so writing them
+      // under the new sourceHash would persist stale session context.
+      if (this.flushTimer) {
+        clearTimeout(this.flushTimer);
+        this.flushTimer = undefined;
+      }
       this.entries.clear();
     }
     this.sourceHash = sourceHash;
@@ -139,13 +145,21 @@ export class SessionCache {
       return;
     }
     const path = this.persistPath;
+    // Capture the hash at flush time so we can verify it hasn't changed
+    // between scheduling and the async write completing.
+    const hashAtFlush = this.sourceHash;
     const data: PersistedSessionCache = {
-      sourceHash: this.sourceHash,
+      sourceHash: hashAtFlush,
       entries: Array.from(this.entries.entries()),
     };
     const json = JSON.stringify(data);
     this.flushPromise = (this.flushPromise ?? Promise.resolve())
       .then(async () => {
+        // If the sourceHash changed while we were waiting, skip this write —
+        // the entries were captured under a potentially stale hash.
+        if (this.sourceHash !== hashAtFlush) {
+          return;
+        }
         await mkdir(dirname(path), { recursive: true });
         // Atomic write: write to temp file then rename to avoid corruption on crash
         const tmpPath = join(dirname(path), `.session-cache.tmp.${Date.now()}`);
