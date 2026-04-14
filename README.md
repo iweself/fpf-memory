@@ -107,7 +107,7 @@ bun run mcp
 Hosted/public MCP endpoint used by Codex by default:
 
 ```text
-https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp
+https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp
 ```
 
 Optional local full-surface MCP server for development and expert tools:
@@ -134,7 +134,7 @@ Equivalent `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.fpf_memory]
-url = "https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp"
+url = "https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp"
 ```
 
 This repo ships the same project-scoped configuration at `.codex/config.toml` and `.mcp.json`. Once the project is trusted, Codex can load the hosted `fpf_memory` server directly from the repo.

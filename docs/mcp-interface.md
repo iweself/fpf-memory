@@ -20,7 +20,7 @@ The runtime itself is compiler-backed and local to `FPF-spec.md`:
 
 ## Transport
 
-- hosted/public (default Codex path): `https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp`
+- hosted/public (default Codex path): `https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp`
 - stdio (local expert/dev path): `FPF_MCP_SURFACE=full bun run mcp`
 - HTTP (local dev path): `http://localhost:4111/api/mcp/fpf_memory/mcp` via `mastra dev`
 - server name: `fpf_memory`
@@ -34,7 +34,7 @@ Default `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.fpf_memory]
-url = "https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp"
+url = "https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp"
 ```
 
 This repo ships the same hosted configuration at `.codex/config.toml` and `.mcp.json`. Codex will load that file after the project is trusted.
@@ -100,7 +100,7 @@ Typical checks:
 ```bash
 bun run check
 bun run test
-curl -X POST https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/tools/get_fpf_index_status/execute \
+curl -X POST https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/tools/get_fpf_index_status/execute \
   -H 'content-type: application/json' \
   -d '{"data":{}}'
 FPF_MCP_SURFACE=full bun run mcp
