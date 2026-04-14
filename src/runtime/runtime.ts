@@ -519,9 +519,12 @@ function interleaveBrowseEntries(entries: CatalogEntry[], limit: number): Catalo
     if (!added) break;
   }
 
+  // Enforce the limit — the first pass may overshoot when limit < kindCount.
+  const capped = result.slice(0, limit);
+
   // Sort the interleaved result by ID for stable output.
-  result.sort((a, b) => a.id.localeCompare(b.id));
-  return result;
+  capped.sort((a, b) => a.id.localeCompare(b.id));
+  return capped;
 }
 
 function nodeToCatalogEntry(
