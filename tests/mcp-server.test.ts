@@ -190,15 +190,17 @@ describe('Mastra MCP server', () => {
     }>;
 
     expect(tools.map((tool) => tool.name)).toEqual([
+      'browse_fpf_catalog',
+      'search_fpf',
       'ask_fpf',
       'query_fpf_spec',
-      'get_fpf_index_status',
-      'refresh_fpf_index',
-      'trace_fpf_path',
-      'inspect_fpf_node',
       'read_fpf_doc',
+      'get_fpf_index_status',
+      'inspect_fpf_node',
       'inspect_fpf_anchor',
       'expand_fpf_citations',
+      'trace_fpf_path',
+      'refresh_fpf_index',
     ]);
 
     for (const tool of tools) {
@@ -277,8 +279,11 @@ describe('Mastra MCP server', () => {
     const toolsList = await harness.request('tools/list');
     const tools = (toolsList.result?.tools ?? []) as Array<{ name: string }>;
     expect(tools.map((tool) => tool.name)).toEqual([
+      'browse_fpf_catalog',
+      'search_fpf',
       'ask_fpf',
       'query_fpf_spec',
+      'read_fpf_doc',
       'get_fpf_index_status',
     ]);
   });

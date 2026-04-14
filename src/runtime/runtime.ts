@@ -19,18 +19,24 @@ import {
 } from './session-cache.js';
 import type {
   AnswerMode,
+  BrowseCatalogResult,
   BuildAudit,
+  CatalogEntry,
   ExpandCitationsResult,
   IndexingView,
   InspectAnchorResult,
   InspectResult,
   LocalAnswerSynthesizer,
+  NodeKind,
   QueryResult,
   ReadDocResult,
   RuntimeStatus,
+  SearchHit,
+  SearchResult,
   Snapshot,
   TraceResult,
 } from './types.js';
+import { normalizeForLookup, tokenize, scoreOverlap } from './text.js';
 import { getRuntimeObservabilitySummary } from '../observability/runtime-observability.js';
 
 export interface FpfRuntimeOptions {
@@ -258,6 +264,102 @@ export class FpfRuntime {
     };
   }
 
+  async browse(
+    options: { part?: string; status?: string; kind?: NodeKind; limit?: number; forceRefresh?: boolean } = {},
+  ): Promise<BrowseCatalogResult> {
+    await this.refresh(options.forceRefresh ?? false);
+    const snapshot = await this.requireSnapshot();
+
+    const partLower = options.part?.toLowerCase();
+    const statusLower = options.status?.toLowerCase();
+    const limit = Math.min(options.limit ?? 200, 500);
+
+    const entries = Object.values(snapshot.compiledNodes)
+      .filter((node) => {
+        if (options.kind && node.kind !== options.kind) return false;
+        if (partLower && node.part?.toLowerCase() !== partLower) return false;
+        if (statusLower && node.status?.toLowerCase() !== statusLower) return false;
+        return true;
+      })
+      .map((node) => nodeToCatalogEntry(node, snapshot));
+
+    entries.sort((a, b) => a.id.localeCompare(b.id));
+
+    // When no kind filter is active, interleave kinds so the default page
+    // shows a representative mix of patterns, routes, and lexemes instead
+    // of burying routes/lexemes past the limit cutoff.
+    const trimmed = options.kind
+      ? entries.slice(0, limit)
+      : interleaveBrowseEntries(entries, limit);
+
+    return {
+      entries: trimmed,
+      total: entries.length,
+      filters: {
+        part: options.part,
+        status: options.status,
+        kind: options.kind,
+      },
+      snapshot: { sourceHash: snapshot.sourceHash, builtAt: snapshot.builtAt },
+    };
+  }
+
+  async search(
+    query: string,
+    options: { kind?: NodeKind; limit?: number; forceRefresh?: boolean } = {},
+  ): Promise<SearchResult> {
+    await this.refresh(options.forceRefresh ?? false);
+    const snapshot = await this.requireSnapshot();
+
+    // Tokenize the raw query first so camelCase splits (e.g. BoundedContext →
+    // bounded + context) are preserved; tokenize() handles lowercasing internally.
+    const queryTokens = tokenize(query);
+    const limit = Math.min(options.limit ?? 20, 100);
+
+    const hits: SearchHit[] = [];
+    for (const node of Object.values(snapshot.compiledNodes)) {
+      if (options.kind && node.kind !== options.kind) {
+        continue;
+      }
+
+      const score = scoreOverlap(queryTokens, node.searchableText);
+      if (score <= 0) {
+        continue;
+      }
+
+      hits.push({
+        id: node.id,
+        kind: node.kind,
+        title: node.title,
+        status: node.status,
+        part: node.part,
+        score,
+        snippet: extractSnippet(node.searchableText, queryTokens),
+      });
+    }
+
+    // Boost exact ID and exact title matches so precise selector queries
+    // rank the target node first, ahead of broader prefix matches.
+    const normalizedQuery = normalizeForLookup(query);
+    for (const hit of hits) {
+      if (hit.id === query || normalizeForLookup(hit.id) === normalizedQuery) {
+        hit.score += 200;
+      } else if (normalizeForLookup(hit.title) === normalizedQuery) {
+        hit.score += 150;
+      }
+    }
+
+    hits.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    const trimmed = hits.slice(0, limit);
+
+    return {
+      query,
+      hits: trimmed,
+      total: hits.length,
+      snapshot: { sourceHash: snapshot.sourceHash, builtAt: snapshot.builtAt },
+    };
+  }
+
   private persistSession(sessionId: string | undefined, trace: TraceResult): void {
     if (!sessionId) {
       return;
@@ -375,4 +477,151 @@ function snapshotNeedsRebuild(snapshot: Snapshot): boolean {
       typeof node.metadata.role !== 'string' ||
       typeof node.metadata.routeBearing !== 'boolean',
   );
+}
+
+/**
+ * Interleave entries by kind so the default browse page shows a
+ * representative mix of patterns, routes, and lexemes.  Each kind
+ * gets a fair share of the limit, and leftover slots are filled by
+ * whichever kinds have entries remaining.
+ */
+function interleaveBrowseEntries(entries: CatalogEntry[], limit: number): CatalogEntry[] {
+  const byKind = new Map<string, CatalogEntry[]>();
+  for (const entry of entries) {
+    const bucket = byKind.get(entry.kind) ?? [];
+    bucket.push(entry);
+    byKind.set(entry.kind, bucket);
+  }
+
+  const kinds = [...byKind.keys()].sort();
+  const perKind = Math.max(1, Math.floor(limit / kinds.length));
+  const result: CatalogEntry[] = [];
+
+  // First pass: take up to perKind from each bucket.
+  for (const kind of kinds) {
+    const bucket = byKind.get(kind)!;
+    result.push(...bucket.splice(0, perKind));
+  }
+
+  // Second pass: fill remaining slots round-robin.
+  let remaining = limit - result.length;
+  while (remaining > 0) {
+    let added = false;
+    for (const kind of kinds) {
+      if (remaining <= 0) break;
+      const bucket = byKind.get(kind)!;
+      if (bucket.length > 0) {
+        result.push(bucket.shift()!);
+        remaining -= 1;
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+
+  // Enforce the limit — the first pass may overshoot when limit < kindCount.
+  const capped = result.slice(0, limit);
+
+  // Sort the interleaved result by ID for stable output.
+  capped.sort((a, b) => a.id.localeCompare(b.id));
+  return capped;
+}
+
+function nodeToCatalogEntry(
+  node: import('./types.js').CompiledNode,
+  snapshot: Snapshot,
+): CatalogEntry {
+  let description = '';
+  if (node.kind === 'pattern') {
+    const pattern = snapshot.patternGraph.nodes[node.id];
+    description = pattern?.description ?? node.title;
+  } else if (node.kind === 'route') {
+    const route = snapshot.routeGraph.nodes[node.id];
+    description = route?.description ?? node.title;
+  } else if (node.kind === 'lexeme') {
+    const entry = snapshot.lexicon[node.id];
+    description = entry
+      ? `Lexicon: ${entry.canonical}${entry.aliases.length > 0 ? ` (${entry.aliases.join(', ')})` : ''}`
+      : node.title;
+  }
+  return {
+    id: node.id,
+    kind: node.kind,
+    title: node.title,
+    status: node.status,
+    part: node.part,
+    cluster: node.cluster,
+    description,
+  };
+}
+
+const SNIPPET_RADIUS = 80;
+
+function findTokenPosition(
+  searchableText: string,
+  lower: string,
+  token: string,
+): { pos: number; len: number } | undefined {
+  // Try literal substring match first.
+  const literalPos = lower.indexOf(token);
+  if (literalPos !== -1) {
+    return { pos: literalPos, len: token.length };
+  }
+
+  // For collapsed tokens (e.g. "a23" from "A.2.3"), try matching with
+  // optional non-alphanumeric separators between each character.
+  if (token.length > 0) {
+    const escaped = Array.from(token).map((c) =>
+      c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    );
+    const pattern = new RegExp(escaped.join('[^a-z0-9]*'), 'i');
+    const match = pattern.exec(searchableText);
+    if (match && match.index !== undefined) {
+      return { pos: match.index, len: match[0].length };
+    }
+  }
+
+  return undefined;
+}
+
+function extractSnippet(searchableText: string, queryTokens: string[]): string {
+  const lower = searchableText.toLowerCase();
+  let bestPos = 0;
+  let bestLen = 0;
+  let bestTokenLen = 0;
+
+  for (const token of queryTokens) {
+    const hit = findTokenPosition(searchableText, lower, token);
+    if (hit && token.length > bestTokenLen) {
+      bestPos = hit.pos;
+      bestLen = hit.len;
+      bestTokenLen = token.length;
+    }
+  }
+
+  let start = Math.max(0, bestPos - SNIPPET_RADIUS);
+  let end = Math.min(searchableText.length, bestPos + bestLen + SNIPPET_RADIUS);
+
+  // Snap to word boundaries to avoid cutting words in half.
+  if (start > 0) {
+    const nextSpace = searchableText.indexOf(' ', start);
+    if (nextSpace !== -1 && nextSpace < bestPos) {
+      start = nextSpace + 1;
+    }
+  }
+  if (end < searchableText.length) {
+    const prevSpace = searchableText.lastIndexOf(' ', end);
+    if (prevSpace > bestPos + bestLen) {
+      end = prevSpace;
+    }
+  }
+
+  let snippet = searchableText.slice(start, end).replace(/\s+/g, ' ').trim();
+  if (start > 0) {
+    snippet = `…${snippet}`;
+  }
+  if (end < searchableText.length) {
+    snippet = `${snippet}…`;
+  }
+  return snippet;
 }

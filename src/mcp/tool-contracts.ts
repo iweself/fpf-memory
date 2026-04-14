@@ -485,3 +485,87 @@ export type ReadFpfDocInput = z.infer<typeof readFpfDocInputSchema>;
 export type InspectFpfAnchorInput = z.infer<typeof inspectFpfAnchorInputSchema>;
 export type ExpandFpfCitationsInput = z.infer<typeof expandFpfCitationsInputSchema>;
 export type TraceFpfPathInput = z.infer<typeof traceFpfPathInputSchema>;
+
+// ---------------------------------------------------------------------------
+// Discovery layer schemas (browse / search)
+// ---------------------------------------------------------------------------
+
+export const catalogEntrySchema = z
+  .object({
+    id: z.string(),
+    kind: nodeKindSchema,
+    title: z.string(),
+    status: z.string().optional(),
+    part: z.string().optional(),
+    cluster: z.string().optional(),
+    description: z.string(),
+  })
+  .strict();
+
+export const browseFpfCatalogInputSchema = z
+  .object({
+    part: z.string().optional(),
+    status: z.string().optional(),
+    kind: nodeKindSchema.optional(),
+    limit: z.number().int().min(1).max(500).optional(),
+    forceRefresh: z.boolean().optional(),
+  })
+  .strict();
+
+export const browseFpfCatalogResultSchema = z
+  .object({
+    entries: z.array(catalogEntrySchema),
+    total: z.number(),
+    filters: z
+      .object({
+        part: z.string().optional(),
+        status: z.string().optional(),
+        kind: nodeKindSchema.optional(),
+      })
+      .strict(),
+    snapshot: z
+      .object({
+        sourceHash: z.string(),
+        builtAt: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export const searchHitSchema = z
+  .object({
+    id: z.string(),
+    kind: nodeKindSchema,
+    title: z.string(),
+    status: z.string().optional(),
+    part: z.string().optional(),
+    score: z.number(),
+    snippet: z.string(),
+  })
+  .strict();
+
+export const searchFpfInputSchema = z
+  .object({
+    query: z.string().min(1),
+    kind: nodeKindSchema.optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    forceRefresh: z.boolean().optional(),
+  })
+  .strict();
+
+export const searchFpfResultSchema = z
+  .object({
+    query: z.string(),
+    hits: z.array(searchHitSchema),
+    total: z.number(),
+    snapshot: z
+      .object({
+        sourceHash: z.string(),
+        builtAt: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type BrowseFpfCatalogInput = z.infer<typeof browseFpfCatalogInputSchema>;
+export type SearchFpfInput = z.infer<typeof searchFpfInputSchema>;

@@ -12,6 +12,6 @@ export const fpfMemory = new MCPServer({
 export const fpfMemoryPublic = new MCPServer({
   name: 'fpf_memory',
   version: '1.0.0',
-  description: 'FPF-spec query runtime with public tool surface (ask, query, status).',
+  description: 'FPF-spec query runtime with public discovery surface (browse, search, ask, query, read, status).',
   tools: fpfPublicTools,
 });
