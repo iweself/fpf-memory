@@ -162,14 +162,7 @@ export class FpfRuntime {
     forceRefresh = false,
     sessionId?: string,
   ): Promise<QueryResult> {
-    const audit = await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    const engine = new QueryEngine(
-      snapshot,
-      audit.rebuilt,
-      this.synthesizer,
-      sessionId ? this.sessionCache.get(sessionId) : undefined,
-    );
+    const engine = await this.createEngine(forceRefresh, sessionId);
     const trace = engine.trace(question, mode);
     const result = await engine.answerFromTrace(question, mode, trace);
     this.persistSession(sessionId, trace);
@@ -182,14 +175,7 @@ export class FpfRuntime {
     forceRefresh = false,
     sessionId?: string,
   ): Promise<TraceResult> {
-    const audit = await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    const trace = new QueryEngine(
-      snapshot,
-      audit.rebuilt,
-      this.synthesizer,
-      sessionId ? this.sessionCache.get(sessionId) : undefined,
-    ).trace(question, mode);
+    const trace = (await this.createEngine(forceRefresh, sessionId)).trace(question, mode);
     this.persistSession(sessionId, trace);
     return trace;
   }
@@ -199,9 +185,7 @@ export class FpfRuntime {
     kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
     forceRefresh = false,
   ): Promise<InspectResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).inspect(selector, kind);
+    return (await this.createEngine(forceRefresh)).inspect(selector, kind);
   }
 
   async readDoc(
@@ -209,24 +193,18 @@ export class FpfRuntime {
     kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
     forceRefresh = false,
   ): Promise<ReadDocResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).readDoc(selector, kind);
+    return (await this.createEngine(forceRefresh)).readDoc(selector, kind);
   }
 
   async inspectAnchor(anchorId: string, forceRefresh = false): Promise<InspectAnchorResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).inspectAnchor(anchorId);
+    return (await this.createEngine(forceRefresh)).inspectAnchor(anchorId);
   }
 
   async expandCitations(
     citationIds: string[],
     forceRefresh = false,
   ): Promise<ExpandCitationsResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).expandCitations(citationIds);
+    return (await this.createEngine(forceRefresh)).expandCitations(citationIds);
   }
 
   async status(): Promise<RuntimeStatus> {
@@ -377,22 +355,22 @@ export class FpfRuntime {
     this.sessionCache.set(sessionId, nextState);
   }
 
-  private async loadSnapshot(): Promise<Snapshot | undefined> {
-    try {
-      const content = await readFile(this.artifactPaths.snapshot, 'utf8');
-      return JSON.parse(content) as Snapshot;
-    } catch {
-      return undefined;
-    }
+  private async createEngine(forceRefresh = false, sessionId?: string): Promise<QueryEngine> {
+    const audit = await this.refresh(forceRefresh);
+    return new QueryEngine(
+      await this.requireSnapshot(),
+      audit.rebuilt,
+      this.synthesizer,
+      sessionId ? this.sessionCache.get(sessionId) : undefined,
+    );
   }
 
-  private async loadIndexingView(): Promise<IndexingView | undefined> {
-    try {
-      const content = await readFile(this.artifactPaths.indexingView, 'utf8');
-      return JSON.parse(content) as IndexingView;
-    } catch {
-      return undefined;
-    }
+  private loadSnapshot(): Promise<Snapshot | undefined> {
+    return this.readJsonFile(this.artifactPaths.snapshot);
+  }
+
+  private loadIndexingView(): Promise<IndexingView | undefined> {
+    return this.readJsonFile(this.artifactPaths.indexingView);
   }
 
   private async requireSnapshot(): Promise<Snapshot> {
@@ -436,6 +414,14 @@ export class FpfRuntime {
   private async writeJson(path: string, value: unknown): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, JSON.stringify(value, null, 2));
+  }
+
+  private async readJsonFile<T>(path: string): Promise<T | undefined> {
+    try {
+      return JSON.parse(await readFile(path, 'utf8')) as T;
+    } catch {
+      return undefined;
+    }
   }
 
   private async pathExists(path: string): Promise<boolean> {
