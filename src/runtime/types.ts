@@ -188,9 +188,11 @@ export interface Snapshot {
 }
 
 export type ChangeFamily =
+  | 'no_change'
   | 'viewing_change'
   | 'slot_explicitness_change'
   | 'editioned_semantic_change'
+  | 'entity_addition'
   | 'described_entity_retargeting';
 
 export interface IndexingViewEntry {
@@ -234,7 +236,7 @@ export interface RefreshSentinel {
 }
 
 export interface RefreshClassification {
-  changeFamily: ChangeFamily | 'no_change';
+  changeFamily: ChangeFamily;
   sentinels: RefreshSentinel[];
   addedIds: string[];
   removedIds: string[];

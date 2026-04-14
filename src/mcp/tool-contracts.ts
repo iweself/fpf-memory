@@ -123,6 +123,7 @@ export const changeFamilySchema = z.enum([
   'viewing_change',
   'slot_explicitness_change',
   'editioned_semantic_change',
+  'entity_addition',
   'described_entity_retargeting',
 ]);
 

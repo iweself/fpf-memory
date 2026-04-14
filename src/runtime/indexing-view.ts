@@ -115,12 +115,26 @@ function inferChangeFamily(
   removedIds: string[],
   changedIds: string[],
 ): ChangeFamily {
-  if (addedIds.length > 0 || removedIds.length > 0) {
+  // Distinguish pure additions (benign) from removals/renames (real retarget risk)
+  if (removedIds.length > 0) {
     return 'described_entity_retargeting';
+  }
+  if (addedIds.length > 0) {
+    return 'entity_addition';
   }
 
   if (changedIds.length === 0) {
-    // No pattern/route ID changes but edition differs — must be anchor or lexicon change
+    // No pattern/route ID changes but edition differs — check anchors and lexicon explicitly
+    const anchorsChanged =
+      previous.anchorIds.length !== current.anchorIds.length ||
+      previous.anchorIds.some((id, i) => id !== current.anchorIds[i]);
+    const lexiconChanged =
+      previous.lexiconCanonicals.length !== current.lexiconCanonicals.length ||
+      previous.lexiconCanonicals.some((id, i) => id !== current.lexiconCanonicals[i]);
+    if (anchorsChanged || lexiconChanged) {
+      return 'viewing_change';
+    }
+    // Edition differs but no detectable field change — defensive fallback
     return 'viewing_change';
   }
 
@@ -133,11 +147,11 @@ function inferChangeFamily(
       if (prevRoute && currRoute) {
         return (
           prevRoute.name !== currRoute.name ||
-          JSON.stringify(prevRoute.orderedIds) !== JSON.stringify(currRoute.orderedIds) ||
-          JSON.stringify(prevRoute.landingIds) !== JSON.stringify(currRoute.landingIds) ||
-          JSON.stringify(prevRoute.optionalIds) !== JSON.stringify(currRoute.optionalIds) ||
-          JSON.stringify(prevRoute.routeSurfaces) !== JSON.stringify(currRoute.routeSurfaces) ||
-          JSON.stringify(prevRoute.constraints) !== JSON.stringify(currRoute.constraints)
+          !arraysEqual(prevRoute.orderedIds, currRoute.orderedIds) ||
+          !arraysEqual(prevRoute.landingIds, currRoute.landingIds) ||
+          !arraysEqual(prevRoute.optionalIds, currRoute.optionalIds) ||
+          !arraysEqual(prevRoute.routeSurfaces, currRoute.routeSurfaces) ||
+          !arraysEqual(prevRoute.constraints, currRoute.constraints)
         );
       }
       return true;
@@ -147,7 +161,7 @@ function inferChangeFamily(
       prev.status !== curr.status ||
       prev.type !== curr.type ||
       prev.normativity !== curr.normativity ||
-      JSON.stringify(prev.relationEdges) !== JSON.stringify(curr.relationEdges)
+      !relationEdgesEqual(prev.relationEdges, curr.relationEdges)
     );
   });
 
@@ -164,7 +178,7 @@ function inferChangeFamily(
     return (
       prev.part !== curr.part ||
       prev.cluster !== curr.cluster ||
-      JSON.stringify(prev.aliases) !== JSON.stringify(curr.aliases)
+      !arraysEqual(prev.aliases, curr.aliases)
     );
   });
 
@@ -173,6 +187,14 @@ function inferChangeFamily(
   }
 
   return 'viewing_change';
+}
+
+/** Cap sentinel detail to first N items for uniform truncation. */
+const MAX_DETAIL_ITEMS = 10;
+function formatDetail(label: string, items: string[]): string {
+  const capped = items.slice(0, MAX_DETAIL_ITEMS);
+  const suffix = items.length > MAX_DETAIL_ITEMS ? `, … (${items.length - MAX_DETAIL_ITEMS} more)` : '';
+  return `${label}: ${capped.join(', ')}${suffix}`;
 }
 
 function runRefreshSentinels(
@@ -187,7 +209,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'id_continuity',
     passed: missingIds.length === 0,
-    detail: missingIds.length > 0 ? truncateDetail(`Removed pattern IDs: ${missingIds.join(', ')}`) : undefined,
+    detail: missingIds.length > 0 ? formatDetail('Removed pattern IDs', missingIds) : undefined,
   });
 
   const prevAliases = new Set(
@@ -200,7 +222,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'alias_coverage',
     passed: droppedAliases.length === 0,
-    detail: droppedAliases.length > 0 ? truncateDetail(`Dropped aliases: ${droppedAliases.join(', ')}`) : undefined,
+    detail: droppedAliases.length > 0 ? formatDetail('Dropped aliases', droppedAliases) : undefined,
   });
 
   const prevAnchorSet = new Set(previous.anchorIds);
@@ -209,7 +231,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'anchor_continuity',
     passed: missingAnchors.length === 0,
-    detail: missingAnchors.length > 0 ? `Missing anchors: ${missingAnchors.slice(0, 10).join(', ')}` : undefined,
+    detail: missingAnchors.length > 0 ? formatDetail('Missing anchors', missingAnchors) : undefined,
   });
 
   const prevRouteIds = new Set(Object.keys(previous.routes));
@@ -218,7 +240,7 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'route_closure',
     passed: missingRoutes.length === 0,
-    detail: missingRoutes.length > 0 ? truncateDetail(`Missing routes: ${missingRoutes.join(', ')}`) : undefined,
+    detail: missingRoutes.length > 0 ? formatDetail('Missing routes', missingRoutes) : undefined,
   });
 
   const allRelationTargets = new Set<string>();
@@ -233,20 +255,13 @@ function runRefreshSentinels(
   sentinels.push({
     name: 'no_dangling_references',
     passed: danglingRefs.length === 0,
-    detail: danglingRefs.length > 0 ? `Dangling references: ${danglingRefs.slice(0, 10).join(', ')}` : undefined,
+    detail: danglingRefs.length > 0 ? formatDetail('Dangling references', danglingRefs) : undefined,
   });
 
   return sentinels;
 }
 
-const MAX_DETAIL_LENGTH = 500;
-function truncateDetail(detail: string): string {
-  if (detail.length <= MAX_DETAIL_LENGTH) {
-    return detail;
-  }
-  return `${detail.slice(0, MAX_DETAIL_LENGTH)}… (truncated)`;
-}
-
+/** Field-by-field equality for IndexingViewEntry — avoids JSON.stringify allocation. */
 function entryEqual(
   a: IndexingViewEntry | undefined,
   b: IndexingViewEntry | undefined,
@@ -254,9 +269,22 @@ function entryEqual(
   if (!a || !b) {
     return a === b;
   }
-  return JSON.stringify(a) === JSON.stringify(b);
+  return (
+    a.id === b.id &&
+    a.kind === b.kind &&
+    a.title === b.title &&
+    a.status === b.status &&
+    a.type === b.type &&
+    a.normativity === b.normativity &&
+    a.part === b.part &&
+    a.cluster === b.cluster &&
+    arraysEqual(a.aliases, b.aliases) &&
+    arraysEqual(a.anchorIds, b.anchorIds) &&
+    relationEdgesEqual(a.relationEdges, b.relationEdges)
+  );
 }
 
+/** Field-by-field equality for IndexingViewRoute — avoids JSON.stringify allocation. */
 function routeEqual(
   a: IndexingViewRoute | undefined,
   b: IndexingViewRoute | undefined,
@@ -264,5 +292,40 @@ function routeEqual(
   if (!a || !b) {
     return a === b;
   }
-  return JSON.stringify(a) === JSON.stringify(b);
+  return (
+    a.id === b.id &&
+    a.name === b.name &&
+    arraysEqual(a.orderedIds, b.orderedIds) &&
+    arraysEqual(a.optionalIds, b.optionalIds) &&
+    arraysEqual(a.landingIds, b.landingIds) &&
+    arraysEqual(a.routeSurfaces, b.routeSurfaces) &&
+    arraysEqual(a.constraints, b.constraints)
+  );
+}
+
+function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function relationEdgesEqual(
+  a: ReadonlyArray<{ from: string; relation: string; to: string }>,
+  b: ReadonlyArray<{ from: string; relation: string; to: string }>,
+): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].from !== b[i].from || a[i].relation !== b[i].relation || a[i].to !== b[i].to) {
+      return false;
+    }
+  }
+  return true;
 }
