@@ -65,6 +65,17 @@ const RELATION_LABELS: Record<string, RelationKind> = {
   'interacts with': 'interacts_with',
 };
 
+const RELATION_LABEL_ALTERNATION = Object.keys(RELATION_LABELS)
+  .sort((left, right) => right.length - left.length)
+  .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+const RELATION_LABEL_TOKEN =
+  `(?:\\*\\*\\s*)?(?:${RELATION_LABEL_ALTERNATION}):(?:\\s*\\*\\*)?`;
+const LABELED_RELATION_REGEX = new RegExp(
+  `(?:\\*\\*\\s*)?(${RELATION_LABEL_ALTERNATION}):(?:\\s*\\*\\*)?\\s*([\\s\\S]*?)(?=(?:\\s*(?:[*-]\\s*)?${RELATION_LABEL_TOKEN})|$)`,
+  'gis',
+);
+
 const PATTERN_ROW_ID = /^\**[A-Z]\.\d+(?:\.[A-Za-z0-9]+)*\**$/;
 const HEADING_ID =
   /^([A-Z]\.\d+(?:\.[A-Za-z0-9]+)*(?::[A-Za-z0-9.]+)?)\s+-\s+(.+)$/;
@@ -360,24 +371,34 @@ export function parseLabeledRelations(
   sourceCitation: string,
 ): RelationEdge[] {
   const relationEdges: RelationEdge[] = [];
-  const relationRegex =
-    /\*\*([^:*]+):\*\*\s*([\s\S]*?)(?=(?:\n\s*[*-]\s*\*\*[^:*]+:\*\*|\s+\*\*[^:*]+:\*\*|$))/g;
-  for (const match of text.matchAll(relationRegex)) {
-    const label = normalizeForLookup(match[1] ?? '');
-    const relation = RELATION_LABELS[label];
-    if (!relation) {
-      continue;
-    }
-    for (const target of extractIds(match[2] ?? '')) {
-      relationEdges.push({
-        from: sourceId,
-        relation,
-        to: target,
-        source: sourceCitation,
-      });
-    }
+
+  for (const match of text.matchAll(LABELED_RELATION_REGEX)) {
+    pushRelationEdges(relationEdges, sourceId, match[1] ?? '', match[2] ?? '', sourceCitation);
   }
+
   return relationEdges;
+}
+
+function pushRelationEdges(
+  edges: RelationEdge[],
+  sourceId: string,
+  rawLabel: string,
+  rawTargets: string,
+  sourceCitation: string,
+): void {
+  const label = normalizeForLookup(rawLabel);
+  const relation = RELATION_LABELS[label];
+  if (!relation) {
+    return;
+  }
+  for (const target of extractIds(rawTargets)) {
+    edges.push({
+      from: sourceId,
+      relation,
+      to: target,
+      source: sourceCitation,
+    });
+  }
 }
 
 export function inferSectionRole(heading: string, fullId?: string): SectionRole {

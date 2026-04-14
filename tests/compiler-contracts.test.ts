@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from '@rstest/core';
 
 import { compileFpfSource, type CompilerOutput } from '../src/runtime/compiler.js';
+import { parseLabeledRelations, parseSource } from '../src/runtime/source-parser.js';
 
 /**
  * Stage-local contract tests for the compiler pipeline.
@@ -88,6 +89,63 @@ describe('Compiler / Parser stage', () => {
     const nonEmpty = anchors.filter((a) => a.text.length > 0);
     expect(nonEmpty.length).toBeGreaterThan(anchors.length / 2);
   });
+
+  it('parses typed relations from plain-text catalog dependency cells', async () => {
+    const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
+    const sourceText = await readFile(sourcePath, 'utf8');
+    const ir = parseSource(sourceText);
+    const relations = ir.metadata['A.1.1']?.relations ?? [];
+
+    expect(relations).toContainEqual({
+      from: 'A.1.1',
+      relation: 'builds_on',
+      to: 'A.1',
+      source: 'A.1.1:catalog',
+    });
+    expect(relations).toContainEqual({
+      from: 'A.1.1',
+      relation: 'prerequisite_for',
+      to: 'A.2.1',
+      source: 'A.1.1:catalog',
+    });
+  });
+
+  it('parses mixed bold and plain relation labels in one block', () => {
+    const relations = parseLabeledRelations(
+      'X.1',
+      '**Builds on:** A.1. Constrained by: B.2. **Coordinates with:** C.3. Constrains: D.4.',
+      'X.1:test',
+    );
+
+    expect(relations).toEqual(
+      expect.arrayContaining([
+        {
+          from: 'X.1',
+          relation: 'builds_on',
+          to: 'A.1',
+          source: 'X.1:test',
+        },
+        {
+          from: 'X.1',
+          relation: 'constrained_by',
+          to: 'B.2',
+          source: 'X.1:test',
+        },
+        {
+          from: 'X.1',
+          relation: 'coordinates_with',
+          to: 'C.3',
+          source: 'X.1:test',
+        },
+        {
+          from: 'X.1',
+          relation: 'constrains',
+          to: 'D.4',
+          source: 'X.1:test',
+        },
+      ]),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -99,9 +157,10 @@ describe('Compiler / Graph closure stage', () => {
     const { validation } = snapshot;
 
     // The FPF spec has a small number of forward/external references that
-    // don't resolve to compiled nodes.  The contract is that this set stays
-    // bounded — a regression would show as a sudden spike.
-    expect(validation.unresolvedReferences.length).toBeLessThan(20);
+    // don't resolve to compiled nodes. Plain-text catalog relation recovery
+    // surfaces a few additional intentional unresolved targets, so keep this
+    // bounded rather than pinning it too tightly.
+    expect(validation.unresolvedReferences.length).toBeLessThan(30);
   });
 
   it('tracks duplicate IDs produced by catalog + heading overlap', async () => {
