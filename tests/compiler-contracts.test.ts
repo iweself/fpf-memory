@@ -12,6 +12,10 @@ import { compileFpfSource, type CompilerOutput } from '../src/runtime/compiler.j
  * Each test targets a specific compiler stage promise so that a failure
  * pinpoints the broken stage rather than surfacing as a generic
  * "end-to-end answer is wrong."
+ *
+ * Canonical fixture IDs: `A.1.1` is used as a stable spec anchor for
+ * metadata assertions. If the FPF spec renames or renumbers this
+ * pattern, update the ID here to match.
  */
 
 let cachedOutput: CompilerOutput | undefined;
@@ -288,8 +292,9 @@ describe('Compiler / Snapshot determinism stage', () => {
     const secondSections = second.snapshot.validation.parsedSections;
     const secondIndexNodes = Object.keys(second.snapshot.indexMap).length;
 
-    const structurallyDifferent =
-      secondSections > firstSections || secondIndexNodes > firstIndexNodes;
-    expect(structurallyDifferent).toBe(true);
+    // The synthetic Z.99 heading is parsed as a section (not a pattern —
+    // the compiler only promotes headings that match spec-catalog entries).
+    // Verify the section count grew, proving the parser handled the new heading.
+    expect(secondSections).toBeGreaterThan(firstSections);
   });
 });

@@ -14,6 +14,10 @@ import type { LocalAnswerSynthesizer, Snapshot } from '../src/runtime/types.js';
  * Each test targets a specific retrieval stage promise so that a failure
  * pinpoints the broken stage rather than surfacing as a generic
  * "end-to-end answer is wrong."
+ *
+ * Canonical fixture IDs: `A.1.1`, `A.15`, `B.3` are used as stable spec
+ * anchors throughout these tests. If the FPF spec renames or renumbers
+ * these patterns, update the IDs here to match.
  */
 
 let cachedSnapshot: Snapshot | undefined;
@@ -77,7 +81,7 @@ describe('Query / Normalizer stage', () => {
 
   it('returns empty signals for a nonsense question', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('xyzzy plugh');
+    const trace = engine(snapshot).trace('__FPFTEST_NONSENSE_999__');
 
     expect(trace.detected.ids).toEqual([]);
     expect(trace.detected.routeNames).toEqual([]);
@@ -120,7 +124,7 @@ describe('Query / Seed coverage stage', () => {
 
   it('produces few or low-scoring candidates for a completely unrelated question', async () => {
     const snapshot = await getSnapshot();
-    const trace = engine(snapshot).trace('xyzzy plugh');
+    const trace = engine(snapshot).trace('__FPFTEST_NONSENSE_999__');
 
     // Index description overlap may still surface some weak candidates.
     // The contract is that no candidate scores above the exact-match
@@ -259,7 +263,7 @@ describe('Query / Projection stability stage', () => {
 
   it('returns low-confidence status for completely unresolvable questions', async () => {
     const snapshot = await getSnapshot();
-    const result = await engine(snapshot).query('xyzzy plugh nonsense', 'compact');
+    const result = await engine(snapshot).query('__FPFTEST_NONSENSE_999__', 'compact');
 
     // Weak index-description overlap may still produce ambiguous candidates,
     // so the engine may return 'ambiguous' or 'not_found'.  The contract is
