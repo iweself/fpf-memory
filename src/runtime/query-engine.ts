@@ -232,50 +232,21 @@ export class QueryEngine {
   inspect(selector: string, kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto'): InspectResult {
     const resolvedId = this.resolveSelector(selector, kind);
     if (!resolvedId) {
-      return {
-        selector,
-        resolvedAs: 'not_found',
-        status: 'not_found',
-        anchors: [],
-        neighbors: [],
-        snapshot: {
-          sourceHash: this.snapshot.sourceHash,
-          builtAt: this.snapshot.builtAt,
-        },
-      };
+      return this.notFoundInspect(selector);
     }
 
     const node = this.snapshot.compiledNodes[resolvedId];
-    const anchors = (node.anchorIds ?? [])
-      .map((anchorId) => this.snapshot.anchorMap[anchorId])
-      .filter((anchor): anchor is Snapshot['anchorMap'][string] => Boolean(anchor));
-    const neighbors = node.neighborEdges
-      .map((edge): InspectNeighbor | undefined => {
-        const target = this.snapshot.compiledNodes[edge.to];
-        if (!target) {
-          return undefined;
-        }
-        return {
-          id: target.id,
-          kind: target.kind,
-          title: target.title,
-          relation: edge.relation,
-        };
-      })
-      .filter((neighbor): neighbor is InspectNeighbor => Boolean(neighbor));
-
     return {
       selector,
-      resolvedAs: node.kind === 'route' ? 'route' : node.kind === 'lexeme' ? 'lexeme' : 'id',
+      resolvedAs: this.resolvedAsForNode(node),
       status: 'ok',
       node,
-      anchors,
-      neighbors,
+      anchors: (node.anchorIds ?? [])
+        .map((anchorId) => this.snapshot.anchorMap[anchorId])
+        .filter((anchor): anchor is Snapshot['anchorMap'][string] => Boolean(anchor)),
+      neighbors: this.neighborsForNode(node),
       docRef: resolveDocTarget(this.snapshot, node.id)?.docRef,
-      snapshot: {
-        sourceHash: this.snapshot.sourceHash,
-        builtAt: this.snapshot.builtAt,
-      },
+      snapshot: this.snapshotRef(),
     };
   }
 
@@ -285,84 +256,32 @@ export class QueryEngine {
   ): ReadDocResult {
     const resolvedNodeId = this.resolveSelector(selector, kind);
     if (!resolvedNodeId) {
-      return {
-        selector,
-        resolvedAs: 'not_found',
-        status: 'not_found',
-        snapshot: {
-          sourceHash: this.snapshot.sourceHash,
-          builtAt: this.snapshot.builtAt,
-        },
-      };
+      return this.notFoundReadDoc(selector);
     }
 
     const resolvedNode = this.snapshot.compiledNodes[resolvedNodeId];
     if (!resolvedNode) {
-      return {
-        selector,
-        resolvedAs: 'not_found',
-        status: 'not_found',
-        snapshot: {
-          sourceHash: this.snapshot.sourceHash,
-          builtAt: this.snapshot.builtAt,
-        },
-      };
+      return this.notFoundReadDoc(selector);
     }
 
+    const resolvedAs = this.resolvedAsForNode(resolvedNode);
     const docTarget = resolveDocTarget(this.snapshot, resolvedNodeId);
-    if (!docTarget) {
-      return {
-        selector,
-        resolvedAs:
-          resolvedNode.kind === 'route'
-            ? 'route'
-            : resolvedNode.kind === 'lexeme'
-              ? 'lexeme'
-              : 'id',
-        status: 'not_found',
-        snapshot: {
-          sourceHash: this.snapshot.sourceHash,
-          builtAt: this.snapshot.builtAt,
-        },
-      };
-    }
-
-    const projection = buildDocsProjection(this.snapshot);
-    const page = projection.pagesByMarkdownPath[docTarget.docRef.markdownPath];
-    if (!page) {
-      return {
-        selector,
-        resolvedAs:
-          resolvedNode.kind === 'route'
-            ? 'route'
-            : resolvedNode.kind === 'lexeme'
-              ? 'lexeme'
-              : 'id',
-        status: 'not_found',
-        snapshot: {
-          sourceHash: this.snapshot.sourceHash,
-          builtAt: this.snapshot.builtAt,
-        },
-      };
+    const page = docTarget
+      ? buildDocsProjection(this.snapshot).pagesByMarkdownPath[docTarget.docRef.markdownPath]
+      : undefined;
+    if (!docTarget || !page) {
+      return this.notFoundReadDoc(selector, resolvedAs);
     }
 
     return {
       selector,
-      resolvedAs:
-        resolvedNode.kind === 'route'
-          ? 'route'
-          : resolvedNode.kind === 'lexeme'
-            ? 'lexeme'
-            : 'id',
+      resolvedAs,
       status: 'ok',
       nodeId: docTarget.nodeId,
       title: docTarget.title,
       docRef: docTarget.docRef,
       markdown: page.markdown,
-      snapshot: {
-        sourceHash: this.snapshot.sourceHash,
-        builtAt: this.snapshot.builtAt,
-      },
+      snapshot: this.snapshotRef(),
     };
   }
 
@@ -374,10 +293,7 @@ export class QueryEngine {
       anchor: expanded.anchor,
       ownerNode: expanded.ownerNode,
       neighbors: expanded.neighbors,
-      snapshot: {
-        sourceHash: this.snapshot.sourceHash,
-        builtAt: this.snapshot.builtAt,
-      },
+      snapshot: this.snapshotRef(),
     };
   }
 
@@ -385,10 +301,7 @@ export class QueryEngine {
     return {
       citationIds,
       items: citationIds.map((citationId) => this.expandCitation(citationId)),
-      snapshot: {
-        sourceHash: this.snapshot.sourceHash,
-        builtAt: this.snapshot.builtAt,
-      },
+      snapshot: this.snapshotRef(),
     };
   }
 
@@ -553,6 +466,40 @@ export class QueryEngine {
       .filter((neighbor): neighbor is InspectNeighbor => Boolean(neighbor));
   }
 
+  private snapshotRef(): { sourceHash: string; builtAt: string } {
+    return {
+      sourceHash: this.snapshot.sourceHash,
+      builtAt: this.snapshot.builtAt,
+    };
+  }
+
+  private resolvedAsForNode(node: CompiledNode): 'id' | 'route' | 'lexeme' {
+    return node.kind === 'route' ? 'route' : node.kind === 'lexeme' ? 'lexeme' : 'id';
+  }
+
+  private notFoundInspect(selector: string): InspectResult {
+    return {
+      selector,
+      resolvedAs: 'not_found',
+      status: 'not_found',
+      anchors: [],
+      neighbors: [],
+      snapshot: this.snapshotRef(),
+    };
+  }
+
+  private notFoundReadDoc(
+    selector: string,
+    resolvedAs: ReadDocResult['resolvedAs'] = 'not_found',
+  ): ReadDocResult {
+    return {
+      selector,
+      resolvedAs,
+      status: 'not_found',
+      snapshot: this.snapshotRef(),
+    };
+  }
+
   private result(
     question: string,
     mode: AnswerMode,
@@ -562,11 +509,7 @@ export class QueryEngine {
       ...payload,
       mode,
       question,
-      snapshot: {
-        sourceHash: this.snapshot.sourceHash,
-        builtAt: this.snapshot.builtAt,
-        rebuilt: this.rebuilt,
-      },
+      snapshot: { ...this.snapshotRef(), rebuilt: this.rebuilt },
     };
   }
 }

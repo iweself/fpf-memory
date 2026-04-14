@@ -26,7 +26,7 @@ The runtime itself is compiler-backed and local to `FPF-spec.md`:
 - server name: `fpf_memory`
 - protocol version: `2024-11-05`
 
-The hosted server exposes only the 3 public tools. Local stdio and local HTTP default to the same public surface; set `FPF_MCP_SURFACE=full` to expose all 9 tools for local expert work.
+The hosted server exposes only the public tool surface. Local stdio and local HTTP default to the same public surface; set `FPF_MCP_SURFACE=full` to expose the full tool set for local expert work.
 
 ## Codex Setup
 
@@ -45,43 +45,11 @@ For temporary local expert work, point a client at `src/mastra/stdio.ts` and set
 
 ### Public tools (hosted default surface)
 
-#### `ask_fpf`
+`browse_fpf_catalog`, `search_fpf`, `ask_fpf`, `query_fpf_spec`, `read_fpf_doc`, and `get_fpf_index_status`.
 
-Return a markdown-first grounded answer envelope over the same runtime.
+### Full-surface-only tools
 
-#### `query_fpf_spec`
-
-Answer a question with deterministic grounding, citations, constraints, and freshness metadata.
-
-#### `get_fpf_index_status`
-
-Report whether the current runtime index exists, whether it is fresh against the current source hash, and which artifacts are present.
-
-### Expert tools (local full-surface runtime only)
-
-#### `refresh_fpf_index`
-
-Build or rebuild the compiler-backed vectorless index from `FPF-spec.md` and persist the runtime artifact set under `.runtime/fpf-index/`.
-
-#### `trace_fpf_path`
-
-Return the retrieval trace used for a question, including candidate scores, graph expansion, and selected anchors.
-
-#### `inspect_fpf_node`
-
-Inspect one pattern, route, or lexeme and return anchors, neighboring relations, and stable document references.
-
-#### `read_fpf_doc`
-
-Resolve a pattern, route, or lexeme to the canonical generated markdown page and return the selected document node, stable paths, and exact generated markdown text.
-
-#### `inspect_fpf_anchor`
-
-Inspect one exact anchor ID and return raw anchor text plus owning-node context.
-
-#### `expand_fpf_citations`
-
-Expand multiple citation IDs into raw anchor text plus owning-node context without adding new semantics.
+`inspect_fpf_node`, `inspect_fpf_anchor`, `expand_fpf_citations`, `trace_fpf_path`, and `refresh_fpf_index`.
 
 ## Direct Document Contract
 

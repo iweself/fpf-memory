@@ -106,12 +106,11 @@ export class FpfRuntime {
         compiler: buildCompilerSummary(existingSnapshot),
         artifacts: this.artifactPaths,
       };
-      await this.writeArtifacts(existingSnapshot);
       const existingView = await this.loadIndexingView();
       if (!existingView) {
-        const view = buildIndexingView(existingSnapshot);
-        await this.writeJson(this.artifactPaths.indexingView, view);
+        await this.writeJson(this.artifactPaths.indexingView, buildIndexingView(existingSnapshot));
       }
+      await this.writeArtifacts(existingSnapshot, true);
       await this.writeAudit(audit);
       return audit;
     }
@@ -404,10 +403,9 @@ export class FpfRuntime {
     return snapshot;
   }
 
-  private async writeArtifacts(snapshot: Snapshot): Promise<void> {
+  private async writeArtifacts(snapshot: Snapshot, onlyMissing = false): Promise<void> {
     const payloads = {
       snapshot,
-      buildAudit: undefined,
       indexMap: {
         roots: snapshot.indexRoots,
         nodes: snapshot.indexMap,
@@ -418,10 +416,16 @@ export class FpfRuntime {
       anchorMap: snapshot.anchorMap,
     } as const;
 
+    const entries = Object.entries(payloads) as Array<
+      [keyof typeof payloads, (typeof payloads)[keyof typeof payloads]]
+    >;
     await Promise.all(
-      Object.entries(payloads)
-        .filter((entry): entry is [keyof typeof payloads, Exclude<(typeof payloads)[keyof typeof payloads], undefined>] => entry[1] !== undefined)
-        .map(([key, value]) => this.writeJson(this.artifactPaths[key], value)),
+      entries.map(async ([key, value]) => {
+        if (onlyMissing && (await this.pathExists(this.artifactPaths[key]))) {
+          return;
+        }
+        await this.writeJson(this.artifactPaths[key], value);
+      }),
     );
   }
 
@@ -434,16 +438,18 @@ export class FpfRuntime {
     await writeFile(path, JSON.stringify(value, null, 2));
   }
 
+  private async pathExists(path: string): Promise<boolean> {
+    try {
+      await readFile(path, 'utf8');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async getArtifactPresence(): Promise<Record<string, boolean>> {
     const entries = await Promise.all(
-      Object.entries(this.artifactPaths).map(async ([key, path]) => {
-        try {
-          await readFile(path, 'utf8');
-          return [key, true] as const;
-        } catch {
-          return [key, false] as const;
-        }
-      }),
+      Object.entries(this.artifactPaths).map(async ([key, path]) => [key, await this.pathExists(path)] as const),
     );
     return Object.fromEntries(entries);
   }
