@@ -29,7 +29,7 @@ const DEFAULT_QUERY_MODE: AnswerMode = 'verbose';
 export const refreshFpfIndexTool = createTool({
   id: 'refresh_fpf_index',
   description:
-    'Build or rebuild the local vectorless FPF index from FPF-spec.md and persist the artifact set.',
+    'Build or rebuild the compiler-backed vectorless FPF index from FPF-spec.md and persist the artifact set.',
   inputSchema: refreshFpfIndexInputSchema,
   outputSchema: buildAuditSchema,
   execute: async ({ force }) => runtime.refresh(force ?? false),
@@ -38,7 +38,7 @@ export const refreshFpfIndexTool = createTool({
 export const queryFpfSpecTool = createTool({
   id: 'query_fpf_spec',
   description:
-    'Answer questions against the local vectorless FPF runtime with auditable IDs, citations, constraints, and freshness metadata.',
+    'Answer questions against the compiler-backed vectorless FPF runtime with auditable IDs, citations, constraints, and freshness metadata.',
   inputSchema: queryFpfSpecInputSchema,
   outputSchema: queryResultSchema,
   execute: async ({ question, mode, forceRefresh, sessionId }) =>
@@ -48,7 +48,7 @@ export const queryFpfSpecTool = createTool({
 export const askFpfTool = createTool({
   id: 'ask_fpf',
   description:
-    'Return an FPF answer in markdown with grounding metadata using the local vectorless runtime.',
+    'Return an FPF answer in markdown with grounding metadata using the compiler-backed vectorless runtime.',
   inputSchema: askFpfInputSchema,
   outputSchema: askFpfResultSchema,
   execute: async ({ question, mode, forceRefresh, sessionId }) => {
@@ -65,7 +65,7 @@ export const askFpfTool = createTool({
 export const getFpfIndexStatusTool = createTool({
   id: 'get_fpf_index_status',
   description:
-    'Inspect whether the local FPF index exists, whether it is fresh against the current source hash, and which artifacts are present.',
+    'Inspect whether the current FPF runtime index exists, whether it is fresh against the current source hash, and which artifacts are present.',
   inputSchema: getFpfIndexStatusInputSchema,
   outputSchema: runtimeStatusSchema,
   execute: async () => runtime.status(),
@@ -128,7 +128,7 @@ export const fpfPublicTools = {
   get_fpf_index_status: getFpfIndexStatusTool,
 } as const;
 
-/** Expert/debug tools — local use only. */
+/** Expert/debug tools — full-surface runtime only. */
 export const fpfExpertTools = {
   refresh_fpf_index: refreshFpfIndexTool,
   trace_fpf_path: traceFpfPathTool,
@@ -138,7 +138,7 @@ export const fpfExpertTools = {
   expand_fpf_citations: expandFpfCitationsTool,
 } as const;
 
-/** All tools — used by local stdio and Hono server. */
+/** All tools — used by the full-surface MCP runtime. */
 export const fpfMcpTools = {
   ...fpfPublicTools,
   ...fpfExpertTools,

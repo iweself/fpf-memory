@@ -11,4 +11,5 @@ output.txt
 *.db-*
 .mastra-project.json
 package-lock.json
+src/mastra/public
 .DS_Store

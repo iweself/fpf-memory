@@ -8,7 +8,7 @@ Public tools (deployed MCP surface):
 - `query_fpf_spec` for structured answer envelopes
 - `get_fpf_index_status` for runtime freshness checks
 
-Expert tools (local stdio only, via `bun run mcp`):
+Expert tools (local full-surface runtime only, via `FPF_MCP_SURFACE=full bun run mcp`):
 
 - `read_fpf_doc` for exact generated markdown pages
 - `trace_fpf_path` for retrieval evidence and provenance
