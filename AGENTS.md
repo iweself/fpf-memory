@@ -9,6 +9,7 @@ Public tools (deployed MCP surface):
 - `ask_fpf` for markdown-first answers
 - `query_fpf_spec` for structured answer envelopes
 - `read_fpf_doc` for exact generated markdown pages
+- `get_fpf_index_status` for runtime freshness checks
 
 Expert tools (local full-surface runtime only, via `FPF_MCP_SURFACE=full bun run mcp`):
 
@@ -17,5 +18,4 @@ Expert tools (local full-surface runtime only, via `FPF_MCP_SURFACE=full bun run
 
 Admin tools (index management):
 
-- `get_fpf_index_status` for runtime freshness checks
 - `refresh_fpf_index` to rebuild the local artifact set

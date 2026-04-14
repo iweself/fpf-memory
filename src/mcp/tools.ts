@@ -162,6 +162,7 @@ export const fpfPublicTools = {
   ask_fpf: askFpfTool,
   query_fpf_spec: queryFpfSpecTool,
   read_fpf_doc: readFpfDocTool,
+  get_fpf_index_status: getFpfIndexStatusTool,
 } as const;
 
 /** Expert/debug tools — full-surface runtime only. */
@@ -174,7 +175,6 @@ export const fpfExpertTools = {
 
 /** Admin tools — index management. */
 export const fpfAdminTools = {
-  get_fpf_index_status: getFpfIndexStatusTool,
   refresh_fpf_index: refreshFpfIndexTool,
 } as const;
 

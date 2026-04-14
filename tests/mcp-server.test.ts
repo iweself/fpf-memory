@@ -195,11 +195,11 @@ describe('Mastra MCP server', () => {
       'ask_fpf',
       'query_fpf_spec',
       'read_fpf_doc',
+      'get_fpf_index_status',
       'inspect_fpf_node',
       'inspect_fpf_anchor',
       'expand_fpf_citations',
       'trace_fpf_path',
-      'get_fpf_index_status',
       'refresh_fpf_index',
     ]);
 
@@ -284,6 +284,7 @@ describe('Mastra MCP server', () => {
       'ask_fpf',
       'query_fpf_spec',
       'read_fpf_doc',
+      'get_fpf_index_status',
     ]);
   });
 
