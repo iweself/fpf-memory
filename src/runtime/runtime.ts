@@ -51,10 +51,12 @@ export class FpfRuntime {
     });
     const artifactDir =
       options.artifactDir ?? process.env.FPF_RUNTIME_ARTIFACT_DIR ?? DEFAULT_ARTIFACT_DIR;
-    const artifactResolution = resolveRuntimePath(artifactDir, {
-      kind: 'directory',
-      fallbackRoot: sourceResolution.root,
-    });
+    const artifactResolution = resolveRuntimePath(
+      resolve(sourceResolution.root, artifactDir),
+      {
+        kind: 'directory',
+      },
+    );
 
     this.sourcePath = sourceResolution.path;
     this.artifactDir = artifactResolution.path;
@@ -198,7 +200,7 @@ export class FpfRuntime {
 
   async status(): Promise<RuntimeStatus> {
     let existingSnapshot = await this.loadSnapshot();
-    if (!existingSnapshot) {
+    if (!existingSnapshot || snapshotNeedsRebuild(existingSnapshot)) {
       await this.refresh(false).catch((error) => {
         const message = error instanceof Error ? error.message : String(error);
         console.warn(`[FpfRuntime.status] refresh(false) failed: ${message}`);
@@ -213,7 +215,10 @@ export class FpfRuntime {
       builtAt: existingSnapshot?.builtAt,
       snapshotExists: Boolean(existingSnapshot),
       currentSourceHash,
-      fresh: existingSnapshot?.sourceHash === currentSourceHash,
+      fresh:
+        existingSnapshot != null &&
+        !snapshotNeedsRebuild(existingSnapshot) &&
+        existingSnapshot.sourceHash === currentSourceHash,
       compilerMode: 'local_vectorless',
       artifacts: await this.getArtifactPresence(),
       synthesizer: this.synthesizer?.describe
