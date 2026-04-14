@@ -64,11 +64,6 @@ export class QueryEngine {
     private readonly sessionState?: RetrievalSessionState,
   ) {}
 
-  async query(question: string, mode: AnswerMode = 'compact'): Promise<QueryResult> {
-    const trace = this.trace(question, mode);
-    return this.answerFromTrace(question, mode, trace);
-  }
-
   async answerFromTrace(
     question: string,
     mode: AnswerMode,
@@ -230,15 +225,15 @@ export class QueryEngine {
   }
 
   inspect(selector: string, kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto'): InspectResult {
-    const resolvedId = this.resolveSelector(selector, kind);
-    if (!resolvedId) {
+    const resolved = this.resolveNode(selector, kind);
+    if (!resolved) {
       return this.notFoundInspect(selector);
     }
 
-    const node = this.snapshot.compiledNodes[resolvedId];
+    const { node, resolvedAs } = resolved;
     return {
       selector,
-      resolvedAs: this.resolvedAsForNode(node),
+      resolvedAs,
       status: 'ok',
       node,
       anchors: (node.anchorIds ?? [])
@@ -254,18 +249,13 @@ export class QueryEngine {
     selector: string,
     kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
   ): ReadDocResult {
-    const resolvedNodeId = this.resolveSelector(selector, kind);
-    if (!resolvedNodeId) {
+    const resolved = this.resolveNode(selector, kind);
+    if (!resolved) {
       return this.notFoundReadDoc(selector);
     }
 
-    const resolvedNode = this.snapshot.compiledNodes[resolvedNodeId];
-    if (!resolvedNode) {
-      return this.notFoundReadDoc(selector);
-    }
-
-    const resolvedAs = this.resolvedAsForNode(resolvedNode);
-    const docTarget = resolveDocTarget(this.snapshot, resolvedNodeId);
+    const { node, resolvedAs } = resolved;
+    const docTarget = resolveDocTarget(this.snapshot, node.id);
     const page = docTarget
       ? buildDocsProjection(this.snapshot).pagesByMarkdownPath[docTarget.docRef.markdownPath]
       : undefined;
@@ -358,12 +348,8 @@ export class QueryEngine {
         nodeId: node.id,
         score: this.scoreLexemeSelectorMatch(normalizedSelector, node),
       }))
-      .sort((left, right) => {
-        if (right.score !== left.score) {
-          return right.score - left.score;
-        }
-        return left.nodeId.localeCompare(right.nodeId);
-      })[0]?.nodeId;
+      .sort((left, right) => right.score - left.score || left.nodeId.localeCompare(right.nodeId))[0]
+      ?.nodeId;
   }
 
   private scoreLexemeSelectorMatch(normalizedSelector: string, node: CompiledNode): number {
@@ -467,14 +453,20 @@ export class QueryEngine {
   }
 
   private snapshotRef(): { sourceHash: string; builtAt: string } {
-    return {
-      sourceHash: this.snapshot.sourceHash,
-      builtAt: this.snapshot.builtAt,
-    };
+    return { sourceHash: this.snapshot.sourceHash, builtAt: this.snapshot.builtAt };
+  }
+
+  private resolveNode(
+    selector: string,
+    kind: 'auto' | 'id' | 'route' | 'lexeme',
+  ): { node: CompiledNode; resolvedAs: 'id' | 'route' | 'lexeme' } | undefined {
+    const nodeId = this.resolveSelector(selector, kind);
+    const node = nodeId ? this.snapshot.compiledNodes[nodeId] : undefined;
+    return node ? { node, resolvedAs: this.resolvedAsForNode(node) } : undefined;
   }
 
   private resolvedAsForNode(node: CompiledNode): 'id' | 'route' | 'lexeme' {
-    return node.kind === 'route' ? 'route' : node.kind === 'lexeme' ? 'lexeme' : 'id';
+    return node.kind === 'pattern' ? 'id' : node.kind;
   }
 
   private notFoundInspect(selector: string): InspectResult {
