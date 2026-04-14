@@ -119,7 +119,7 @@ function inferChangeFamily(
   if (removedIds.length > 0) {
     return 'described_entity_retargeting';
   }
-  if (addedIds.length > 0) {
+  if (addedIds.length > 0 && changedIds.length === 0) {
     return 'entity_addition';
   }
 

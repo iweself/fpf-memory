@@ -92,7 +92,8 @@ export class FpfRuntime {
       return audit;
     }
 
-    const previousIndexingView = await this.loadIndexingView();
+    const previousIndexingView = await this.loadIndexingView()
+      ?? (compatibleSnapshot && existingSnapshot ? buildIndexingView(existingSnapshot) : undefined);
     const sourceText = await readFile(this.sourcePath, 'utf8');
     const builtAt = new Date().toISOString();
     const { snapshot } = compileFpfSource({
