@@ -392,6 +392,7 @@ export interface TraceResult {
   sessionApplied: boolean;
   sessionReusedNodeIds: string[];
   sessionMateriallyChanged: boolean;
+  routeWins: boolean;
   sufficient: boolean;
   status: AnswerStatus;
   snapshot: {

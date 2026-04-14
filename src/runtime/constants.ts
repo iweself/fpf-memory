@@ -20,6 +20,11 @@ export const ROUTE_INDEX_CITATION = 'J.4';
 
 export const PROJECT_ALIGNMENT_ROUTE_NAME = 'project alignment';
 
+export const MAX_HOPS = 6;
+export const MAX_SELECTED_ANCHORS = 12;
+export const MAX_EXCLUDED = 5;
+export const MAX_SYNTHESIS_SLICES = 8;
+
 export const PART_C_LABEL = 'Part C - Kernel Extension Specifications';
 
 export const PART_C_CLUSTER_LABELS = [

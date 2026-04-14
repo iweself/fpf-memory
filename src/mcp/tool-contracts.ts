@@ -329,6 +329,7 @@ export const traceResultSchema = z
     sessionApplied: z.boolean(),
     sessionReusedNodeIds: z.array(z.string()),
     sessionMateriallyChanged: z.boolean(),
+    routeWins: z.boolean(),
     sufficient: z.boolean(),
     status: answerStatusSchema,
     snapshot: snapshotWithRebuildSchema,

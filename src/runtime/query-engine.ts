@@ -1,67 +1,58 @@
+/**
+ * query-engine.ts — QueryEngine orchestrator.
+ *
+ * Delegates to six focused stage modules:
+ *   1. query-normalizer.ts   (QueryNormalizer)
+ *   2. candidate-seeder.ts   (CandidateSeeder)
+ *   3. candidate-ranker.ts   (CandidateRanker)
+ *   4. frontier-expander.ts  (FrontierExpander)
+ *   5. answer-projector.ts   (AnswerProjector)
+ *   6. synthesis-adapter.ts  (SynthesisAdapter)
+ *
+ * This file wires the stages together and exposes query(), trace(),
+ * inspect(), readDoc(), inspectAnchor(), and expandCitations().
+ */
+
 import {
-  findLexemeMatches,
-  formatAnchorSentences,
-  getPartCDraftsByCluster,
   isPartCDraftQuery,
-  scorePatternQuery,
-  scoreRouteQuery,
-  selectBestAnchors,
 } from './compiler.js';
+import {
+  MAX_EXCLUDED,
+  MAX_SYNTHESIS_SLICES,
+} from './constants.js';
 import {
   buildDocsProjection,
   resolveDocTarget,
 } from '../docs/projection.js';
+import { normalizeQuery } from './query-normalizer.js';
+import { seedCandidates } from './candidate-seeder.js';
+import { isAmbiguous, rankCandidates } from './candidate-ranker.js';
+import { expandGrounding } from './frontier-expander.js';
+import {
+  answerPartCDrafts,
+  buildPatternAnswer,
+  buildRouteAnswer,
+  prepareSynthesisSlices,
+} from './answer-projector.js';
+import { synthesizeAnswer } from './synthesis-adapter.js';
 import { type RetrievalSessionState } from './session-cache.js';
 import {
-  extractIds,
   normalizeForLookup,
-  scoreOverlap,
-  tokenize,
-  unique,
 } from './text.js';
 import type {
-  AnchorRef,
   AnswerMode,
-  AnswerSlice,
   CompiledNode,
   ExpandedCitation,
   ExpandCitationsResult,
-  FollowedReference,
-  FrontierCandidate,
-  FrontierOrigin,
-  GraphExpansion,
-  HeuristicSeedRule,
   InspectAnchorResult,
   InspectNeighbor,
   InspectResult,
   LocalAnswerSynthesizer,
   QueryResult,
   ReadDocResult,
-  RelationEdge,
-  RetrievalHop,
-  SectionRole,
   Snapshot,
-  TraceCandidate,
   TraceResult,
 } from './types.js';
-
-const MAX_HOPS = 6;
-const MAX_SELECTED_ANCHORS = 12;
-const MAX_EXCLUDED = 5;
-const MAX_SYNTHESIS_SLICES = 8;
-
-interface FrontierWorkItem extends FrontierCandidate {
-  priority: number;
-  relation?: RelationEdge;
-}
-
-interface GroundingResult {
-  selectedNodeIds: string[];
-  selectedAnchorIds: string[];
-  retrievalHops: RetrievalHop[];
-  followedReferences: FollowedReference[];
-  sufficient: boolean;
-}
 
 export class QueryEngine {
   private anchorOwnerNodeMap?: Map<string, CompiledNode>;
@@ -97,7 +88,7 @@ export class QueryEngine {
     }
 
     if (isPartCDraftQuery(question)) {
-      return this.answerPartCDrafts(question, mode);
+      return answerPartCDrafts(question, mode, this.snapshot, this.rebuilt);
     }
 
     if (trace.status === 'not_found') {
@@ -117,19 +108,16 @@ export class QueryEngine {
       });
     }
 
-    const routeNodeId = trace.selectedNodeIds.find(
-      (nodeId) => this.snapshot.compiledNodes[nodeId]?.kind === 'route',
-    );
+    const routeNodeId = trace.routeWins
+      ? trace.selectedNodeIds.find(
+          (nodeId) => this.snapshot.compiledNodes[nodeId]?.kind === 'route',
+        )
+      : undefined;
     const deterministic = routeNodeId
-      ? this.buildRouteAnswer(question, mode, routeNodeId, trace)
-      : this.buildPatternAnswer(question, mode, trace);
+      ? buildRouteAnswer(question, mode, routeNodeId, trace, this.snapshot, this.rebuilt)
+      : buildPatternAnswer(question, mode, trace, this.snapshot, this.rebuilt);
 
     if (!this.synthesizer) {
-      return deterministic;
-    }
-
-    const available = await this.synthesizer.isAvailable();
-    if (!available) {
       return deterministic;
     }
 
@@ -137,43 +125,18 @@ export class QueryEngine {
       .map((nodeId) => this.snapshot.compiledNodes[nodeId])
       .filter((node): node is CompiledNode => Boolean(node))
       .slice(0, MAX_SYNTHESIS_SLICES);
-    const slices = this.prepareSynthesisSlices(trace);
+    const slices = prepareSynthesisSlices(trace, this.snapshot);
 
-    try {
-      const synthesized = await this.synthesizer.synthesize({
-        question,
-        mode,
-        trace,
-        nodes,
-        slices,
-        deterministicResult: deterministic,
-      });
-
-      return {
-        ...deterministic,
-        answer: synthesized.answer ?? deterministic.answer,
-        constraints: synthesized.constraints ?? deterministic.constraints,
-        confidence: synthesized.confidence ?? deterministic.confidence,
-        gaps: synthesized.gaps ?? deterministic.gaps,
-        groundingChain: synthesized.groundingChain ?? deterministic.groundingChain,
-      };
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Local synthesizer failed with an unknown error.';
-      return {
-        ...deterministic,
-        gaps: unique([...deterministic.gaps, `Local synthesis skipped: ${message}`]),
-      };
-    }
+    return synthesizeAnswer(question, mode, trace, nodes, slices, deterministic, this.synthesizer);
   }
 
   trace(question: string, mode: AnswerMode = 'compact'): TraceResult {
-    const normalizedQuestion = normalizeForLookup(question);
+    const normalized = normalizeQuery(question, this.snapshot);
     if (!question.trim()) {
       return {
         mode,
         question,
-        normalizedQuestion,
+        normalizedQuestion: normalized.normalizedQuestion,
         detected: {
           ids: [],
           lexemes: [],
@@ -192,6 +155,7 @@ export class QueryEngine {
         sessionApplied: false,
         sessionReusedNodeIds: [],
         sessionMateriallyChanged: false,
+        routeWins: false,
         sufficient: false,
         status: 'unsupported',
         snapshot: {
@@ -202,144 +166,26 @@ export class QueryEngine {
       };
     }
 
-    const detectedIds = extractIds(question);
-    const matchedLexemeIds = findLexemeMatches(question, this.snapshot.lexicon);
-    const matchedRouteNames = Object.values(this.snapshot.routeGraph.nodes)
-      .filter((route) => normalizedQuestion.includes(normalizeForLookup(route.name)))
-      .map((route) => route.name);
-    const familyTerms = Object.keys(this.snapshot.indexes.familyIndex).filter((key) =>
-      normalizedQuestion.includes(key),
-    );
-    const statusTerms = ['draft', 'stable', 'stub', 'transitional'].filter((term) =>
-      normalizedQuestion.includes(term),
-    );
+    // Stage 2: Seed candidates
+    const seeding = seedCandidates(normalized, this.snapshot, this.sessionState);
 
-    const candidateMap = new Map<string, TraceCandidate>();
-    const frontierCandidates: FrontierCandidate[] = [];
-    const frontierKeys = new Set<string>();
-    const graphExpansions: GraphExpansion[] = [];
+    // Stage 3: Rank and select initial nodes
+    const ranking = rankCandidates(question, seeding.candidateMap, this.snapshot);
 
-    const addCandidate = (
-      nodeId: string,
-      delta: number,
-      reason: string,
-      origin: FrontierOrigin,
-    ): void => {
-      const node = this.snapshot.compiledNodes[nodeId];
-      if (!node || delta <= 0) {
-        return;
-      }
-
-      const existing = candidateMap.get(nodeId);
-      if (existing) {
-        existing.score += delta;
-        existing.reasons.push(reason);
-      } else {
-        candidateMap.set(nodeId, {
-          nodeId,
-          kind: node.kind,
-          score: delta,
-          reasons: [reason],
-        });
-      }
-
-      const frontierKey = `${nodeId}:${origin}:${reason}`;
-      if (!frontierKeys.has(frontierKey)) {
-        frontierKeys.add(frontierKey);
-        frontierCandidates.push({
-          targetId: nodeId,
-          kind: node.kind,
-          reason,
-          score: delta,
-          origin,
-        });
-      }
-    };
-
-    for (const id of detectedIds) {
-      addCandidate(id, 100, 'exact-id', 'exact_match');
-    }
-
-    for (const entry of scorePatternQuery(
+    // Stage 4: Expand grounding via frontier
+    const grounding = expandGrounding(
       question,
-      Object.values(this.snapshot.patternGraph.nodes),
-    ).slice(0, 24)) {
-      if (entry.score > 0) {
-        addCandidate(entry.pattern.id, entry.score, entry.reasons.join(','), 'lexical');
-      }
-    }
-
-    for (const entry of scoreRouteQuery(
-      question,
-      Object.values(this.snapshot.routeGraph.nodes),
-    ).slice(0, 12)) {
-      if (entry.score > 0) {
-        addCandidate(entry.route.id, entry.score, entry.reasons.join(','), 'route_expansion');
-      }
-    }
-
-    for (const lexemeId of matchedLexemeIds) {
-      addCandidate(lexemeId, 45, 'lexeme-match', 'lexical');
-      const lexeme = this.snapshot.lexicon[lexemeId];
-      for (const linkedNodeId of lexeme?.linkedNodeIds ?? []) {
-        addCandidate(linkedNodeId, 24, `linked-from:${lexeme.canonical}`, 'lexical');
-      }
-    }
-
-    for (const familyTerm of familyTerms) {
-      for (const nodeId of this.snapshot.indexes.familyIndex[familyTerm] ?? []) {
-        addCandidate(nodeId, 12, `family:${familyTerm}`, 'lexical');
-      }
-    }
-
-    for (const statusTerm of statusTerms) {
-      for (const nodeId of this.snapshot.indexes.statusIndex[statusTerm] ?? []) {
-        addCandidate(nodeId, 10, `status:${statusTerm}`, 'lexical');
-      }
-    }
-
-    this.addIndexDescriptionCandidates(question, addCandidate);
-    this.addHeuristicSeeds(normalizedQuestion, addCandidate);
-
-    const sessionApplied = this.shouldApplySessionContext(normalizedQuestion, detectedIds);
-    if (sessionApplied) {
-      for (const nodeId of this.sessionState?.lastSelectedNodeIds ?? []) {
-        addCandidate(nodeId, 18, 'session:recent-selection', 'session_context');
-      }
-      if (this.sessionState?.lastSelectedRouteId) {
-        addCandidate(this.sessionState.lastSelectedRouteId, 20, 'session:recent-route', 'session_context');
-      }
-      for (const nodeId of this.sessionState?.recentUnresolvedNodeIds ?? []) {
-        addCandidate(nodeId, 8, 'session:unresolved-neighbor', 'session_context');
-      }
-    }
-
-    const candidates = this.rankCandidates(candidateMap);
-    const routeCandidate = candidates.find((candidate) => candidate.kind === 'route');
-    const bestPattern = candidates.find((candidate) => candidate.kind === 'pattern');
-    const routeWins = this.routeWins(normalizedQuestion, routeCandidate, bestPattern);
-    const heuristicInitialNodeIds = this.heuristicInitialNodeIds(normalizedQuestion);
-    const initialNodeIds = routeWins
-      ? (routeCandidate ? [routeCandidate.nodeId] : [])
-      : heuristicInitialNodeIds.length > 0
-        ? heuristicInitialNodeIds
-        : this.selectInitialPatternNodes(question, candidates, detectedIds);
-    const initialAnchorIds = routeWins
-      ? this.selectRouteAnchors(routeCandidate?.nodeId)
-      : this.selectPatternAnchors(question, initialNodeIds);
-
-    const grounding = this.expandGrounding(
-      question,
-      candidates,
-      initialNodeIds,
-      initialAnchorIds,
-      frontierCandidates,
-      frontierKeys,
-      graphExpansions,
+      ranking.candidates,
+      ranking.initialNodeIds,
+      ranking.initialAnchorIds,
+      seeding.frontierCandidates,
+      seeding.frontierKeys,
+      this.snapshot,
     );
+
     const selectedNodeIds = grounding.selectedNodeIds;
     const selectedAnchorIds = grounding.selectedAnchorIds;
-    const excludedNodeIds = candidates
+    const excludedNodeIds = ranking.candidates
       .map((candidate) => candidate.nodeId)
       .filter((nodeId) => !selectedNodeIds.includes(nodeId))
       .slice(0, MAX_EXCLUDED);
@@ -349,38 +195,31 @@ export class QueryEngine {
     const status =
       selectedNodeIds.length === 0
         ? 'not_found'
-        : routeWins
+        : ranking.routeWins
           ? 'ok'
-          : this.isAmbiguous(question, candidates)
+          : isAmbiguous(question, ranking.candidates)
             ? 'ambiguous'
             : 'ok';
 
     return {
       mode,
       question,
-      normalizedQuestion,
-      detected: {
-        ids: detectedIds,
-        lexemes: matchedLexemeIds
-          .map((lexemeId) => this.snapshot.lexicon[lexemeId]?.canonical)
-          .filter((value): value is string => Boolean(value)),
-        routeNames: matchedRouteNames,
-        familyTerms,
-        statusTerms,
-      },
-      candidateScores: candidates.slice(0, 16),
-      frontierCandidates,
-      graphExpansions,
+      normalizedQuestion: normalized.normalizedQuestion,
+      detected: normalized.detected,
+      candidateScores: ranking.candidates.slice(0, 16),
+      frontierCandidates: seeding.frontierCandidates,
+      graphExpansions: grounding.graphExpansions,
       selectedNodeIds,
       selectedAnchorIds,
       excludedNodeIds,
       followedReferences: grounding.followedReferences,
       retrievalHops: grounding.retrievalHops,
-      sessionApplied,
+      sessionApplied: seeding.sessionApplied,
       sessionReusedNodeIds,
       sessionMateriallyChanged:
-        sessionApplied && sessionReusedNodeIds.length > 0 && detectedIds.length === 0,
+        seeding.sessionApplied && sessionReusedNodeIds.length > 0 && normalized.detected.ids.length === 0,
       sufficient: grounding.sufficient,
+      routeWins: ranking.routeWins,
       status,
       snapshot: {
         sourceHash: this.snapshot.sourceHash,
@@ -553,832 +392,6 @@ export class QueryEngine {
     };
   }
 
-  private addIndexDescriptionCandidates(
-    question: string,
-    addCandidate: (nodeId: string, delta: number, reason: string, origin: FrontierOrigin) => void,
-  ): void {
-    const queryTokens = tokenize(question);
-    const bestByTarget = new Map<string, { score: number; reason: string }>();
-    for (const indexNode of Object.values(this.snapshot.indexMap)) {
-      const targetId = indexNode.metadata?.patternId;
-      if (!targetId || !this.snapshot.compiledNodes[targetId]) {
-        continue;
-      }
-
-      let score = scoreOverlap(
-        queryTokens,
-        `${indexNode.title} ${indexNode.description} ${indexNode.path.join(' ')}`,
-      );
-      const normalizedDescription = normalizeForLookup(indexNode.description);
-      if (
-        normalizedDescription &&
-        normalizedDescription.length > 8 &&
-        normalizeForLookup(question).includes(normalizedDescription)
-      ) {
-        score += 18;
-      }
-      if (indexNode.metadata.routeBearing) {
-        score += 2;
-      }
-      if (score <= 0) {
-        continue;
-      }
-
-      const existing = bestByTarget.get(targetId);
-      if (!existing || score > existing.score) {
-        bestByTarget.set(targetId, {
-          score,
-          reason: `index:${indexNode.id}`,
-        });
-      }
-    }
-
-    for (const [targetId, best] of bestByTarget.entries()) {
-      addCandidate(targetId, best.score, best.reason, 'lexical');
-    }
-  }
-
-  private matchesSeedRule(normalizedQuestion: string, rule: HeuristicSeedRule): boolean {
-    const matchesGroup = (alternatives: string[]): boolean =>
-      alternatives.some((term) => term.length > 0 && normalizedQuestion.includes(term));
-    return (
-      rule.allOf.every(matchesGroup) &&
-      rule.anyOf.some(matchesGroup)
-    );
-  }
-
-  private addHeuristicSeeds(
-    normalizedQuestion: string,
-    addCandidate: (nodeId: string, delta: number, reason: string, origin: FrontierOrigin) => void,
-  ): void {
-    for (const rule of this.snapshot.heuristicSeedRules ?? []) {
-      if (!this.matchesSeedRule(normalizedQuestion, rule)) {
-        continue;
-      }
-      if (rule.routeId !== undefined && rule.routeScore !== undefined) {
-        addCandidate(rule.routeId, rule.routeScore, `burden:${rule.name}`, 'route_expansion');
-      }
-      for (const nodeId of rule.seedNodeIds) {
-        addCandidate(nodeId, rule.seedScore, rule.name, rule.seedOrigin);
-      }
-    }
-  }
-
-  private heuristicInitialNodeIds(normalizedQuestion: string): string[] {
-    for (const rule of this.snapshot.heuristicSeedRules ?? []) {
-      if (rule.initialNodeIds.length === 0) {
-        continue;
-      }
-      if (!this.matchesSeedRule(normalizedQuestion, rule)) {
-        continue;
-      }
-      return rule.initialNodeIds.filter((nodeId) =>
-        Boolean(this.snapshot.patternGraph.nodes[nodeId]),
-      );
-    }
-    return [];
-  }
-
-  private shouldApplySessionContext(
-    normalizedQuestion: string,
-    detectedIds: string[],
-  ): boolean {
-    if (!this.sessionState || this.sessionState.lastSelectedNodeIds.length === 0) {
-      return false;
-    }
-
-    if (detectedIds.length === 0) {
-      return true;
-    }
-
-    return /\bit\b|\bthat\b|\bthose\b|\bthem\b|\bconnect\b|\brelate\b|\balso\b/.test(
-      normalizedQuestion,
-    );
-  }
-
-  private rankCandidates(candidateMap: Map<string, TraceCandidate>): TraceCandidate[] {
-    return Array.from(candidateMap.values()).sort((left, right) => {
-      if (right.score !== left.score) {
-        return right.score - left.score;
-      }
-      if (left.kind !== right.kind) {
-        if (left.kind === 'pattern') {
-          return -1;
-        }
-        if (right.kind === 'pattern') {
-          return 1;
-        }
-      }
-      return left.nodeId.localeCompare(right.nodeId);
-    });
-  }
-
-  private routeWins(
-    normalizedQuestion: string,
-    routeCandidate?: TraceCandidate,
-    bestPattern?: TraceCandidate,
-  ): boolean {
-    if (!routeCandidate) {
-      return false;
-    }
-
-    const routeIntent =
-      normalizedQuestion.includes('route') ||
-      normalizedQuestion.includes('where to start') ||
-      normalizedQuestion.includes('first route') ||
-      normalizedQuestion.includes('overloaded') ||
-      normalizedQuestion.includes('across teams') ||
-      normalizedQuestion.includes('burden');
-
-    if (routeIntent) {
-      return routeCandidate.score >= (bestPattern?.score ?? 0) - 4;
-    }
-
-    return routeCandidate.score >= (bestPattern?.score ?? 0) + 10;
-  }
-
-  private selectInitialPatternNodes(
-    question: string,
-    candidates: TraceCandidate[],
-    detectedIds: string[],
-  ): string[] {
-    const explicitPatterns = detectedIds.filter((id) => this.snapshot.patternGraph.nodes[id]);
-    if (explicitPatterns.length > 0) {
-      return unique(explicitPatterns);
-    }
-
-    const selected: string[] = [];
-    const normalizedQuestion = normalizeForLookup(question);
-    const questionWantsRelations =
-      normalizedQuestion.includes('workflow') ||
-      normalizedQuestion.includes('connect') ||
-      normalizedQuestion.includes('relation');
-    const budget = questionWantsRelations || detectedIds.length > 1 ? 3 : 2;
-    for (const candidate of candidates) {
-      if (candidate.kind !== 'pattern') {
-        continue;
-      }
-      selected.push(candidate.nodeId);
-      if (selected.length >= budget) {
-        break;
-      }
-    }
-
-    return unique(selected);
-  }
-
-  private selectRouteAnchors(routeNodeId?: string): string[] {
-    if (!routeNodeId) {
-      return [];
-    }
-    const route = this.snapshot.routeGraph.nodes[routeNodeId];
-    return route ? unique(route.anchorIds).slice(0, MAX_SELECTED_ANCHORS) : [];
-  }
-
-  private selectPatternAnchors(question: string, nodeIds: string[]): string[] {
-    const anchorIds: string[] = [];
-    for (const nodeId of nodeIds) {
-      const pattern = this.snapshot.patternGraph.nodes[nodeId];
-      if (!pattern) {
-        continue;
-      }
-      anchorIds.push(
-        ...selectBestAnchors(question, pattern, this.snapshot.anchorMap).map((anchor) => anchor.id),
-      );
-    }
-    return unique(anchorIds).slice(0, MAX_SELECTED_ANCHORS);
-  }
-
-  private expandGrounding(
-    question: string,
-    candidates: TraceCandidate[],
-    initialNodeIds: string[],
-    initialAnchorIds: string[],
-    frontierCandidates: FrontierCandidate[],
-    frontierKeys: Set<string>,
-    graphExpansions: GraphExpansion[],
-  ): GroundingResult {
-    const selectedNodeIds = unique(initialNodeIds);
-    const selectedAnchorIds = unique(initialAnchorIds).slice(0, MAX_SELECTED_ANCHORS);
-    const retrievalHops: RetrievalHop[] = [];
-    const followedReferences: FollowedReference[] = [];
-    const candidateScoreById = new Map(
-      candidates.map((candidate) => [candidate.nodeId, candidate.score] as const),
-    );
-
-    let sufficient = this.isGroundingSufficient(question, selectedNodeIds, selectedAnchorIds);
-
-    for (let iteration = 1; iteration <= MAX_HOPS && !sufficient; iteration += 1) {
-      const missingRoles = this.missingRoles(question, selectedAnchorIds);
-      const frontier = this.buildFrontier(
-        question,
-        selectedNodeIds,
-        selectedAnchorIds,
-        candidateScoreById,
-        missingRoles,
-        frontierCandidates,
-        frontierKeys,
-      );
-      const picked = frontier[0];
-      if (!picked) {
-        break;
-      }
-
-      const addedNodeIds = selectedNodeIds.includes(picked.targetId) ? [] : [picked.targetId];
-      const addedAnchorIds = this.anchorIdsForNode(question, picked.targetId, missingRoles).filter(
-        (anchorId) => !selectedAnchorIds.includes(anchorId),
-      );
-
-      if (addedNodeIds.length === 0 && addedAnchorIds.length === 0) {
-        continue;
-      }
-
-      selectedNodeIds.push(...addedNodeIds);
-      selectedAnchorIds.push(...addedAnchorIds);
-
-      if (picked.relation) {
-        graphExpansions.push({
-          from: picked.relation.from,
-          relation: picked.relation.relation,
-          to: picked.relation.to,
-          reason: picked.reason,
-        });
-        if (picked.relation.relation === 'explicit_reference') {
-          followedReferences.push({
-            from: picked.relation.from,
-            to: picked.relation.to,
-            relation: picked.relation.relation,
-            source: picked.relation.source,
-          });
-        }
-      }
-
-      sufficient = this.isGroundingSufficient(
-        question,
-        unique(selectedNodeIds),
-        unique(selectedAnchorIds),
-      );
-      retrievalHops.push({
-        iteration,
-        reason: picked.reason,
-        addedNodeIds,
-        addedAnchorIds,
-        sufficientAfter: sufficient,
-      });
-    }
-
-    return {
-      selectedNodeIds: unique(selectedNodeIds),
-      selectedAnchorIds: unique(selectedAnchorIds).slice(0, MAX_SELECTED_ANCHORS),
-      retrievalHops,
-      followedReferences,
-      sufficient,
-    };
-  }
-
-  private buildFrontier(
-    question: string,
-    selectedNodeIds: string[],
-    selectedAnchorIds: string[],
-    candidateScoreById: Map<string, number>,
-    missingRoles: SectionRole[],
-    frontierCandidates: FrontierCandidate[],
-    frontierKeys: Set<string>,
-  ): FrontierWorkItem[] {
-    const selected = new Set(selectedNodeIds);
-    const queue = new Map<string, FrontierWorkItem>();
-
-    const register = (
-      item: FrontierWorkItem,
-      appendFrontier = true,
-    ): void => {
-      const node = this.snapshot.compiledNodes[item.targetId];
-      if (!node || selected.has(item.targetId)) {
-        return;
-      }
-
-      const existing = queue.get(item.targetId);
-      if (
-        existing &&
-        (existing.priority < item.priority ||
-          (existing.priority === item.priority && existing.score >= item.score))
-      ) {
-        return;
-      }
-      queue.set(item.targetId, item);
-
-      if (appendFrontier) {
-        const frontierKey = `${item.targetId}:${item.origin}:${item.reason}`;
-        if (!frontierKeys.has(frontierKey)) {
-          frontierKeys.add(frontierKey);
-          frontierCandidates.push({
-            targetId: item.targetId,
-            kind: item.kind,
-            reason: item.reason,
-            score: item.score,
-            origin: item.origin,
-          });
-        }
-      }
-    };
-
-    for (const nodeId of selectedNodeIds) {
-      for (const edge of this.snapshot.relationGraph) {
-        if (edge.from !== nodeId) {
-          continue;
-        }
-        const target = this.snapshot.compiledNodes[edge.to];
-        if (!target || target.kind === 'lexeme') {
-          continue;
-        }
-
-        const baseScore = candidateScoreById.get(edge.to) ?? 0;
-        if (edge.relation === 'explicit_reference') {
-          register({
-            targetId: edge.to,
-            kind: target.kind,
-            reason: `explicit reference from ${edge.from}`,
-            score: 90 + baseScore,
-            origin: 'reference_follow',
-            priority: 1,
-            relation: edge,
-          });
-          continue;
-        }
-
-        if (
-          ['route_hint', 'route_step', 'landing_on', 'current_route_surface', 'typical_next_owner'].includes(
-            edge.relation,
-          )
-        ) {
-          register({
-            targetId: edge.to,
-            kind: target.kind,
-            reason: `route expansion via ${edge.relation}`,
-            score: 70 + baseScore,
-            origin: 'route_expansion',
-            priority: 2,
-            relation: edge,
-          });
-          continue;
-        }
-
-        if (
-          [
-            'builds_on',
-            'prerequisite_for',
-            'used_by',
-            'coordinates_with',
-            'constrains',
-            'refines',
-            'enables',
-            'informs',
-            'constitutes',
-            'constrained_by',
-            'interacts_with',
-          ].includes(edge.relation)
-        ) {
-          const coverage = this.anchorIdsForNode(question, edge.to, missingRoles).length;
-          register({
-            targetId: edge.to,
-            kind: target.kind,
-            reason:
-              coverage > 0
-                ? `role coverage via ${edge.relation}`
-                : `graph neighbor via ${edge.relation}`,
-            score: 50 + coverage * 4 + baseScore,
-            origin: 'reference_follow',
-            priority: coverage > 0 ? 3 : 5,
-            relation: edge,
-          });
-          continue;
-        }
-
-        if (
-          [
-            'outline_parent',
-            'outline_child',
-            'outline_prev_sibling',
-            'outline_next_sibling',
-          ].includes(edge.relation)
-        ) {
-          register({
-            targetId: edge.to,
-            kind: target.kind,
-            reason: `outline adjacency via ${edge.relation}`,
-            score: 34 + baseScore,
-            origin: 'adjacency',
-            priority: 4,
-            relation: edge,
-          });
-        }
-      }
-    }
-
-    for (const [nodeId, score] of candidateScoreById.entries()) {
-      if (selected.has(nodeId)) {
-        continue;
-      }
-      const node = this.snapshot.compiledNodes[nodeId];
-      if (!node || node.kind === 'lexeme') {
-        continue;
-      }
-
-      const coverage = this.anchorIdsForNode(question, nodeId, missingRoles).length;
-      if (coverage > 0) {
-        register({
-          targetId: nodeId,
-          kind: node.kind,
-          reason: `missing role coverage (${missingRoles.join(', ')})`,
-          score: score + coverage * 6,
-          origin: 'lexical',
-          priority: 3,
-        });
-      } else {
-        register({
-          targetId: nodeId,
-          kind: node.kind,
-          reason: 'lexical fallback',
-          score,
-          origin: 'lexical',
-          priority: 6,
-        });
-      }
-    }
-
-    return Array.from(queue.values()).sort((left, right) => {
-      if (left.priority !== right.priority) {
-        return left.priority - right.priority;
-      }
-      if (right.score !== left.score) {
-        return right.score - left.score;
-      }
-      return left.targetId.localeCompare(right.targetId);
-    });
-  }
-
-  private anchorIdsForNode(
-    question: string,
-    nodeId: string,
-    preferredRoles: SectionRole[],
-  ): string[] {
-    const node = this.snapshot.compiledNodes[nodeId];
-    if (!node) {
-      return [];
-    }
-
-    if (node.kind === 'route') {
-      const route = this.snapshot.routeGraph.nodes[nodeId];
-      return route ? unique(route.anchorIds) : [];
-    }
-
-    if (node.kind !== 'pattern') {
-      return [];
-    }
-
-    return this.collectAnchorsForNode(question, nodeId, preferredRoles).map((anchor) => anchor.id);
-  }
-
-  private collectAnchorsForNode(
-    question: string,
-    nodeId: string,
-    preferredRoles: SectionRole[],
-  ): AnchorRef[] {
-    const pattern = this.snapshot.patternGraph.nodes[nodeId];
-    if (!pattern) {
-      return [];
-    }
-
-    const ranked = selectBestAnchors(question, pattern, this.snapshot.anchorMap);
-    if (preferredRoles.length === 0) {
-      return ranked.slice(0, 4);
-    }
-
-    return unique([
-      ...ranked.filter((anchor) => preferredRoles.includes(anchor.role)),
-      ...ranked.filter((anchor) => !preferredRoles.includes(anchor.role)),
-    ]).slice(0, 4);
-  }
-
-  private selectedAnchorsForPatternFromTrace(
-    patternId: string,
-    question: string,
-    trace: TraceResult,
-  ): AnchorRef[] {
-    const fromTrace = trace.selectedAnchorIds
-      .map((anchorId) => this.snapshot.anchorMap[anchorId])
-      .filter(
-        (anchor): anchor is Snapshot['anchorMap'][string] =>
-          Boolean(anchor) && anchor.nodeId === patternId,
-      );
-    if (fromTrace.length > 0) {
-      return fromTrace;
-    }
-
-    const pattern = this.snapshot.patternGraph.nodes[patternId];
-    return pattern ? selectBestAnchors(question, pattern, this.snapshot.anchorMap) : [];
-  }
-
-  private missingRoles(question: string, anchorIds: string[]): SectionRole[] {
-    const rolesPresent = new Set(
-      anchorIds
-        .map((anchorId) => this.snapshot.anchorMap[anchorId]?.role)
-        .filter((role): role is SectionRole => Boolean(role)),
-    );
-    return this.requiredRolesForQuestion(question).filter((role) => !rolesPresent.has(role));
-  }
-
-  private requiredRolesForQuestion(question: string): SectionRole[] {
-    const normalized = normalizeForLookup(question);
-    const roles = new Set<SectionRole>();
-
-    if (
-      normalized.includes('connect') ||
-      normalized.includes('workflow') ||
-      normalized.includes('relation')
-    ) {
-      roles.add('relations');
-    }
-    if (
-      normalized.includes('must') ||
-      normalized.includes('shall') ||
-      normalized.includes('checklist') ||
-      normalized.includes('conformance')
-    ) {
-      roles.add('conformance');
-    }
-    if (normalized.includes('why') || normalized.includes('problem')) {
-      roles.add('problem');
-    }
-    if (normalized.includes('force')) {
-      roles.add('forces');
-    }
-    if (
-      roles.size === 0 ||
-      normalized.includes('what is') ||
-      normalized.includes('definition') ||
-      normalized.includes('use')
-    ) {
-      roles.add('definition');
-      roles.add('solution');
-    }
-
-    return Array.from(roles);
-  }
-
-  private isGroundingSufficient(
-    question: string,
-    nodeIds: string[],
-    anchorIds: string[],
-  ): boolean {
-    if (nodeIds.length === 0 || anchorIds.length === 0) {
-      return false;
-    }
-
-    const anchors = anchorIds
-      .map((anchorId) => this.snapshot.anchorMap[anchorId])
-      .filter((anchor): anchor is AnchorRef => Boolean(anchor));
-    const normalized = normalizeForLookup(question);
-    const patternNodeIds = nodeIds.filter((nodeId) => this.snapshot.patternGraph.nodes[nodeId]);
-    const hasRoute = nodeIds.some((nodeId) => this.snapshot.routeGraph.nodes[nodeId]);
-    const roleSet = new Set(anchors.map((anchor) => anchor.role));
-
-    if (
-      normalized.includes('connect') ||
-      normalized.includes('workflow') ||
-      normalized.includes('relation')
-    ) {
-      return patternNodeIds.length >= 2 && roleSet.has('relations');
-    }
-
-    if (
-      normalized.includes('must') ||
-      normalized.includes('shall') ||
-      normalized.includes('checklist') ||
-      normalized.includes('conformance')
-    ) {
-      return roleSet.has('conformance');
-    }
-
-    if (
-      normalized.includes('route') ||
-      normalized.includes('where to start') ||
-      normalized.includes('first route') ||
-      normalized.includes('overloaded') ||
-      normalized.includes('across teams')
-    ) {
-      return hasRoute && patternNodeIds.length >= 3;
-    }
-
-    return roleSet.has('definition') || roleSet.has('solution');
-  }
-
-  private answerPartCDrafts(question: string, mode: AnswerMode): QueryResult {
-    const grouped = getPartCDraftsByCluster(this.snapshot.patternGraph.nodes);
-    const ids = Object.values(grouped).flatMap((patterns) => patterns.map((pattern) => pattern.id));
-    const answerLines = Object.entries(grouped).flatMap(([cluster, patterns]) => {
-      const rows = patterns.map((pattern) => `- ${pattern.id} - ${pattern.title}`);
-      return rows.length > 0 ? [`${cluster}:`, ...rows] : [`${cluster}:`, '- none'];
-    });
-    return this.result(question, mode, {
-      answer: answerLines.join('\n'),
-      ids,
-      relations: [],
-      constraints: [
-        'Only rows whose Part is Part C and whose status is Draft are included.',
-        'Cluster labels come from the top-of-file catalog and stay local to the source monolith.',
-      ],
-      citations: ['Part C catalog'],
-      confidence: 0.95,
-      gaps: [],
-      status: 'ok',
-      groundingChain:
-        mode === 'proof'
-          ? [
-              'Matched the structured Part C Draft listing route.',
-              'Filtered the compiled pattern graph by Part C plus status Draft, then grouped by cluster label.',
-            ]
-          : undefined,
-    });
-  }
-
-  private buildRouteAnswer(
-    question: string,
-    mode: AnswerMode,
-    routeNodeId: string,
-    trace: TraceResult,
-  ): QueryResult {
-    const route = this.snapshot.routeGraph.nodes[routeNodeId]!;
-    const ids = unique([...route.orderedIds, ...route.optionalIds, ...route.landingIds]);
-    const relations = this.snapshot.relationGraph
-      .filter((edge) => ids.includes(edge.from) && ids.includes(edge.to))
-      .map((edge) => ({ from: edge.from, relation: edge.relation, to: edge.to }));
-    const constraints = [
-      route.firstHonestBurden
-        ? `First honest burden: ${route.firstHonestBurden}.`
-        : 'Choose this route only when the stated burden matches the present problem.',
-      ...(route.constraints ?? []),
-    ];
-    const answer = [
-      `${route.name} is the matched first-practical route.`,
-      route.firstHonestBurden ? `Burden: ${route.firstHonestBurden}.` : '',
-      route.orderedIds.length > 0
-        ? `Ordered entry IDs: ${route.orderedIds.join(' -> ')}.`
-        : '',
-      route.optionalIds.length > 0
-        ? `Conditional additions: ${route.optionalIds.join(', ')}.`
-        : '',
-      route.landingIds.length > 0 ? `Landing surface: ${route.landingIds.join(', ')}.` : '',
-      route.routeSurfaces.length > 0
-        ? `Route-bearing surfaces: ${route.routeSurfaces.join(', ')}.`
-        : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    return this.result(question, mode, {
-      answer,
-      ids,
-      relations,
-      constraints,
-      citations: unique(route.citations),
-      confidence: 0.92,
-      gaps: [],
-      status: 'ok',
-      groundingChain:
-        mode === 'proof'
-          ? [
-              `Selected ${route.name} because route-bearing surfaces and burden terms dominated the frontier.`,
-              ...trace.frontierCandidates
-                .slice(0, 8)
-                .map(
-                  (candidate) =>
-                    `${candidate.origin}: ${candidate.targetId} (${candidate.score}) ${candidate.reason}`,
-                ),
-              ...trace.retrievalHops.map(
-                (hop) =>
-                  `hop ${hop.iteration}: ${hop.reason}; nodes=${hop.addedNodeIds.join(', ') || 'none'}; anchors=${hop.addedAnchorIds.join(', ') || 'none'}`,
-              ),
-            ]
-          : undefined,
-    });
-  }
-
-  private buildPatternAnswer(
-    question: string,
-    mode: AnswerMode,
-    trace: TraceResult,
-  ): QueryResult {
-    const patternIds = trace.selectedNodeIds.filter(
-      (nodeId) => this.snapshot.compiledNodes[nodeId]?.kind === 'pattern',
-    );
-    const patterns = patternIds
-      .map((patternId) => this.snapshot.patternGraph.nodes[patternId])
-      .filter((pattern): pattern is Snapshot['patternGraph']['nodes'][string] => Boolean(pattern));
-
-    const citations = unique(trace.selectedAnchorIds);
-    const answer = patterns
-      .map((pattern) => {
-        const anchors = this.selectedAnchorsForPatternFromTrace(pattern.id, question, trace);
-        const sentences = anchors.flatMap((anchor) =>
-          formatAnchorSentences(anchor, question, mode === 'compact' ? 1 : 2),
-        );
-        const summary = unique(sentences).slice(0, mode === 'compact' ? 2 : 4).join(' ');
-        return `- ${pattern.id}: ${summary || pattern.title}`;
-      })
-      .join('\n');
-
-    const constraints = unique(
-      patterns.flatMap((pattern) => {
-        const anchors = this.selectedAnchorsForPatternFromTrace(pattern.id, question, trace).filter(
-          (anchor) =>
-            ['solution', 'relations', 'conformance', 'definition'].includes(anchor.role),
-        );
-        const constrained = anchors.flatMap((anchor) =>
-          formatAnchorSentences(anchor, question, 2).filter((sentence) =>
-            /(must|shall|should|when|avoid|do not|never|only)/i.test(sentence),
-          ),
-        );
-        return constrained.length > 0
-          ? constrained
-          : anchors[0]
-            ? formatAnchorSentences(anchors[0], question, 1)
-            : [`Keep ${pattern.id} local to its bounded context and cited source text.`];
-      }),
-    ).slice(0, mode === 'compact' ? 3 : 6);
-
-    const relations = this.snapshot.relationGraph
-      .filter((edge) => patternIds.includes(edge.from) && patternIds.includes(edge.to))
-      .map((edge) => ({ from: edge.from, relation: edge.relation, to: edge.to }));
-
-    return this.result(question, mode, {
-      answer,
-      ids: patternIds,
-      relations,
-      constraints,
-      citations,
-      confidence: this.confidenceFromTrace(trace),
-      gaps: this.gapsFromTrace(trace),
-      status: trace.status,
-      groundingChain:
-        mode === 'proof'
-          ? [
-              ...trace.frontierCandidates
-                .slice(0, 10)
-                .map(
-                  (candidate) =>
-                    `${candidate.origin}: ${candidate.targetId} (${candidate.score}) ${candidate.reason}`,
-                ),
-              ...trace.graphExpansions.map(
-                (expansion) =>
-                  `${expansion.from} --${expansion.relation}--> ${expansion.to}: ${expansion.reason}`,
-              ),
-              ...trace.followedReferences.map(
-                (edge) => `followed reference ${edge.from} -> ${edge.to} from ${edge.source}`,
-              ),
-              ...trace.retrievalHops.map(
-                (hop) =>
-                  `hop ${hop.iteration}: ${hop.reason}; nodes=${hop.addedNodeIds.join(', ') || 'none'}; anchors=${hop.addedAnchorIds.join(', ') || 'none'}`,
-              ),
-              ...(trace.sessionApplied
-                ? [
-                    `session reused nodes: ${trace.sessionReusedNodeIds.join(', ') || 'none'}`,
-                    `session materially changed result: ${String(trace.sessionMateriallyChanged)}`,
-                  ]
-                : []),
-            ]
-          : undefined,
-    });
-  }
-
-  private gapsFromTrace(trace: TraceResult): string[] {
-    const gaps: string[] = [];
-    if (trace.status === 'ambiguous') {
-      gaps.push('Nearby candidates remained close in score; inspect the returned IDs together.');
-    }
-    if (!trace.sufficient) {
-      gaps.push('Retrieval stopped at the bounded hop budget before every requested role was fully covered.');
-    }
-    return gaps;
-  }
-
-  private prepareSynthesisSlices(trace: TraceResult): AnswerSlice[] {
-    return trace.selectedAnchorIds
-      .map((anchorId) => this.snapshot.anchorMap[anchorId])
-      .filter((anchor): anchor is Snapshot['anchorMap'][string] => Boolean(anchor))
-      .slice(0, MAX_SYNTHESIS_SLICES)
-      .map<AnswerSlice>((anchor) => ({
-        anchorId: anchor.id,
-        nodeId: anchor.nodeId,
-        heading: anchor.heading,
-        role: anchor.role,
-        lineStart: anchor.lineStart,
-        lineEnd: anchor.lineEnd,
-        text: anchor.text,
-        plainText: anchor.plainText,
-      }));
-  }
-
   private resolveSelector(
     selector: string,
     kind: 'auto' | 'id' | 'route' | 'lexeme',
@@ -1473,7 +486,7 @@ export class QueryEngine {
     return score;
   }
 
-  private findOwnerNodeForAnchor(anchor: AnchorRef): CompiledNode | undefined {
+  private findOwnerNodeForAnchor(anchor: { id: string; nodeId?: string }): CompiledNode | undefined {
     if (anchor.nodeId && this.snapshot.compiledNodes[anchor.nodeId]) {
       return this.snapshot.compiledNodes[anchor.nodeId];
     }
@@ -1538,28 +551,6 @@ export class QueryEngine {
         };
       })
       .filter((neighbor): neighbor is InspectNeighbor => Boolean(neighbor));
-  }
-
-  private isAmbiguous(question: string, candidates: TraceCandidate[]): boolean {
-    const explicitIds = extractIds(question);
-    if (explicitIds.length > 0) {
-      return false;
-    }
-    const patterns = candidates.filter((candidate) => candidate.kind === 'pattern');
-    if (patterns.length < 2) {
-      return false;
-    }
-    const top = patterns[0]!;
-    const runnerUp = patterns[1]!;
-    return top.score - runnerUp.score <= 1;
-  }
-
-  private confidenceFromTrace(trace: TraceResult): number {
-    const top = trace.candidateScores[0]?.score ?? 0;
-    const ambiguous = trace.status === 'ambiguous';
-    const base = Math.min(0.98, 0.45 + top / 20);
-    const adjusted = trace.sufficient ? base : base - 0.1;
-    return ambiguous ? Math.max(0.35, adjusted - 0.2) : Math.max(0.3, adjusted);
   }
 
   private result(
