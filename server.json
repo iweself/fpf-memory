@@ -1,13 +1,14 @@
 {
   "name": "fpf_memory",
   "version": "1.0.0",
-  "description": "Local vectorless FPF-spec runtime for MCP clients.",
+  "description": "Optional local full-surface FPF MCP runtime for expert clients.",
   "transport": "stdio",
   "command": "bun",
   "cwd": ".",
   "args": ["src/mastra/stdio.ts"],
   "env": {
     "FPF_SPEC_SOURCE_PATH": "FPF-spec.md",
-    "FPF_RUNTIME_ARTIFACT_DIR": ".runtime/fpf-index"
+    "FPF_RUNTIME_ARTIFACT_DIR": ".runtime/fpf-index",
+    "FPF_MCP_SURFACE": "full"
   }
 }

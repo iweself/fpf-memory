@@ -104,13 +104,19 @@ bun run mcp
 
 ## Run And Test MCP
 
-Start the stdio MCP server:
+Hosted/public MCP endpoint used by Codex by default:
 
-```bash
-bun run mcp
+```text
+https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp
 ```
 
-Start the hosted Mastra runtime on the Hono engine:
+Optional local full-surface MCP server for development and expert tools:
+
+```bash
+FPF_MCP_SURFACE=full bun run mcp
+```
+
+Start the hosted Mastra runtime locally on the Hono engine:
 
 ```bash
 bun run start
@@ -122,31 +128,16 @@ Decision record for this interface choice:
 
 - [DRR-0001: MCP As The First-Class Codex Interface](docs/drr/DRR-0001-mcp-first-class-interface.md)
 
-For Codex registration:
-
-- Command: `bun`
-- Arguments: `src/mastra/stdio.ts`
-- Working directory: your local `fpf-memory` repo root
+The DRR records the MCP-first boundary choice; the current Codex default is the hosted public MCP.
 
 Equivalent `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.fpf_memory]
-command = "bun"
-args = ["src/mastra/stdio.ts"]
-cwd = "/absolute/path/to/fpf-memory"
-required = false
-startup_timeout_sec = 15
-tool_timeout_sec = 60
+url = "https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp"
 ```
 
-This repo now also ships the same project-scoped configuration at `.codex/config.toml`. Once the project is trusted, Codex can load the `fpf_memory` server directly from the repo without copying the snippet into your user config.
-
-Local development can keep using the Bun shortcut:
-
-```bash
-bun run mcp
-```
+This repo ships the same project-scoped configuration at `.codex/config.toml` and `.mcp.json`. Once the project is trusted, Codex can load the hosted `fpf_memory` server directly from the repo.
 
 Recommended Codex tasks:
 
@@ -154,13 +145,19 @@ Recommended Codex tasks:
 - structured query: `Use only the fpf_memory MCP server. Call query_fpf_spec with question: "What is an FPF pattern?"`
 - check runtime freshness: `Use only the fpf_memory MCP server. Call get_fpf_index_status`
 
-Expert tasks (local stdio only):
+Expert tasks (local full-surface runtime only):
 
 - read a generated page: `Use only the fpf_memory MCP server. Call read_fpf_doc with selector: "A.1.1"`
 - inspect retrieval evidence: `Use only the fpf_memory MCP server. Call trace_fpf_path with question: "How do U.RoleAssignment and U.BoundedContext connect?"`
 - rebuild the local index: `Use only the fpf_memory MCP server. Call refresh_fpf_index`
 
-Smoke-test the same runtime surface locally before wiring it into Codex:
+Start the local full-surface runtime before using expert tools:
+
+```bash
+FPF_MCP_SURFACE=full bun run mcp
+```
+
+Smoke-test the local full-surface runtime before using expert tools or deploying changes:
 
 ```bash
 bun run cli -- status
@@ -178,13 +175,13 @@ Run the end-to-end verification script for the real CLI, MCP stdio, and hosted H
 ./scripts/verify-runtime.sh
 ```
 
-The verification script also checks the direct stdio launcher (same entry as `bun run mcp`):
+The verification script also checks the direct stdio launcher (same entry as `bun run mcp`; add `FPF_MCP_SURFACE=full` for expert-tool work):
 
 ```bash
-bun src/mastra/stdio.ts
+FPF_MCP_SURFACE=full bun src/mastra/stdio.ts
 ```
 
-This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation.
+This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation. Omit `FPF_MCP_SURFACE=full` if you only want the public 3-tool surface.
 
 If this repo is registered as a Codex MCP server, restart Codex after changes and then test with a forced tool-use prompt such as:
 
@@ -248,7 +245,9 @@ Call trace_fpf_path with:
 - `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
 - `get_fpf_index_status`: inspect runtime freshness, artifact presence, and runtime configuration
 
-### Expert tools (local stdio only)
+### Expert tools (local full-surface runtime only)
+
+Set `FPF_MCP_SURFACE=full` on local stdio or local HTTP runtimes to expose these tools. The deployed server stays on the public 3-tool surface.
 
 - `refresh_fpf_index`: rebuild the local artifact set
 - `trace_fpf_path`: return deterministic retrieval evidence only
@@ -257,7 +256,7 @@ Call trace_fpf_path with:
 - `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
 - `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
 
-Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=public` on the deployed server to restrict to public tools only.
+Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=public` on the deployed server to restrict it to public tools only.
 
 ## Runtime behavior
 

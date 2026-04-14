@@ -1,7 +1,7 @@
 {
   "name": "fpf-memory",
   "version": "1.0.0",
-  "description": "Bun-first local vectorless FPF spec runtime exposed through Mastra MCP surfaces with a Hono server engine.",
+  "description": "Bun-first compiler-backed FPF spec runtime exposed through hosted and local Mastra MCP surfaces with a Hono server engine.",
   "private": false,
   "packageManager": "bun@1.3.5",
   "bin": "dist/stdio.js",
@@ -14,6 +14,8 @@
     "build": "bun build ./src/cli.ts ./src/server.ts --outdir dist --target bun",
     "build:mcp": "tsup src/mastra/stdio.ts --format esm,cjs --out-dir dist --no-splitting && node -e \"const fs=require('node:fs');const path='dist/stdio.js';const data=fs.readFileSync(path,'utf8');const shebang='#!/usr/bin/env node';if(!data.startsWith(shebang))fs.writeFileSync(path, shebang + '\\\\n' + data);\" && chmod +x dist/stdio.js",
     "start": "bun src/server.ts",
+    "predeploy": "bash scripts/prepare-deploy.sh",
+    "deploy": "bun run predeploy && npx mastra build && npx mastra server deploy",
     "lint": "rslint --type-check src tests scripts/generate-docs.ts *.config.ts",
     "check": "tsc --noEmit",
     "cli": "bun src/cli.ts",

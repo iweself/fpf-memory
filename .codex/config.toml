@@ -1,9 +1,4 @@
 #:schema https://developers.openai.com/codex/config-schema.json
 
 [mcp_servers.fpf_memory]
-command = "bun"
-args = ["src/mastra/stdio.ts"]
-cwd = "."
-required = false
-startup_timeout_sec = 15
-tool_timeout_sec = 60
+url = "https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp"

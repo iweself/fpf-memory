@@ -7,6 +7,8 @@ description: "Design-Rationale Record for the Codex-facing interface decision in
 
 Status: accepted for the bounded context `CodexAccess:LocalFPFSpecRuntime`
 
+Update 2026-04-13: the default Codex registration path now uses the hosted public MCP URL. The local stdio transport remains available as an optional full-surface expert/dev path.
+
 ## Problem frame
 
 `fpf_memory` needs a Codex-facing interface for grounded access to the local `FPF-spec.md` runtime. The repo already exposes a local MCP server, a Bun CLI, and a hosted Hono/Mastra runtime path, but the interface promise was implicit rather than recorded as an explicit decision.
@@ -28,9 +30,9 @@ The decision includes these commitments:
 
 1. The primary Codex integration surface is the `fpf_memory` MCP server.
 2. The CLI remains an operator/debug surface, not the primary semantic boundary for agent use.
-3. Hosted HTTP remains a transport/hosting option, not the first interface to optimize for in this repo slice.
-4. The Codex registration path is documented and packaged around the stdio entry point:
-   `bun src/mastra/stdio.ts`
+3. The current default Codex transport is the hosted public MCP URL.
+4. The repo also keeps a local stdio entry point for optional full-surface expert/dev work:
+   `FPF_MCP_SURFACE=full bun src/mastra/stdio.ts`
 5. This decision is recorded as a DRR outside the normative FPF core, consistent with `E.9`.
 
 ## Rationale
@@ -44,7 +46,7 @@ This choice keeps the FPF layers separate.
 Why MCP, rather than the alternatives:
 
 - **Against CLI-first:** the CLI is useful for operators and smoke tests, but it is not the native tool-selection boundary for Codex.
-- **Against custom HTTP-first:** Codex already supports MCP natively, so a bespoke API would add interface work without solving the current local integration problem.
+- **Against custom HTTP-first:** Codex already supports MCP natively, so a bespoke API would add interface work without improving the MCP boundary itself.
 - **For MCP-first:** the repo already ships an MCP server, Codex natively supports MCP configuration, and the server contract matches the bounded need for grounded retrieval over local spec artifacts.
 
 This also follows FPF boundary discipline:
@@ -63,14 +65,14 @@ Positive consequences:
 - Codex setup, packaging metadata, and verification can all align around a single published interface decision.
 - Future work can distinguish between:
   - boundary choice: MCP-first
-  - transport choice: stdio now, HTTP optional later
+  - transport choice: hosted/public by default, stdio optional for local expert work
   - surface-shape work: discovery, browse/search, tools/resources/prompts
 
 Trade-offs and follow-up consequences:
 
 - A tool-only MCP surface is still heavier than ideal for first-pass discovery, so later work should improve discovery without changing this decision.
 - Documentation now has one more artifact to keep current; that is acceptable because the DRR is the durable rationale carrier.
-- If the bounded context changes from local Codex use to a hosted multi-tenant product, a later DRR may designate HTTP as an additional first-class external boundary for that different scope.
+- If the bounded context changes again, a later DRR can further refine hosted/public vs local expert transport choices without overturning the MCP-first boundary.
 
 References:
 

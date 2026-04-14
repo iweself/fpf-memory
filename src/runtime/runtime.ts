@@ -10,6 +10,7 @@ import {
 import { compileFpfSource } from './compiler.js';
 import { createSynthesizerFromEnv } from './lm-studio-synthesizer.js';
 import { QueryEngine } from './query-engine.js';
+import { resolveRuntimePath } from './path-resolution.js';
 import {
   SessionCache,
   type RetrievalSessionState,
@@ -44,14 +45,21 @@ export class FpfRuntime {
   private readonly sessionCache: SessionCache;
 
   constructor(options: FpfRuntimeOptions = {}) {
-    this.sourcePath = resolve(
-      process.cwd(),
-      options.sourcePath ?? process.env.FPF_SPEC_SOURCE_PATH ?? DEFAULT_SOURCE_PATH,
+    const sourcePath = options.sourcePath ?? process.env.FPF_SPEC_SOURCE_PATH ?? DEFAULT_SOURCE_PATH;
+    const sourceResolution = resolveRuntimePath(sourcePath, {
+      kind: 'file',
+    });
+    const artifactDir =
+      options.artifactDir ?? process.env.FPF_RUNTIME_ARTIFACT_DIR ?? DEFAULT_ARTIFACT_DIR;
+    const artifactResolution = resolveRuntimePath(
+      resolve(sourceResolution.root, artifactDir),
+      {
+        kind: 'directory',
+      },
     );
-    this.artifactDir = resolve(
-      process.cwd(),
-      options.artifactDir ?? process.env.FPF_RUNTIME_ARTIFACT_DIR ?? DEFAULT_ARTIFACT_DIR,
-    );
+
+    this.sourcePath = sourceResolution.path;
+    this.artifactDir = artifactResolution.path;
     this.artifactPaths = Object.fromEntries(
       Object.entries(ARTIFACT_FILENAMES).map(([key, filename]) => [
         key,
@@ -191,7 +199,15 @@ export class FpfRuntime {
   }
 
   async status(): Promise<RuntimeStatus> {
-    const existingSnapshot = await this.loadSnapshot();
+    let existingSnapshot = await this.loadSnapshot();
+    if (!existingSnapshot || snapshotNeedsRebuild(existingSnapshot)) {
+      await this.refresh(false).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`[FpfRuntime.status] refresh(false) failed: ${message}`);
+      });
+      existingSnapshot = await this.loadSnapshot();
+    }
+
     const currentSourceHash = await hashFile(this.sourcePath);
     return {
       sourcePath: this.sourcePath,
@@ -199,7 +215,10 @@ export class FpfRuntime {
       builtAt: existingSnapshot?.builtAt,
       snapshotExists: Boolean(existingSnapshot),
       currentSourceHash,
-      fresh: existingSnapshot?.sourceHash === currentSourceHash,
+      fresh:
+        existingSnapshot != null &&
+        !snapshotNeedsRebuild(existingSnapshot) &&
+        existingSnapshot.sourceHash === currentSourceHash,
       compilerMode: 'local_vectorless',
       artifacts: await this.getArtifactPresence(),
       synthesizer: this.synthesizer?.describe

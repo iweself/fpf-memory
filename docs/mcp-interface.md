@@ -1,17 +1,17 @@
 ---
 title: "MCP Interface"
-description: "Spec-oriented interface contract for the local FPF stdio MCP server."
+description: "Spec-oriented interface contract for the hosted and local FPF MCP surfaces."
 ---
 
 # MCP Interface
 
-This page documents the public MCP surface implemented by `fpf_memory`.
+This page documents the MCP surfaces implemented by `fpf_memory`.
 
 Decision record:
 
 - [DRR-0001: MCP As The First-Class Codex Interface](/drr/DRR-0001-mcp-first-class-interface/)
 
-The runtime itself is compiler-backed and local:
+The runtime itself is compiler-backed and local to `FPF-spec.md`:
 
 - authored source: `FPF-spec.md`
 - runtime artifacts: `.runtime/fpf-index/*`
@@ -20,38 +20,30 @@ The runtime itself is compiler-backed and local:
 
 ## Transport
 
-- stdio (local): `bun run mcp`
-- HTTP (local): `http://localhost:4111/api/mcp/fpf_memory/mcp` via `mastra dev`
+- hosted/public (default Codex path): `https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp`
+- stdio (local expert/dev path): `FPF_MCP_SURFACE=full bun run mcp`
+- HTTP (local dev path): `http://localhost:4111/api/mcp/fpf_memory/mcp` via `mastra dev`
 - server name: `fpf_memory`
 - protocol version: `2024-11-05`
 
-Both stdio and HTTP default to the public tool surface (3 tools). Set `FPF_MCP_SURFACE=full` for all 9 tools.
+The hosted server exposes only the 3 public tools. Local stdio and local HTTP default to the same public surface; set `FPF_MCP_SURFACE=full` to expose all 9 tools for local expert work.
 
 ## Codex Setup
 
-Codex desktop app fields:
-
-- command: `bun`
-- arguments: `src/mastra/stdio.ts`
-- working directory: absolute path to the local repo root
-
-Equivalent `~/.codex/config.toml` entry:
+Default `~/.codex/config.toml` entry:
 
 ```toml
 [mcp_servers.fpf_memory]
-command = "bun"
-args = ["src/mastra/stdio.ts"]
-cwd = "/absolute/path/to/fpf-memory"
-required = false
-startup_timeout_sec = 15
-tool_timeout_sec = 60
+url = "https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/mcp"
 ```
 
-This repo also ships the same project-scoped configuration at `.codex/config.toml`. Codex will load that file after the project is trusted.
+This repo ships the same hosted configuration at `.codex/config.toml` and `.mcp.json`. Codex will load that file after the project is trusted.
+
+For temporary local expert work, point a client at `src/mastra/stdio.ts` and set `FPF_MCP_SURFACE=full`.
 
 ## Tool Catalog
 
-### Public tools (default surface)
+### Public tools (hosted default surface)
 
 #### `ask_fpf`
 
@@ -63,13 +55,13 @@ Answer a question with deterministic grounding, citations, constraints, and fres
 
 #### `get_fpf_index_status`
 
-Report whether the local index exists, whether it is fresh against the current source hash, and which artifacts are present.
+Report whether the current runtime index exists, whether it is fresh against the current source hash, and which artifacts are present.
 
-### Expert tools (FPF_MCP_SURFACE=full)
+### Expert tools (local full-surface runtime only)
 
 #### `refresh_fpf_index`
 
-Build or rebuild the local vectorless index from `FPF-spec.md` and persist the runtime artifact set under `.runtime/fpf-index/`.
+Build or rebuild the compiler-backed vectorless index from `FPF-spec.md` and persist the runtime artifact set under `.runtime/fpf-index/`.
 
 #### `trace_fpf_path`
 
@@ -103,12 +95,13 @@ Static routes mirror those pages under `/generated/**` with clean URLs and `.htm
 
 ## Verification
 
-Typical local checks:
+Typical checks:
 
 ```bash
 bun run check
 bun run test
-bun run docs:build
-bun run cli -- read-doc --selector "A.1.1"
-bun run mcp
+curl -X POST https://fpf-memory-remote-20260414.server.mastra.cloud/api/mcp/fpf_memory/tools/get_fpf_index_status/execute \
+  -H 'content-type: application/json' \
+  -d '{"data":{}}'
+FPF_MCP_SURFACE=full bun run mcp
 ```
