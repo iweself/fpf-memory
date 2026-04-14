@@ -22,13 +22,16 @@ export function resolveRuntimePath(
   options: RuntimePathResolutionOptions = {},
 ): ResolvedRuntimePath {
   const trimmedPath = rawPath.trim();
+  if (trimmedPath.length === 0) {
+    throw new Error('Runtime path must not be empty');
+  }
   const kind = options.kind ?? 'any';
 
   if (isAbsolute(trimmedPath)) {
     const absolutePath = resolve(trimmedPath);
     return {
       path: absolutePath,
-      root: kind === 'directory' ? absolutePath : dirname(absolutePath),
+      root: dirname(absolutePath),
       existed: pathMatchesKind(absolutePath, kind),
     };
   }

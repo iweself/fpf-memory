@@ -199,7 +199,10 @@ export class FpfRuntime {
   async status(): Promise<RuntimeStatus> {
     let existingSnapshot = await this.loadSnapshot();
     if (!existingSnapshot) {
-      await this.refresh(false).catch(() => undefined);
+      await this.refresh(false).catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`[FpfRuntime.status] refresh(false) failed: ${message}`);
+      });
       existingSnapshot = await this.loadSnapshot();
     }
 

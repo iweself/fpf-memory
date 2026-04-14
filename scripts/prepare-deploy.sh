@@ -15,11 +15,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PUBLIC="$ROOT/src/mastra/public"
 INDEX="$ROOT/.runtime/fpf-index"
 
-# 1. Ensure the snapshot exists locally
-if [ ! -f "$INDEX/snapshot.json" ]; then
-  echo "Snapshot not found — building index..."
-  bun "$ROOT/src/cli.ts" refresh-index
-fi
+# 1. Rebuild snapshot so staged artifact matches current source
+echo "Refreshing index snapshot..."
+bun "$ROOT/src/cli.ts" refresh
 
 # 2. Stage only what the runtime reads
 mkdir -p "$PUBLIC/.runtime/fpf-index"
