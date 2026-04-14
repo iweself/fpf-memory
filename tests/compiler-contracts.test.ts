@@ -288,9 +288,7 @@ describe('Compiler / Snapshot determinism stage', () => {
     // Verify a structural difference — the added heading should produce at
     // least one more parsed section or index-map node than the original.
     const firstSections = first.snapshot.validation.parsedSections;
-    const firstIndexNodes = Object.keys(first.snapshot.indexMap).length;
     const secondSections = second.snapshot.validation.parsedSections;
-    const secondIndexNodes = Object.keys(second.snapshot.indexMap).length;
 
     // The synthetic Z.99 heading is parsed as a section (not a pattern —
     // the compiler only promotes headings that match spec-catalog entries).
