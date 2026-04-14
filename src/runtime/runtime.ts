@@ -36,7 +36,7 @@ import type {
   Snapshot,
   TraceResult,
 } from './types.js';
-import { tokenize, scoreOverlap } from './text.js';
+import { normalizeForLookup, tokenize, scoreOverlap } from './text.js';
 import { getRuntimeObservabilitySummary } from '../observability/runtime-observability.js';
 
 export interface FpfRuntimeOptions {
@@ -284,7 +284,13 @@ export class FpfRuntime {
       .map((node) => nodeToCatalogEntry(node, snapshot));
 
     entries.sort((a, b) => a.id.localeCompare(b.id));
-    const trimmed = entries.slice(0, limit);
+
+    // When no kind filter is active, interleave kinds so the default page
+    // shows a representative mix of patterns, routes, and lexemes instead
+    // of burying routes/lexemes past the limit cutoff.
+    const trimmed = options.kind
+      ? entries.slice(0, limit)
+      : interleaveBrowseEntries(entries, limit);
 
     return {
       entries: trimmed,
@@ -330,6 +336,17 @@ export class FpfRuntime {
         score,
         snippet: extractSnippet(node.searchableText, queryTokens),
       });
+    }
+
+    // Boost exact ID and exact title matches so precise selector queries
+    // rank the target node first, ahead of broader prefix matches.
+    const normalizedQuery = normalizeForLookup(query);
+    for (const hit of hits) {
+      if (hit.id === query || normalizeForLookup(hit.id) === normalizedQuery) {
+        hit.score += 200;
+      } else if (normalizeForLookup(hit.title) === normalizedQuery) {
+        hit.score += 150;
+      }
     }
 
     hits.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
@@ -460,6 +477,51 @@ function snapshotNeedsRebuild(snapshot: Snapshot): boolean {
       typeof node.metadata.role !== 'string' ||
       typeof node.metadata.routeBearing !== 'boolean',
   );
+}
+
+/**
+ * Interleave entries by kind so the default browse page shows a
+ * representative mix of patterns, routes, and lexemes.  Each kind
+ * gets a fair share of the limit, and leftover slots are filled by
+ * whichever kinds have entries remaining.
+ */
+function interleaveBrowseEntries(entries: CatalogEntry[], limit: number): CatalogEntry[] {
+  const byKind = new Map<string, CatalogEntry[]>();
+  for (const entry of entries) {
+    const bucket = byKind.get(entry.kind) ?? [];
+    bucket.push(entry);
+    byKind.set(entry.kind, bucket);
+  }
+
+  const kinds = [...byKind.keys()].sort();
+  const perKind = Math.max(1, Math.floor(limit / kinds.length));
+  const result: CatalogEntry[] = [];
+
+  // First pass: take up to perKind from each bucket.
+  for (const kind of kinds) {
+    const bucket = byKind.get(kind)!;
+    result.push(...bucket.splice(0, perKind));
+  }
+
+  // Second pass: fill remaining slots round-robin.
+  let remaining = limit - result.length;
+  while (remaining > 0) {
+    let added = false;
+    for (const kind of kinds) {
+      if (remaining <= 0) break;
+      const bucket = byKind.get(kind)!;
+      if (bucket.length > 0) {
+        result.push(bucket.shift()!);
+        remaining -= 1;
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
+
+  // Sort the interleaved result by ID for stable output.
+  result.sort((a, b) => a.id.localeCompare(b.id));
+  return result;
 }
 
 function nodeToCatalogEntry(

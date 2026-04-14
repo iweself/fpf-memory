@@ -86,6 +86,15 @@ describe('Discovery layer', () => {
       expect(limited.total).toBeGreaterThan(3);
     });
 
+    it('includes all kinds in default unfiltered page', async () => {
+      const result = await runtime.browse();
+      const kinds = new Set(result.entries.map((e) => e.kind));
+      // Default browse page must include routes and lexemes, not just patterns.
+      expect(kinds.has('pattern')).toBe(true);
+      expect(kinds.has('route')).toBe(true);
+      expect(kinds.has('lexeme')).toBe(true);
+    });
+
     it('includes description for each entry', async () => {
       const result = await runtime.browse({ limit: 10 });
       for (const entry of result.entries) {
@@ -151,6 +160,12 @@ describe('Discovery layer', () => {
         // to the beginning of the node.
         expect(hit.snippet.toLowerCase()).toMatch(/a\.1\.1|boundedcontext|semantic/i);
       }
+    });
+
+    it('ranks exact ID match first when searching by node ID', async () => {
+      const result = await runtime.search('A.1.1');
+      expect(result.hits.length).toBeGreaterThan(0);
+      expect(result.hits[0]!.id).toBe('A.1.1');
     });
   });
 });
