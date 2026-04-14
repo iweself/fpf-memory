@@ -217,6 +217,10 @@ export interface IndexingViewRoute {
   landingIds: string[];
   routeSurfaces: string[];
   constraints: string[];
+  anchorIds: string[];
+  citations: string[];
+  nextOwners: string[];
+  reroutes: string[];
 }
 
 export interface IndexingView {

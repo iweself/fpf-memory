@@ -39,6 +39,10 @@ export function buildIndexingView(snapshot: Snapshot): IndexingView {
       landingIds: [...route.landingIds],
       routeSurfaces: [...route.routeSurfaces],
       constraints: route.firstHonestBurden ? [route.firstHonestBurden] : [],
+      anchorIds: [...route.anchorIds].sort(),
+      citations: [...route.citations].sort(),
+      nextOwners: [...route.nextOwners].sort(),
+      reroutes: [...route.reroutes].sort(),
     };
   }
 
@@ -151,7 +155,11 @@ function inferChangeFamily(
           !arraysEqual(prevRoute.landingIds, currRoute.landingIds) ||
           !arraysEqual(prevRoute.optionalIds, currRoute.optionalIds) ||
           !arraysEqual(prevRoute.routeSurfaces, currRoute.routeSurfaces) ||
-          !arraysEqual(prevRoute.constraints, currRoute.constraints)
+          !arraysEqual(prevRoute.constraints, currRoute.constraints) ||
+          !arraysEqual(prevRoute.anchorIds, currRoute.anchorIds) ||
+          !arraysEqual(prevRoute.citations, currRoute.citations) ||
+          !arraysEqual(prevRoute.nextOwners, currRoute.nextOwners) ||
+          !arraysEqual(prevRoute.reroutes, currRoute.reroutes)
         );
       }
       return true;
@@ -299,7 +307,11 @@ function routeEqual(
     arraysEqual(a.optionalIds, b.optionalIds) &&
     arraysEqual(a.landingIds, b.landingIds) &&
     arraysEqual(a.routeSurfaces, b.routeSurfaces) &&
-    arraysEqual(a.constraints, b.constraints)
+    arraysEqual(a.constraints, b.constraints) &&
+    arraysEqual(a.anchorIds, b.anchorIds) &&
+    arraysEqual(a.citations, b.citations) &&
+    arraysEqual(a.nextOwners, b.nextOwners) &&
+    arraysEqual(a.reroutes, b.reroutes)
   );
 }
 
