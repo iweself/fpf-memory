@@ -162,8 +162,8 @@ function buildHeuristicSeedRules(
   if (creativityNodeIds.length > 0) {
     rules.push({
       name: 'creative-search-heuristic',
-      allOf: ['creativity|creative'],
-      anyOf: ['open-ended|open ended', 'search'],
+      allOf: [['creativity', 'creative']],
+      anyOf: [['open-ended', 'open ended'], ['search']],
       seedNodeIds: creativityNodeIds,
       seedScore: 64,
       seedOrigin: 'lexical',
@@ -178,10 +178,15 @@ function buildHeuristicSeedRules(
     (id) => id in patternNodes || id in routeNodes,
   );
   if (alignmentRoute) {
+    // Populate project-alignment constraints that were previously hard-coded in query-engine.ts
+    alignmentRoute.constraints = [
+      'Add F.11 and F.9 only when method/work vocabulary is explicitly at stake in the question.',
+      'Land on F.17 early rather than escalating to F.11 unless the asker names a cross-team mismatch.',
+    ];
     rules.push({
       name: 'vocabulary-alignment',
-      allOf: ['vocabulary'],
-      anyOf: ['overloaded', 'across teams', 'across contexts'],
+      allOf: [['vocabulary']],
+      anyOf: [['overloaded'], ['across teams'], ['across contexts']],
       seedNodeIds: alignmentNodeIds,
       seedScore: 20,
       seedOrigin: 'route_expansion',
@@ -197,8 +202,8 @@ function buildHeuristicSeedRules(
   if (roleNodeIds.length > 0) {
     rules.push({
       name: 'role-assignment-connection',
-      allOf: ['role assignment'],
-      anyOf: ['connect', 'relation'],
+      allOf: [['role assignment']],
+      anyOf: [['connect'], ['relation']],
       seedNodeIds: roleNodeIds,
       seedScore: 36,
       seedOrigin: 'lexical',
@@ -212,8 +217,8 @@ function buildHeuristicSeedRules(
   if (entityNodeIds.length > 0) {
     rules.push({
       name: 'same-entity-comparative-reading',
-      allOf: ['same entity|same-entity'],
-      anyOf: ['rewrite', 'comparative'],
+      allOf: [['same entity', 'same-entity']],
+      anyOf: [['rewrite'], ['comparative']],
       seedNodeIds: entityNodeIds,
       seedScore: 40,
       seedOrigin: 'lexical',

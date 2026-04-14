@@ -599,8 +599,8 @@ export class QueryEngine {
   }
 
   private matchesSeedRule(normalizedQuestion: string, rule: HeuristicSeedRule): boolean {
-    const matchesGroup = (terms: string): boolean =>
-      terms.split('|').some((term) => term.length > 0 && normalizedQuestion.includes(term));
+    const matchesGroup = (alternatives: string[]): boolean =>
+      alternatives.some((term) => term.length > 0 && normalizedQuestion.includes(term));
     return (
       rule.allOf.every(matchesGroup) &&
       rule.anyOf.some(matchesGroup)

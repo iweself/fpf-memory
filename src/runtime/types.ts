@@ -167,8 +167,10 @@ export interface BuildValidation {
 
 export interface HeuristicSeedRule {
   name: string;
-  allOf: string[];
-  anyOf: string[];
+  /** Outer array = AND, inner array = OR alternatives for each term group. */
+  allOf: string[][];
+  /** Outer array = OR groups, inner array = OR alternatives within each group. */
+  anyOf: string[][];
   seedNodeIds: string[];
   seedScore: number;
   seedOrigin: FrontierOrigin;
@@ -197,7 +199,7 @@ export interface Snapshot {
   compiledNodes: Record<string, CompiledNode>;
   relationGraph: RelationEdge[];
   indexes: SnapshotIndexes;
-  heuristicSeedRules: HeuristicSeedRule[];
+  heuristicSeedRules?: HeuristicSeedRule[];
   validation: BuildValidation;
 }
 
