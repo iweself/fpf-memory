@@ -143,11 +143,11 @@ Recommended Codex tasks:
 
 - answer a question: `Use only the fpf_memory MCP server. Call ask_fpf with question: "What is U.PromiseContent?"`
 - structured query: `Use only the fpf_memory MCP server. Call query_fpf_spec with question: "What is an FPF pattern?"`
+- read a generated page: `Use only the fpf_memory MCP server. Call read_fpf_doc with selector: "A.1.1"`
 - check runtime freshness: `Use only the fpf_memory MCP server. Call get_fpf_index_status`
 
 Expert tasks (local full-surface runtime only):
 
-- read a generated page: `Use only the fpf_memory MCP server. Call read_fpf_doc with selector: "A.1.1"`
 - inspect retrieval evidence: `Use only the fpf_memory MCP server. Call trace_fpf_path with question: "How do U.RoleAssignment and U.BoundedContext connect?"`
 - rebuild the local index: `Use only the fpf_memory MCP server. Call refresh_fpf_index`
 
@@ -181,7 +181,7 @@ The verification script also checks the direct stdio launcher (same entry as `bu
 FPF_MCP_SURFACE=full bun src/mastra/stdio.ts
 ```
 
-This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation. Omit `FPF_MCP_SURFACE=full` if you only want the public 3-tool surface.
+This starts a long-running stdio server; for a manual smoke check, stop it with `Ctrl+C` after startup confirmation. Omit `FPF_MCP_SURFACE=full` if you only want the public surface.
 
 If this repo is registered as a Codex MCP server, restart Codex after changes and then test with a forced tool-use prompt such as:
 
@@ -241,20 +241,11 @@ Call trace_fpf_path with:
 
 ### Public tools (default surface)
 
-- `ask_fpf`: return the grounded answer as markdown with IDs, citations, constraints, gaps, and snapshot metadata
-- `query_fpf_spec`: return the answer envelope with IDs, citations, constraints, and freshness metadata
-- `get_fpf_index_status`: inspect runtime freshness, artifact presence, and runtime configuration
+`browse_fpf_catalog`, `search_fpf`, `ask_fpf`, `query_fpf_spec`, `read_fpf_doc`, and `get_fpf_index_status`.
 
-### Expert tools (local full-surface runtime only)
+### Full-surface-only tools
 
-Set `FPF_MCP_SURFACE=full` on local stdio or local HTTP runtimes to expose these tools. The deployed server stays on the public 3-tool surface.
-
-- `refresh_fpf_index`: rebuild the local artifact set
-- `trace_fpf_path`: return deterministic retrieval evidence only
-- `inspect_fpf_node`: expand one node into its anchors, neighboring relations, and stable doc references
-- `read_fpf_doc`: return the canonical generated markdown page plus stable markdown/static paths
-- `inspect_fpf_anchor`: expand one anchor into raw anchor text plus owning node context
-- `expand_fpf_citations`: expand multiple citations into raw anchor text plus owning node context
+Set `FPF_MCP_SURFACE=full` on local stdio or local HTTP runtimes to expose `inspect_fpf_node`, `inspect_fpf_anchor`, `expand_fpf_citations`, `trace_fpf_path`, and `refresh_fpf_index`.
 
 Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=public` on the deployed server to restrict it to public tools only.
 

@@ -91,6 +91,13 @@ describe('FpfRuntime', () => {
     expect(second.rebuilt).toBe(false);
     expect(second.reason).toBe('snapshot_current');
 
+    await rm(resolve(artifactDir, ARTIFACT_FILENAMES.routeGraph), { force: true });
+    const backfilled = await runtime.refresh();
+    expect(backfilled.rebuilt).toBe(false);
+    expect(await readFile(resolve(artifactDir, ARTIFACT_FILENAMES.routeGraph), 'utf8')).toContain(
+      '"relations"',
+    );
+
     await writeFile(sourcePath, `${await readFile(sourcePath, 'utf8')}\n<!-- hash-shift -->\n`);
     const third = await runtime.refresh();
     expect(third.rebuilt).toBe(true);

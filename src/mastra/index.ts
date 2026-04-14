@@ -23,6 +23,6 @@ export function createMastraRuntime(env: NodeJS.ProcessEnv = process.env) {
 
 /**
  * Direct Mastra instance export required by `mastra build` / `mastra deploy`.
- * Deployed server sets FPF_MCP_SURFACE=public to restrict to 3 public tools.
+ * Deployed server sets FPF_MCP_SURFACE=public to restrict to the public tool surface.
  */
 export const mastra = createMastraRuntime();

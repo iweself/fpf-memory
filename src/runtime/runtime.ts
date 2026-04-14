@@ -106,12 +106,11 @@ export class FpfRuntime {
         compiler: buildCompilerSummary(existingSnapshot),
         artifacts: this.artifactPaths,
       };
-      await this.writeArtifacts(existingSnapshot);
       const existingView = await this.loadIndexingView();
       if (!existingView) {
-        const view = buildIndexingView(existingSnapshot);
-        await this.writeJson(this.artifactPaths.indexingView, view);
+        await this.writeJson(this.artifactPaths.indexingView, buildIndexingView(existingSnapshot));
       }
+      await this.writeArtifacts(existingSnapshot, true);
       await this.writeAudit(audit);
       return audit;
     }
@@ -163,14 +162,7 @@ export class FpfRuntime {
     forceRefresh = false,
     sessionId?: string,
   ): Promise<QueryResult> {
-    const audit = await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    const engine = new QueryEngine(
-      snapshot,
-      audit.rebuilt,
-      this.synthesizer,
-      sessionId ? this.sessionCache.get(sessionId) : undefined,
-    );
+    const engine = await this.createEngine(forceRefresh, sessionId);
     const trace = engine.trace(question, mode);
     const result = await engine.answerFromTrace(question, mode, trace);
     this.persistSession(sessionId, trace);
@@ -183,14 +175,7 @@ export class FpfRuntime {
     forceRefresh = false,
     sessionId?: string,
   ): Promise<TraceResult> {
-    const audit = await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    const trace = new QueryEngine(
-      snapshot,
-      audit.rebuilt,
-      this.synthesizer,
-      sessionId ? this.sessionCache.get(sessionId) : undefined,
-    ).trace(question, mode);
+    const trace = (await this.createEngine(forceRefresh, sessionId)).trace(question, mode);
     this.persistSession(sessionId, trace);
     return trace;
   }
@@ -200,9 +185,7 @@ export class FpfRuntime {
     kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
     forceRefresh = false,
   ): Promise<InspectResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).inspect(selector, kind);
+    return (await this.createEngine(forceRefresh)).inspect(selector, kind);
   }
 
   async readDoc(
@@ -210,24 +193,18 @@ export class FpfRuntime {
     kind: 'auto' | 'id' | 'route' | 'lexeme' = 'auto',
     forceRefresh = false,
   ): Promise<ReadDocResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).readDoc(selector, kind);
+    return (await this.createEngine(forceRefresh)).readDoc(selector, kind);
   }
 
   async inspectAnchor(anchorId: string, forceRefresh = false): Promise<InspectAnchorResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).inspectAnchor(anchorId);
+    return (await this.createEngine(forceRefresh)).inspectAnchor(anchorId);
   }
 
   async expandCitations(
     citationIds: string[],
     forceRefresh = false,
   ): Promise<ExpandCitationsResult> {
-    await this.refresh(forceRefresh);
-    const snapshot = await this.requireSnapshot();
-    return new QueryEngine(snapshot, false, this.synthesizer).expandCitations(citationIds);
+    return (await this.createEngine(forceRefresh)).expandCitations(citationIds);
   }
 
   async status(): Promise<RuntimeStatus> {
@@ -378,22 +355,22 @@ export class FpfRuntime {
     this.sessionCache.set(sessionId, nextState);
   }
 
-  private async loadSnapshot(): Promise<Snapshot | undefined> {
-    try {
-      const content = await readFile(this.artifactPaths.snapshot, 'utf8');
-      return JSON.parse(content) as Snapshot;
-    } catch {
-      return undefined;
-    }
+  private async createEngine(forceRefresh = false, sessionId?: string): Promise<QueryEngine> {
+    const audit = await this.refresh(forceRefresh);
+    return new QueryEngine(
+      await this.requireSnapshot(),
+      audit.rebuilt,
+      this.synthesizer,
+      sessionId ? this.sessionCache.get(sessionId) : undefined,
+    );
   }
 
-  private async loadIndexingView(): Promise<IndexingView | undefined> {
-    try {
-      const content = await readFile(this.artifactPaths.indexingView, 'utf8');
-      return JSON.parse(content) as IndexingView;
-    } catch {
-      return undefined;
-    }
+  private loadSnapshot(): Promise<Snapshot | undefined> {
+    return this.readJsonFile(this.artifactPaths.snapshot);
+  }
+
+  private loadIndexingView(): Promise<IndexingView | undefined> {
+    return this.readJsonFile(this.artifactPaths.indexingView);
   }
 
   private async requireSnapshot(): Promise<Snapshot> {
@@ -404,10 +381,9 @@ export class FpfRuntime {
     return snapshot;
   }
 
-  private async writeArtifacts(snapshot: Snapshot): Promise<void> {
+  private async writeArtifacts(snapshot: Snapshot, onlyMissing = false): Promise<void> {
     const payloads = {
       snapshot,
-      buildAudit: undefined,
       indexMap: {
         roots: snapshot.indexRoots,
         nodes: snapshot.indexMap,
@@ -418,10 +394,16 @@ export class FpfRuntime {
       anchorMap: snapshot.anchorMap,
     } as const;
 
+    const entries = Object.entries(payloads) as Array<
+      [keyof typeof payloads, (typeof payloads)[keyof typeof payloads]]
+    >;
     await Promise.all(
-      Object.entries(payloads)
-        .filter((entry): entry is [keyof typeof payloads, Exclude<(typeof payloads)[keyof typeof payloads], undefined>] => entry[1] !== undefined)
-        .map(([key, value]) => this.writeJson(this.artifactPaths[key], value)),
+      entries.map(async ([key, value]) => {
+        if (onlyMissing && (await this.pathExists(this.artifactPaths[key]))) {
+          return;
+        }
+        await this.writeJson(this.artifactPaths[key], value);
+      }),
     );
   }
 
@@ -434,16 +416,26 @@ export class FpfRuntime {
     await writeFile(path, JSON.stringify(value, null, 2));
   }
 
+  private async readJsonFile<T>(path: string): Promise<T | undefined> {
+    try {
+      return JSON.parse(await readFile(path, 'utf8')) as T;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async pathExists(path: string): Promise<boolean> {
+    try {
+      await readFile(path, 'utf8');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private async getArtifactPresence(): Promise<Record<string, boolean>> {
     const entries = await Promise.all(
-      Object.entries(this.artifactPaths).map(async ([key, path]) => {
-        try {
-          await readFile(path, 'utf8');
-          return [key, true] as const;
-        } catch {
-          return [key, false] as const;
-        }
-      }),
+      Object.entries(this.artifactPaths).map(async ([key, path]) => [key, await this.pathExists(path)] as const),
     );
     return Object.fromEntries(entries);
   }
