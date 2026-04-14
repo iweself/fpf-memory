@@ -365,6 +365,9 @@ function buildCompilerSummary(snapshot: Snapshot): BuildAudit['compiler'] {
 }
 
 function snapshotNeedsRebuild(snapshot: Snapshot): boolean {
+  if (!Array.isArray(snapshot.heuristicSeedRules)) {
+    return true;
+  }
   return Object.values(snapshot.indexMap).some(
     (node) =>
       typeof node.description !== 'string' ||

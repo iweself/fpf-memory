@@ -115,6 +115,7 @@ export interface RouteRecord {
   citations: string[];
   anchorIds: string[];
   searchableText: string;
+  constraints: string[];
 }
 
 export interface LexiconEntry {
@@ -164,6 +165,20 @@ export interface BuildValidation {
   brokenRoutes: string[];
 }
 
+export interface HeuristicSeedRule {
+  name: string;
+  /** Outer array = AND, inner array = OR alternatives for each term group. */
+  allOf: string[][];
+  /** Outer array = OR groups, inner array = OR alternatives within each group. */
+  anyOf: string[][];
+  seedNodeIds: string[];
+  seedScore: number;
+  seedOrigin: FrontierOrigin;
+  initialNodeIds: string[];
+  routeId?: string;
+  routeScore?: number;
+}
+
 export interface Snapshot {
   sourcePath: string;
   sourceHash: string;
@@ -184,6 +199,7 @@ export interface Snapshot {
   compiledNodes: Record<string, CompiledNode>;
   relationGraph: RelationEdge[];
   indexes: SnapshotIndexes;
+  heuristicSeedRules?: HeuristicSeedRule[];
   validation: BuildValidation;
 }
 

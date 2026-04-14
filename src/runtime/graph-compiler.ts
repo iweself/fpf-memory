@@ -146,6 +146,7 @@ export function buildRouteGraph(
       citations: unique([...existing.citations, ...route.citations]),
       anchorIds: unique([...existing.anchorIds, ...route.anchorIds]),
       searchableText: unique([existing.searchableText, route.searchableText]).join(' '),
+      constraints: unique([...existing.constraints, ...route.constraints]),
     });
   }
 
@@ -353,6 +354,7 @@ function parsePrefaceRoutes(
       citations: [PREFACE_ROUTE_CITATION],
       anchorIds: anchorMap[PREFACE_ROUTE_CITATION] ? [PREFACE_ROUTE_CITATION] : [],
       searchableText: cleanMarkdown(trimmed),
+      constraints: [],
     });
   }
 
@@ -413,6 +415,7 @@ function parseJ4Routes(
       citations: [ROUTE_INDEX_CITATION],
       anchorIds: anchorMap[ROUTE_INDEX_CITATION] ? [ROUTE_INDEX_CITATION] : [],
       searchableText: cleanMarkdown(cells.join(' ')),
+      constraints: [],
     });
   }
   return routes;

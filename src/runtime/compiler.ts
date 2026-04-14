@@ -11,6 +11,7 @@
  * The public `compileFpfSource()` API is unchanged.
  */
 
+import { PROJECT_ALIGNMENT_ROUTE_NAME } from './constants.js';
 import {
   buildExplicitReferenceRelations,
   buildLexiconRelations,
@@ -29,8 +30,11 @@ import { parseSource } from './source-parser.js';
 import { buildValidation } from './validation-runner.js';
 import type {
   AnchorRef,
+  HeuristicSeedRule,
   IndexMapNode,
   LexiconEntry,
+  PatternRecord,
+  RouteRecord,
   Snapshot,
 } from './types.js';
 
@@ -86,6 +90,8 @@ export function compileFpfSource(params: {
   );
   const indexes = buildIndexes(compiledNodes, patternGraph.nodes, routeGraph.nodes, lexicon);
 
+  const heuristicSeedRules = buildHeuristicSeedRules(patternGraph.nodes, routeGraph.nodes);
+
   // Stage 4: ValidationRunner — snapshot candidate → validation findings
   const validation = buildValidation(
     compiledNodes,
@@ -117,6 +123,7 @@ export function compileFpfSource(params: {
     compiledNodes,
     relationGraph: allRelations,
     indexes,
+    heuristicSeedRules,
     validation,
   };
 
@@ -142,3 +149,82 @@ export {
   scoreRouteQuery,
   selectBestAnchors,
 } from './query-helpers.js';
+
+function buildHeuristicSeedRules(
+  patternNodes: Record<string, PatternRecord>,
+  routeNodes: Record<string, RouteRecord>,
+): HeuristicSeedRule[] {
+  const rules: HeuristicSeedRule[] = [];
+
+  const creativityNodeIds = ['C.17', 'C.18', 'C.19', 'B.5.2.1', 'A.0'].filter(
+    (id) => id in patternNodes || id in routeNodes,
+  );
+  if (creativityNodeIds.length > 0) {
+    rules.push({
+      name: 'creative-search-heuristic',
+      allOf: [['creativity', 'creative']],
+      anyOf: [['open-ended', 'open ended'], ['search']],
+      seedNodeIds: creativityNodeIds,
+      seedScore: 64,
+      seedOrigin: 'lexical',
+      initialNodeIds: ['C.17', 'C.18', 'C.19'].filter((id) => id in patternNodes),
+    });
+  }
+
+  const alignmentRoute = Object.values(routeNodes).find(
+    (r) => r.name.toLowerCase() === PROJECT_ALIGNMENT_ROUTE_NAME,
+  );
+  const alignmentNodeIds = ['A.1.1', 'A.15', 'B.5.1', 'F.17'].filter(
+    (id) => id in patternNodes || id in routeNodes,
+  );
+  if (alignmentRoute) {
+    // Populate project-alignment constraints that were previously hard-coded in query-engine.ts
+    alignmentRoute.constraints = [
+      'Add F.11 and F.9 only when method/work vocabulary is explicitly at stake in the question.',
+      'Land on F.17 early rather than escalating to F.11 unless the asker names a cross-team mismatch.',
+    ];
+    rules.push({
+      name: 'vocabulary-alignment',
+      allOf: [['vocabulary']],
+      anyOf: [['overloaded'], ['across teams'], ['across contexts']],
+      seedNodeIds: alignmentNodeIds,
+      seedScore: 20,
+      seedOrigin: 'route_expansion',
+      initialNodeIds: [],
+      routeId: alignmentRoute.id,
+      routeScore: 80,
+    });
+  }
+
+  const roleNodeIds = ['A.1.1', 'A.2.1', 'A.2.5'].filter(
+    (id) => id in patternNodes || id in routeNodes,
+  );
+  if (roleNodeIds.length > 0) {
+    rules.push({
+      name: 'role-assignment-connection',
+      allOf: [['role assignment']],
+      anyOf: [['connect'], ['relation']],
+      seedNodeIds: roleNodeIds,
+      seedScore: 36,
+      seedOrigin: 'lexical',
+      initialNodeIds: [],
+    });
+  }
+
+  const entityNodeIds = ['A.6.3.CR', 'A.6.3.RT', 'E.17.ID.CR'].filter(
+    (id) => id in patternNodes || id in routeNodes,
+  );
+  if (entityNodeIds.length > 0) {
+    rules.push({
+      name: 'same-entity-comparative-reading',
+      allOf: [['same entity', 'same-entity']],
+      anyOf: [['rewrite'], ['comparative']],
+      seedNodeIds: entityNodeIds,
+      seedScore: 40,
+      seedOrigin: 'lexical',
+      initialNodeIds: entityNodeIds.filter((id) => id in patternNodes),
+    });
+  }
+
+  return rules;
+}
