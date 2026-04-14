@@ -6,6 +6,7 @@ import {
   ARTIFACT_FILENAMES,
   DEFAULT_ARTIFACT_DIR,
   DEFAULT_SOURCE_PATH,
+  SESSION_CACHE_FILENAME,
 } from './constants.js';
 import { compileFpfSource } from './compiler.js';
 import { buildIndexingView, classifyChange } from './indexing-view.js';
@@ -37,6 +38,7 @@ export interface FpfRuntimeOptions {
   artifactDir?: string;
   synthesizer?: LocalAnswerSynthesizer;
   maxSessions?: number;
+  persistSessionCache?: boolean;
 }
 
 export class FpfRuntime {
@@ -69,12 +71,20 @@ export class FpfRuntime {
       ]),
     ) as Record<keyof typeof ARTIFACT_FILENAMES, string>;
     this.synthesizer = options.synthesizer ?? createSynthesizerFromEnv();
-    this.sessionCache = new SessionCache(options.maxSessions ?? 50);
+    const persistSession =
+      options.persistSessionCache ?? process.env.FPF_PERSIST_SESSION_CACHE === 'true';
+    this.sessionCache = new SessionCache({
+      maxSessions: options.maxSessions ?? 50,
+      persistPath: persistSession
+        ? resolve(this.artifactDir, SESSION_CACHE_FILENAME)
+        : undefined,
+    });
   }
 
   async refresh(force = false): Promise<BuildAudit> {
     await mkdir(this.artifactDir, { recursive: true });
     const currentSourceHash = await hashFile(this.sourcePath);
+    await this.sessionCache.load(currentSourceHash);
     const existingSnapshot = await this.loadSnapshot();
     const compatibleSnapshot = existingSnapshot && !snapshotNeedsRebuild(existingSnapshot);
 

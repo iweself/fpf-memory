@@ -249,6 +249,7 @@ export const runtimeStatusSchema = z
         enabled: z.boolean(),
         maxSessions: z.number(),
         activeSessions: z.number(),
+        persistent: z.boolean(),
       })
       .strict(),
   })

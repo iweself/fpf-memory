@@ -12,6 +12,8 @@ export const ARTIFACT_FILENAMES = {
   indexingView: 'indexing-view.json',
 } as const;
 
+export const SESSION_CACHE_FILENAME = 'session-cache.json';
+
 export const PREFACE_MARKER = '# **Preface** (non-normative)';
 export const PREFACE_ROUTE_CITATION = 'Preface/Where to start';
 export const ROUTE_INDEX_CITATION = 'J.4';
