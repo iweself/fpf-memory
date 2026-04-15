@@ -1,9 +1,14 @@
 node_modules
+FPF-spec.md
 dist
 doc_build
 .mastra
 .runtime
+.fpf-upstream
+docs/generated/
+docs/architecture/html/
 .claude
+.cursor/hooks/state/
 .env
 .env.development
 output.txt
