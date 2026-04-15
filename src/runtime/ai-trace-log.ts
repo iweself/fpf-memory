@@ -56,24 +56,24 @@ export interface AiTraceErrorLog {
   };
 }
 
-type AiTraceLogInput =
+export type AiTraceLogInput =
   | Omit<AiTraceRequestLog, 'traceId' | 'timestamp'>
   | Omit<AiTraceResponseLog, 'traceId' | 'timestamp'>
   | Omit<AiTraceErrorLog, 'traceId' | 'timestamp'>;
 
-export function createAiTraceRecorder(env: NodeJS.ProcessEnv = process.env): {
+export function createAiTraceRecorderFromPath(filePath: string): {
   traceId: string;
   append: (record: AiTraceLogInput) => Promise<void>;
 } {
   const traceId = randomUUID();
-  const filePath = resolveLogPath(env.FPF_AI_TRACE_LOG_PATH, 'ai-traces.jsonl');
+  const resolvedPath = resolveLogPath(filePath, 'ai-traces.jsonl');
 
   return {
     traceId,
     append: async (record) => {
       try {
         await appendFile(
-          filePath,
+          resolvedPath,
           `${JSON.stringify({ ...record, traceId, timestamp: new Date().toISOString() })}\n`,
           'utf8',
         );
@@ -83,3 +83,5 @@ export function createAiTraceRecorder(env: NodeJS.ProcessEnv = process.env): {
     },
   };
 }
+
+export const createAiTraceRecorder = createAiTraceRecorderFromPath;

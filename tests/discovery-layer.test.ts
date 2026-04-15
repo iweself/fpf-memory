@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
 /**
@@ -14,7 +15,7 @@ import { FpfRuntime } from '../src/runtime/runtime.js';
  */
 
 describe('Discovery layer', () => {
-  const canonicalSourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const canonicalSourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   let tempRoot: string;
   let sourcePath: string;
   let artifactDir: string;

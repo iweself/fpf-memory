@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 import { afterEach, describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { resolveRuntimePath } from '../src/runtime/path-resolution.js';
 
 const tempRoots: string[] = [];
@@ -18,12 +19,12 @@ describe('resolveRuntimePath', () => {
     const root = await createTempRoot('fpf-runtime-paths-');
     const appRoot = resolve(root, 'app');
     const bundleRoot = resolve(appRoot, '.mastra/output');
-    const sourcePath = resolve(bundleRoot, 'FPF-spec.md');
+    const sourcePath = resolve(bundleRoot, DEFAULT_SOURCE_PATH);
 
     await mkdir(dirname(sourcePath), { recursive: true });
     await writeFile(sourcePath, '# staged source\n');
 
-    const resolved = resolveRuntimePath('FPF-spec.md', {
+    const resolved = resolveRuntimePath(DEFAULT_SOURCE_PATH, {
       cwd: appRoot,
       kind: 'file',
       moduleUrl: pathToFileURL(resolve(bundleRoot, 'index.mjs')).href,
@@ -38,12 +39,12 @@ describe('resolveRuntimePath', () => {
     const root = await createTempRoot('fpf-runtime-artifacts-');
     const appRoot = resolve(root, 'app');
     const bundleRoot = resolve(appRoot, '.mastra/output');
-    const sourcePath = resolve(bundleRoot, 'FPF-spec.md');
+    const sourcePath = resolve(bundleRoot, DEFAULT_SOURCE_PATH);
 
     await mkdir(dirname(sourcePath), { recursive: true });
     await writeFile(sourcePath, '# staged source\n');
 
-    const sourceResolution = resolveRuntimePath('FPF-spec.md', {
+    const sourceResolution = resolveRuntimePath(DEFAULT_SOURCE_PATH, {
       cwd: appRoot,
       kind: 'file',
       moduleUrl: pathToFileURL(resolve(bundleRoot, 'index.mjs')).href,

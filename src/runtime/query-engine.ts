@@ -23,7 +23,7 @@ import {
 import {
   buildDocsProjection,
   resolveDocTarget,
-} from '../docs/projection.js';
+} from '../core/documents.js';
 import { normalizeQuery } from './query-normalizer.js';
 import { seedCandidates } from './candidate-seeder.js';
 import { isAmbiguous, rankCandidates } from './candidate-ranker.js';

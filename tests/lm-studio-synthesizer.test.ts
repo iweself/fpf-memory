@@ -4,23 +4,38 @@ import { resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { resetRuntimeObservabilityForTests } from '../src/observability/runtime-observability.js';
 import {
   DEFAULT_LM_STUDIO_BASE_URL,
   DEFAULT_LM_STUDIO_API_STYLE,
   DEFAULT_LM_STUDIO_MODEL,
+  createSynthesizerFromEnv,
   LmStudioSynthesizer,
+  normalizeLmStudioApiStyle,
   runLmStudioHealthCheck,
 } from '../src/runtime/lm-studio-synthesizer.js';
+import { createConfiguredRuntime } from '../src/composition/runtime.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
 describe('LmStudioSynthesizer', () => {
-  const canonicalSourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const canonicalSourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   let tempRoot: string;
   let sourcePath: string;
   let artifactDir: string;
   let aiTraceLogPath: string;
   let observabilityLogPath: string;
+
+  function createObservabilityConfig() {
+    return {
+      filePath: observabilityLogPath,
+      format: 'flat' as const,
+      includeInternalSpans: true,
+      logLevel: 'info' as const,
+      excludeModelChunks: true,
+      serviceName: 'fpf-spec-runtime',
+    };
+  }
 
   beforeEach(async () => {
     tempRoot = await mkdtemp(resolve(tmpdir(), 'fpf-runtime-lmstudio-'));
@@ -56,10 +71,8 @@ describe('LmStudioSynthesizer', () => {
       synthesizer: new LmStudioSynthesizer({
         baseUrl: 'http://localhost:1234/v1',
         model: 'google/gemma-4-31b',
-        env: {
-          FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
-          FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
-        },
+        traceLogPath: aiTraceLogPath,
+        observabilityConfig: createObservabilityConfig(),
         fetchImpl: async (url, init) => {
           requestUrl = String(url);
           requestBody = String(init?.body ?? '');
@@ -108,14 +121,15 @@ describe('LmStudioSynthesizer', () => {
     expect(observabilityLog).toContain('"model": "google/gemma-4-31b"');
   });
 
-  it('auto-configures the local synthesizer from environment for status visibility', async () => {
+  it('configures the local synthesizer from environment at the composition edge', async () => {
     process.env.FPF_LOCAL_LLM_BASE_URL = 'http://localhost:1234/v1';
     process.env.FPF_LOCAL_LLM_MODEL = 'google/gemma-4-31b';
     process.env.FPF_MASTRA_OBSERVABILITY_PATH = observabilityLogPath;
 
-    const runtime = new FpfRuntime({
-      sourcePath,
-      artifactDir,
+    const { runtime } = createConfiguredRuntime({
+      ...process.env,
+      FPF_SPEC_SOURCE_PATH: sourcePath,
+      FPF_RUNTIME_ARTIFACT_DIR: artifactDir,
     });
 
     const status = await runtime.status();
@@ -130,12 +144,30 @@ describe('LmStudioSynthesizer', () => {
     expect(status.sessionCache.enabled).toBe(true);
   });
 
-  it('fills missing LM Studio env fields from repo defaults after opt-in', async () => {
+  it('supports the legacy env-shaped synthesizer helper', () => {
+    const synthesizer = createSynthesizerFromEnv({
+      FPF_LOCAL_LLM_BASE_URL: 'http://localhost:1234/v1',
+      FPF_LOCAL_LLM_MODEL: 'google/gemma-4-31b',
+      FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
+      FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
+    } as NodeJS.ProcessEnv);
+
+    expect(synthesizer).toBeDefined();
+    expect(synthesizer?.describe?.()).toEqual({
+      provider: 'lm_studio',
+      model: 'google/gemma-4-31b',
+      baseUrl: 'http://localhost:1234/v1',
+      apiStyle: 'responses',
+    });
+  });
+
+  it('fills missing LM Studio env fields from repo defaults after edge opt-in', async () => {
     process.env.FPF_LOCAL_LLM_MODEL = DEFAULT_LM_STUDIO_MODEL;
 
-    const runtime = new FpfRuntime({
-      sourcePath,
-      artifactDir,
+    const { runtime } = createConfiguredRuntime({
+      ...process.env,
+      FPF_SPEC_SOURCE_PATH: sourcePath,
+      FPF_RUNTIME_ARTIFACT_DIR: artifactDir,
     });
 
     const status = await runtime.status();
@@ -157,10 +189,8 @@ describe('LmStudioSynthesizer', () => {
         baseUrl: 'http://localhost:1234',
         model: 'google/gemma-4-31b',
         apiStyle: 'lmstudio_chat',
-        env: {
-          FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
-          FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
-        },
+        traceLogPath: aiTraceLogPath,
+        observabilityConfig: createObservabilityConfig(),
         fetchImpl: async (url, init) => {
           requestUrl = String(url);
           requestBody = String(init?.body ?? '');
@@ -385,16 +415,14 @@ describe('LmStudioSynthesizer', () => {
     ]);
   });
 
-  it('uses env api key and normalizes the chat alias for health checks', async () => {
+  it('uses an explicit api key and normalizes the chat alias for health checks', async () => {
     const authHeaders: Array<string | null> = [];
 
     const result = await runLmStudioHealthCheck({
-      env: {
-        FPF_LOCAL_LLM_BASE_URL: 'http://localhost:1234',
-        FPF_LOCAL_LLM_MODEL: 'google/gemma-4-31b',
-        FPF_LOCAL_LLM_API_STYLE: 'chat',
-        FPF_LOCAL_LLM_API_KEY: 'secret-token',
-      },
+      baseUrl: 'http://localhost:1234',
+      model: 'google/gemma-4-31b',
+      apiStyle: normalizeLmStudioApiStyle('chat'),
+      apiKey: 'secret-token',
       fetchImpl: async (_url, init) => {
         authHeaders.push(new Headers(init?.headers).get('Authorization'));
         if ((init?.method ?? 'GET') === 'GET') {
@@ -461,10 +489,8 @@ describe('LmStudioSynthesizer', () => {
       synthesizer: new LmStudioSynthesizer({
         baseUrl: 'http://localhost:1234/v1',
         model: 'google/gemma-4-31b',
-        env: {
-          FPF_AI_TRACE_LOG_PATH: aiTraceLogPath,
-          FPF_MASTRA_OBSERVABILITY_PATH: observabilityLogPath,
-        },
+        traceLogPath: aiTraceLogPath,
+        observabilityConfig: createObservabilityConfig(),
         fetchImpl: async () =>
           new Response('server exploded', {
             status: 500,

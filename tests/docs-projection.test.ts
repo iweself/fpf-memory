@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 
 import { beforeAll, describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { generateDocsSite } from '../src/docs/generate.js';
 import {
   buildDocsNavigation,
@@ -19,7 +20,7 @@ import type { Snapshot } from '../src/runtime/types.js';
 const execFileAsync = promisify(execFile);
 
 describe('docs projection', () => {
-  const canonicalSourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const canonicalSourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   let snapshot: Snapshot;
 
   beforeAll(async () => {
@@ -111,6 +112,8 @@ describe('docs projection', () => {
         builtAt: '2026-04-11T19:34:21.498Z',
       });
 
+      expect(result.ownerContext).toBe('Ctx.Docs');
+      expect(result.lifecycleState).toBe('evidence');
       expect(result.generatedFiles).toBeGreaterThan(100);
       expect(
         await readFile(resolve(docsRoot, 'generated/patterns/A.2.md'), 'utf8'),
@@ -165,6 +168,7 @@ describe('docs projection', () => {
             ...process.env,
             FPF_DOCS_ROOT: docsRoot,
             FPF_DOCS_OUT_DIR: outDir,
+            RSPRESS_PERSISTENT_CACHE: 'false',
           },
           timeout: 120_000,
         },
