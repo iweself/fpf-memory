@@ -11,11 +11,11 @@ Decision record:
 
 - [DRR-0001: MCP As The First-Class Codex Interface](/drr/DRR-0001-mcp-first-class-interface/)
 
-The runtime itself is compiler-backed and local to `FPF-spec.md`:
+The runtime itself is compiler-backed and local to the spec file at **`FPF_SPEC_SOURCE_PATH`** (default `.fpf-upstream/FPF-Spec.md` after `bun run spec:download`).
 
-- authored source: `FPF-spec.md`
+- authored source: not vendored in this repository; see README environment section
 - runtime artifacts: `.runtime/fpf-index/*`
-- canonical publishable markdown: `docs/generated/**`
+- generated pattern markdown: `docs/generated/**` (local output of `docs:generate`, not tracked in git)
 - static docs build: ignored `doc_build/`
 
 ## Transport
@@ -59,7 +59,7 @@ Canonical markdown paths preserve the current generated naming contract:
 - routes: `docs/generated/routes/route_<slug>.md`
 - preface pages: `docs/generated/preface/heading_<slug>_<lineStart>.md`
 
-Static routes mirror those pages under `/generated/**` with clean URLs and `.html` emitted into ignored `doc_build/`.
+Static routes mirror those pages under `/generated/**` with clean URLs and `.html` emitted into ignored `doc_build/`. The underlying markdown under `docs/generated/` is produced locally by `docs:generate` and is not tracked in git.
 
 ## Verification
 

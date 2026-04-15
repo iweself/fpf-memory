@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Describe what you'd like and why. Remember this repo is scoped to local FPF-spec.md runtime — no vector database, no remote indexing, no Python.
+        Describe what you'd like and why. Remember this repo is scoped to a local FPF spec file (see FPF_SPEC_SOURCE_PATH) — no vector database, no remote indexing, no Python.
 
   - type: textarea
     id: problem

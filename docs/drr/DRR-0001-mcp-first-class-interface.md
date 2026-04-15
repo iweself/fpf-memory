@@ -11,11 +11,11 @@ Update 2026-04-13: the default Codex registration path now uses the hosted publi
 
 ## Problem frame
 
-`fpf_memory` needs a Codex-facing interface for grounded access to the local `FPF-spec.md` runtime. The repo already exposes a local MCP server, a Bun CLI, and a hosted Hono/Mastra runtime path, but the interface promise was implicit rather than recorded as an explicit decision.
+`fpf_memory` needs a Codex-facing interface for grounded access to the local FPF spec runtime (spec path configured per deployment). The repo already exposes a local MCP server, a Bun CLI, and a hosted Hono/Mastra runtime path, but the interface promise was implicit rather than recorded as an explicit decision.
 
 Without a documented decision, the same word "interface" can collapse several different things:
 
-- the thing itself: the local runtime over `FPF-spec.md`
+- the thing itself: the local runtime over the configured FPF spec markdown source
 - the access point: stdio or HTTP transport
 - the public promise: what Codex can ask for
 - the delivery work and evidence: traces, freshness checks, verification runs
