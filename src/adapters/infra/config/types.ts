@@ -4,7 +4,6 @@ export type McpSurface = 'public' | 'full';
 export type LoggingLevel = 'debug' | 'info' | 'warn' | 'error';
 export type ObservabilityFormat = 'flat' | 'tree' | 'normalized';
 export type ObservabilityLogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
-export type LmStudioApiStyle = 'responses' | 'lmstudio_chat' | 'chat_completions';
 
 export interface RuntimeCoreConfig {
   sourcePath: string;
@@ -32,7 +31,6 @@ export interface LmStudioConfig {
   enabled: boolean;
   baseUrl: string;
   model: string;
-  apiStyle: LmStudioApiStyle;
   apiKey?: string;
   timeoutMs: number;
   traceLogPath: string;

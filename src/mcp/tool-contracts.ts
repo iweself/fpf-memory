@@ -45,7 +45,6 @@ export const frontierOriginSchema = z.enum([
   'session_context',
 ]);
 export const expandedCitationStatusSchema = z.enum(['ok', 'not_found']);
-export const lmStudioApiStyleSchema = z.enum(['responses', 'lmstudio_chat', 'chat_completions']);
 
 export const relationEdgeSchema = z
   .object({
@@ -231,7 +230,6 @@ export const runtimeStatusSchema = z
         provider: z.string().optional(),
         model: z.string().optional(),
         baseUrl: z.string().optional(),
-        apiStyle: lmStudioApiStyleSchema.optional(),
       })
       .strict(),
     observability: z
