@@ -5,9 +5,9 @@ description: "How the hosted FPF runtime reaches Mastra Cloud and how to wire up
 
 # Deploy to Mastra Cloud
 
-The hosted MCP surface is packaged by [`npx mastra build`](../package.json) and pushed to [Mastra Cloud](https://mastra.ai) by [`npx mastra server deploy`](../package.json). Two GitHub workflows cover the pipeline:
+The hosted MCP surface is packaged by [`bunx mastra build`](../package.json) and pushed to [Mastra Cloud](https://mastra.ai) by [`bunx mastra server deploy --yes`](../package.json). Two GitHub workflows cover the pipeline:
 
-- [`.github/workflows/deploy-validation.yml`](../.github/workflows/deploy-validation.yml) — runs on every PR and `push` to `main`. Dry-run: stages assets with `bun run predeploy`, builds with `npx mastra build`, asserts the bundle is well-formed. No credentials needed.
+- [`.github/workflows/deploy-validation.yml`](../.github/workflows/deploy-validation.yml) — runs on every PR and `push` to `main`. Dry-run: stages assets with `bun run predeploy`, builds with `bunx mastra build`, asserts the bundle is well-formed. No credentials needed.
 - [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) — runs on `workflow_dispatch` only (click **Run workflow** in the Actions tab, or `gh workflow run deploy.yml`). Does the full push. Requires three GitHub-side values.
 
 ## Pipeline stages
@@ -16,12 +16,11 @@ The hosted MCP surface is packaged by [`npx mastra build`](../package.json) and 
 bun run deploy
   ├── bun run predeploy
   │     ├── bun run spec:download        → .fpf-upstream/FPF-Spec.md
-  │     └── bash scripts/prepare-deploy.sh
-  │           └── bun scripts/prepare-deploy.ts
-  │                 └── stageDeployAssets(...) → src/mastra/public/.fpf-upstream/FPF-Spec.md
-  │                                              src/mastra/public/.runtime/fpf-index/snapshot.json
-  ├── npx mastra build                    → .mastra/output/
-  └── npx mastra server deploy --yes      → Mastra Cloud
+  │     └── bun scripts/prepare-deploy.ts
+  │           └── stageDeployAssets(...) → src/mastra/public/.fpf-upstream/FPF-Spec.md
+  │                                        src/mastra/public/.runtime/fpf-index/snapshot.json
+  ├── bunx mastra build                   → .mastra/output/
+  └── bunx mastra server deploy --yes     → Mastra Cloud
 ```
 
 Only the final `mastra server deploy` step talks to Mastra Cloud. The first two stages are local and deterministic; that is what `deploy-validation.yml` exercises.
@@ -75,7 +74,6 @@ Every merge to `main` will then deploy. Until you're confident the pipeline is s
 
 ## Related
 
-- [`scripts/prepare-deploy.sh`](../scripts/prepare-deploy.sh) — the wrapper invoked by `bun run predeploy`.
 - [`scripts/prepare-deploy.ts`](../scripts/prepare-deploy.ts) — calls `stageDeployAssets` from [`src/build/stage-deploy-assets.ts`](../src/build/stage-deploy-assets.ts).
 - [`docs/scripts.md`](./scripts.md) — full automation-script reference.
-- [`docs/architecture/artifact-directories.md`](./architecture/artifact-directories.md) — where each output directory comes from.
+- [`docs/architecture/artifact-directories.md`](./architecture/artifact-directories.md) — canonical root-folder contract plus where deploy-time output directories come from.

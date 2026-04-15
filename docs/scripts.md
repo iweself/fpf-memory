@@ -57,14 +57,13 @@ Parsed via [`parseDocsConfig`](../src/adapters/infra/config/env.ts).
 
 ---
 
-## `prepare-deploy.ts` and `prepare-deploy.sh` (`bun run predeploy`)
+## `prepare-deploy.ts` (`bun run predeploy`)
 
 **Purpose:** **Stage the minimum hosted bundle**: the runtime source file (copied under `.fpf-upstream/FPF-Spec.md` in the hosted public tree so it matches the runtime default) and `snapshot.json` under `public/.runtime/fpf-index/`, after ensuring the index is current.
 
 **Flow:**
 
-1. [`prepare-deploy.sh`](../scripts/prepare-deploy.sh): `bash` wrapper; resolves repo root, prints a short message, runs `bun scripts/prepare-deploy.ts`.
-2. [`prepare-deploy.ts`](../scripts/prepare-deploy.ts): calls [`stageDeployAssets`](../src/build/stage-deploy-assets.ts) with [`parseBuildConfigFromEnv`](../src/adapters/infra/config/env.ts) and the current `process.env`.
+1. [`prepare-deploy.ts`](../scripts/prepare-deploy.ts): calls [`stageDeployAssets`](../src/build/stage-deploy-assets.ts) with [`parseBuildConfigFromEnv`](../src/adapters/infra/config/env.ts) and the current `process.env`.
 
 **What `stageDeployAssets` does:**
 
@@ -76,11 +75,30 @@ Parsed via [`parseDocsConfig`](../src/adapters/infra/config/env.ts).
 
 **Stdout:** JSON manifest (`BuildArtifactManifest`) listing staged artifacts and metadata.
 
-**Outputs:** Files under `src/mastra/public/` (gitignored as a tree in this repo). Other compiler artifacts (index-map, graphs, etc.) are **not** staged; comments in the shell script note the hosted runtime only needs source + snapshot for the paths used here.
+**Outputs:** Files under `src/mastra/public/` (gitignored as a tree in this repo). Other compiler artifacts (index-map, graphs, etc.) are **not** staged; the hosted runtime only needs source + snapshot for the paths used here.
 
 **When to run:** Before `bun run deploy` (Mastra build/deploy), which runs `predeploy` first.
 
 **Failure modes:** Refresh or copy failures; wrong `hostedPublicDir` so deploy reads the wrong tree.
+
+---
+
+## `fixup-stdio-build.ts` (`bun run build:mcp`)
+
+**Purpose:** Make the published MCP stdio entrypoint under `dist/stdio.js` executable as a package `bin`, with a Node shebang for direct invocation.
+
+**Flow:**
+
+1. `build:mcp` runs `tsup src/mastra/stdio.ts --format esm --out-dir dist --no-splitting`.
+2. [`fixup-stdio-build.ts`](../scripts/fixup-stdio-build.ts) reads `dist/stdio.js`.
+3. If the file does not already start with `#!/usr/bin/env node`, it prepends the shebang.
+4. It sets mode `755` so the entrypoint can be executed directly.
+
+**Outputs:** Mutates `dist/stdio.js` in place after bundling.
+
+**When to run:** Automatically as part of `bun run build:mcp` and therefore `bun run build`.
+
+**Failure modes:** Missing `dist/stdio.js`; permission errors changing file mode.
 
 ---
 
@@ -148,7 +166,8 @@ Parsed via [`parseDocsConfig`](../src/adapters/infra/config/env.ts).
 |------------|-------------|
 | `docs:generate` | `scripts/generate-docs.ts` |
 | `spec:download` | `scripts/download-upstream-spec.ts` |
-| `predeploy` | `scripts/prepare-deploy.sh` → `prepare-deploy.ts` |
+| `build:mcp` | `scripts/fixup-stdio-build.ts` (after `tsup`) |
+| `predeploy` | `scripts/prepare-deploy.ts` |
 | `check:boundaries` | `scripts/check-boundaries.ts` |
 | `diagrams:generate` | `scripts/generate-architecture-diagrams.ts` |
 
@@ -156,5 +175,5 @@ Parsed via [`parseDocsConfig`](../src/adapters/infra/config/env.ts).
 
 ## Related
 
-- [Artifact directories](./architecture/artifact-directories.md) — where outputs land on disk.
+- [Root-folder contract](./architecture/artifact-directories.md) — canonical top-level directory roles plus generated-output paths.
 - [README](../README.md) — environment variables and first-time clone steps.

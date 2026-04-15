@@ -2,7 +2,6 @@
   "name": "fpf-memory",
   "version": "1.0.0",
   "description": "Bun-first compiler-backed FPF spec runtime exposed through hosted and local Mastra MCP surfaces with a Hono server engine.",
-  "private": false,
   "packageManager": "bun@1.3.5",
   "bin": "dist/stdio.js",
   "files": [
@@ -10,26 +9,25 @@
   ],
   "scripts": {
     "dev": "bun --watch src/server.ts",
-    "build": "bun build ./src/cli.ts ./src/server.ts --outdir dist --target bun && bun run build:mcp",
-    "build:mcp": "tsup src/mastra/stdio.ts --format esm --out-dir dist --no-splitting && node -e \"const fs=require('node:fs');const path='dist/stdio.js';const data=fs.readFileSync(path,'utf8');const shebang='#!/usr/bin/env node';if(!data.startsWith(shebang))fs.writeFileSync(path, shebang + '\\\\n' + data);\" && chmod +x dist/stdio.js",
     "start": "bun src/server.ts",
-    "predeploy": "bun run spec:download && bash scripts/prepare-deploy.sh",
-    "deploy": "bun run predeploy && npx mastra build && npx mastra server deploy --yes",
-    "lint": "rslint --type-check src tests scripts/generate-docs.ts scripts/download-upstream-spec.ts scripts/generate-architecture-diagrams.ts *.config.ts",
-    "check": "tsc --noEmit",
-    "check:boundaries": "bun scripts/check-boundaries.ts",
-    "spec:download": "bun scripts/download-upstream-spec.ts",
     "cli": "bun src/cli.ts",
     "mcp": "bun src/mastra/stdio.ts",
-    "test": "rstest run",
+    "spec:download": "bun scripts/download-upstream-spec.ts",
+    "build": "bun run build:runtime && bun run build:mcp",
+    "build:runtime": "bun build ./src/cli.ts ./src/server.ts --outdir dist --target bun",
+    "build:mcp": "tsup src/mastra/stdio.ts --format esm --out-dir dist --no-splitting && bun scripts/fixup-stdio-build.ts",
     "docs:generate": "bun scripts/generate-docs.ts",
     "diagrams:generate": "bun scripts/generate-architecture-diagrams.ts",
     "docs:dev": "bun run docs:generate && RSPRESS_PERSISTENT_CACHE=false rspress",
     "docs:build": "bun run docs:generate && RSPRESS_PERSISTENT_CACHE=false rspress build",
-    "docs:preview": "RSPRESS_PERSISTENT_CACHE=false rspress preview"
+    "docs:preview": "RSPRESS_PERSISTENT_CACHE=false rspress preview",
+    "lint": "rslint --type-check src tests scripts/*.ts *.config.ts",
+    "check": "tsc --noEmit",
+    "check:boundaries": "bun scripts/check-boundaries.ts",
+    "test": "rstest run",
+    "predeploy": "bun run spec:download && bun scripts/prepare-deploy.ts",
+    "deploy": "bun run predeploy && bunx mastra build && bunx mastra server deploy --yes"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "module",
   "engines": {
@@ -52,7 +50,6 @@
     "bun-types": "^1.3.12",
     "mastra": "^1.5.0",
     "tsup": "^8.5.1",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
 }

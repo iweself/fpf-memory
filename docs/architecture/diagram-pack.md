@@ -77,7 +77,7 @@ These overview posters are still useful, but they are intentionally secondary to
 
 ## Notes
 
-- For build outputs and ignored directories (`.mastra`, `.runtime`, `dist`, `doc_build`, `docs/generated`, `docs/architecture/html`), see [artifact-directories.md](./artifact-directories.md).
+- For the canonical root-folder contract and build outputs / ignored directories (`.mastra`, `.runtime`, `dist`, `doc_build`, `docs/generated`, `docs/architecture/html`), see [artifact-directories.md](./artifact-directories.md).
 - The HTML pack is regenerated locally (`bun run diagrams:generate`); it is not kept in version control.
 - Hybrid alignment rule: keep diagrams conceptual, but each diagram page must include a compact current-surface inventory card (public MCP tools, full-surface additions, and active app-service families) so diagram claims stay auditable against code.
 - If the architecture changes, regenerate or revise the HTML pack in [`scripts/generate-architecture-diagrams.ts`](../../scripts/generate-architecture-diagrams.ts) and run `diagrams:generate`.

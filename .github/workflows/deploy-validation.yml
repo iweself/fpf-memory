@@ -32,7 +32,7 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Stage hosted assets (runs spec:download then prepare-deploy.sh)
+      - name: Stage hosted assets (runs spec:download then prepare-deploy.ts)
         run: bun run predeploy
 
       - name: Assert predeploy staged spec + snapshot

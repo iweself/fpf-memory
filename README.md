@@ -276,7 +276,7 @@ Artifacts are stored under `.runtime/fpf-index/`.
 - Spec source: path from `FPF_SPEC_SOURCE_PATH` (canonical upstream lives in [fpf-sync](https://github.com/venikman/fpf-sync))
 - `docs/generated/**`: produced locally by `docs:generate` (not committed; CI runs it before lint and deploy runs it via `docs:build`)
 - `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
-- Where `.mastra`, `.runtime`, `dist`, `doc_build`, and `docs` come from: [docs/architecture/artifact-directories.md](docs/architecture/artifact-directories.md)
+- Canonical root-folder contract and generated-output origins: [docs/architecture/artifact-directories.md](docs/architecture/artifact-directories.md)
 
 The docs pipeline does not use an LLM step. `bun run docs:generate` writes the canonical markdown collection, and `bun run docs:build` builds the static viewer from that collection.
 
