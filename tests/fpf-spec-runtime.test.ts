@@ -14,11 +14,12 @@ import {
   getFpfIndexStatusInputSchema,
   queryFpfSpecInputSchema,
 } from '../src/mcp/tool-contracts.js';
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { ARTIFACT_FILENAMES } from '../src/runtime/constants.js';
 import { FpfRuntime } from '../src/runtime/runtime.js';
 
 describe('FpfRuntime', () => {
-  const canonicalSourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const canonicalSourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   let tempRoot: string;
   let sourcePath: string;
   let artifactDir: string;
@@ -278,8 +279,8 @@ describe('FpfRuntime', () => {
     expect(status.compilerMode).toBe('local_vectorless');
     expect(status.fresh).toBe(true);
     expect(status.synthesizer.configured).toBe(false);
-    expect(status.observability.configured).toBe(true);
-    expect(status.observability.filePath.endsWith('mastra-observability.json')).toBe(true);
+    expect(status.observability.configured).toBe(false);
+    expect(status.observability.filePath).toBe('');
     expect(status.sessionCache.enabled).toBe(true);
     for (const key of Object.keys(ARTIFACT_FILENAMES)) {
       expect(status.artifacts[key]).toBe(true);
@@ -362,6 +363,15 @@ describe('FpfRuntime', () => {
   });
 
   it('defaults query and ask tools to the configured verbose mode only', async () => {
+    const previousDefaultMode = process.env.FPF_QUERY_DEFAULT_MODE;
+    delete process.env.FPF_QUERY_DEFAULT_MODE;
+    expect(resolveDefaultQueryMode()).toBe('verbose');
+    if (previousDefaultMode === undefined) {
+      delete process.env.FPF_QUERY_DEFAULT_MODE;
+    } else {
+      process.env.FPF_QUERY_DEFAULT_MODE = previousDefaultMode;
+    }
+
     expect(resolveDefaultQueryMode({ FPF_QUERY_DEFAULT_MODE: 'proof' } as NodeJS.ProcessEnv)).toBe(
       'proof',
     );

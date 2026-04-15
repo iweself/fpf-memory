@@ -1,6 +1,11 @@
 import { SpanType } from '@mastra/core/observability';
 
 import { withRuntimeSpan } from '../observability/runtime-observability.js';
+import {
+  parseLmStudioConfig,
+  parseObservabilityConfig,
+} from '../adapters/infra/config/env.js';
+import type { ObservabilityConfig } from '../adapters/infra/config/types.js';
 import type {
   AnswerSlice,
   AnswerSynthesizerInput,
@@ -8,7 +13,7 @@ import type {
   LocalAnswerSynthesizer,
   LocalAnswerSynthesizerInfo,
 } from './types.js';
-import { createAiTraceRecorder } from './ai-trace-log.js';
+import { createAiTraceRecorderFromPath } from './ai-trace-log.js';
 
 export type LmStudioApiStyle = 'responses' | 'lmstudio_chat' | 'chat_completions';
 export type FetchLike = (
@@ -23,19 +28,19 @@ export interface LmStudioSynthesizerOptions {
   apiKey?: string;
   timeoutMs?: number;
   fetchImpl?: FetchLike;
-  env?: NodeJS.ProcessEnv;
+  traceLogPath?: string;
+  observabilityConfig?: ObservabilityConfig;
 }
 
 export interface LmStudioHealthCheckOptions {
   baseUrl?: string;
   model?: string;
-  apiStyle?: LmStudioApiStyle;
+  apiStyle?: LmStudioApiStyle | string;
   timeoutMs?: number;
   systemPrompt?: string;
   input?: string;
   apiKey?: string;
   fetchImpl?: FetchLike;
-  env?: NodeJS.ProcessEnv;
 }
 
 export interface LmStudioHealthCheckResult {
@@ -138,7 +143,9 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
   }
 
   async synthesize(input: AnswerSynthesizerInput): Promise<AnswerSynthesizerOutput> {
-    const traceRecorder = createAiTraceRecorder(this.options.env);
+    const traceRecorder = createAiTraceRecorderFromPath(
+      this.options.traceLogPath ?? '.runtime/logs/ai-traces.jsonl',
+    );
     const systemPrompt = buildSystemPrompt();
     const userPrompt = buildUserPrompt(input);
     const startedAt = Date.now();
@@ -165,7 +172,7 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
 
     const endpointInfo = describeEndpoint(this.endpoint);
     const spanResult = await withRuntimeSpan({
-      env: this.options.env,
+      observabilityConfig: this.options.observabilityConfig,
       type: SpanType.MODEL_GENERATION,
       name: `local synthesis: ${this.options.model}`,
       input: {
@@ -278,47 +285,48 @@ export class LmStudioSynthesizer implements LocalAnswerSynthesizer {
   }
 }
 
+export function createSynthesizerFromConfig(
+  options: LmStudioSynthesizerOptions | undefined,
+): LocalAnswerSynthesizer | undefined {
+  if (!options?.baseUrl || !options.model) {
+    return undefined;
+  }
+  return new LmStudioSynthesizer(options);
+}
+
 export function createSynthesizerFromEnv(
   env: NodeJS.ProcessEnv = process.env,
-  fetchImpl?: typeof fetch,
+  fetchImpl?: FetchLike,
 ): LocalAnswerSynthesizer | undefined {
-  const configuredBaseUrl = env.FPF_LOCAL_LLM_BASE_URL?.trim();
-  const configuredModel = env.FPF_LOCAL_LLM_MODEL?.trim();
-  if (!configuredBaseUrl && !configuredModel) {
+  const lmStudioConfig = parseLmStudioConfig(env);
+  if (!lmStudioConfig.enabled) {
     return undefined;
   }
 
-  const baseUrl = configuredBaseUrl || DEFAULT_LM_STUDIO_BASE_URL;
-  const model = configuredModel || DEFAULT_LM_STUDIO_MODEL;
-  const apiStyle = normalizeLmStudioApiStyle(env.FPF_LOCAL_LLM_API_STYLE) ?? DEFAULT_LM_STUDIO_API_STYLE;
-  const timeoutMs = Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? `${DEFAULT_LM_STUDIO_TIMEOUT_MS}`);
-  return new LmStudioSynthesizer({
-    baseUrl,
-    model,
-    apiStyle,
-    apiKey: env.FPF_LOCAL_LLM_API_KEY?.trim()
-      || (isGeminiHost(baseUrl) ? env.GEMINI_AI_API_KEY?.trim() : undefined),
-    timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : DEFAULT_LM_STUDIO_TIMEOUT_MS,
+  return createSynthesizerFromConfig({
+    baseUrl: lmStudioConfig.baseUrl,
+    model: lmStudioConfig.model,
+    apiStyle: lmStudioConfig.apiStyle,
+    apiKey: lmStudioConfig.apiKey,
+    timeoutMs: lmStudioConfig.timeoutMs,
     fetchImpl,
-    env,
+    traceLogPath: lmStudioConfig.traceLogPath,
+    observabilityConfig: parseObservabilityConfig(env),
   });
 }
 
 export async function runLmStudioHealthCheck(
   options: LmStudioHealthCheckOptions = {},
 ): Promise<LmStudioHealthCheckResult> {
-  const env = options.env ?? process.env;
-  const apiStyle = options.apiStyle
-    ?? normalizeLmStudioApiStyle(env.FPF_LOCAL_LLM_API_STYLE)
+  const apiStyle =
+    normalizeLmStudioApiStyle(options.apiStyle)
     ?? DEFAULT_LM_STUDIO_API_STYLE;
-  const baseUrl = options.baseUrl?.trim() || env.FPF_LOCAL_LLM_BASE_URL?.trim() || DEFAULT_LM_STUDIO_BASE_URL;
-  const model = options.model?.trim() || env.FPF_LOCAL_LLM_MODEL?.trim() || DEFAULT_LM_STUDIO_MODEL;
-  const apiKey = options.apiKey?.trim()
-    || env.FPF_LOCAL_LLM_API_KEY?.trim()
-    || (isGeminiHost(baseUrl) ? env.GEMINI_AI_API_KEY?.trim() : undefined);
+  const baseUrl = options.baseUrl?.trim() || DEFAULT_LM_STUDIO_BASE_URL;
+  const model = options.model?.trim() || DEFAULT_LM_STUDIO_MODEL;
+  const apiKey = options.apiKey?.trim();
   const timeoutMs = Number.isFinite(options.timeoutMs)
     ? Number(options.timeoutMs)
-    : Number(env.FPF_LOCAL_LLM_TIMEOUT_MS ?? `${DEFAULT_LM_STUDIO_TIMEOUT_MS}`);
+    : DEFAULT_LM_STUDIO_TIMEOUT_MS;
   const fetchImpl = options.fetchImpl ?? fetch;
   const modelsEndpoint = buildModelsEndpoint(baseUrl, apiStyle);
   const generationEndpoint = buildGenerationEndpoint(baseUrl, apiStyle);
@@ -734,11 +742,6 @@ async function runHealthRequest<T extends { httpStatus?: number; ok: boolean }>(
       error: error instanceof Error ? error.message : 'Unknown LM Studio health-check error',
     } as T & { durationMs: number; error?: string };
   }
-}
-
-function isGeminiHost(baseUrl: string): boolean {
-  const url = safeUrl(baseUrl);
-  return url?.hostname?.endsWith('.googleapis.com') === true;
 }
 
 function safeUrl(value: string): URL | undefined {

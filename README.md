@@ -1,11 +1,11 @@
 # FPF Spec Runtime
 
-Local `FPF-spec.md` runtime built around the `LocalFPFSpecKnowledgeRuntime` use case.
+Local **FPF spec** runtime built around the `LocalFPFSpecKnowledgeRuntime` use case. The markdown source is **not committed**; after clone run `bun run spec:download` (or set `FPF_SPEC_SOURCE_PATH` to any local file, for example a checkout of [fpf-sync](https://github.com/venikman/fpf-sync)).
 
 It uses:
 
 - local deterministic parsing for exact FPF IDs, routes, relations, anchors, and answer envelopes
-- a vectorless index compiler that emits structural and graph artifacts directly from `FPF-spec.md`
+- a vectorless index compiler that emits structural and graph artifacts from the configured spec file
 - Mastra-owned MCP surfaces plus a Bun CLI as the integration surface
 
 ## Stack
@@ -18,8 +18,8 @@ It uses:
 
 ## Scope
 
-- Runtime source set: `FPF-spec.md` only
-- Canonical publishable markdown: `docs/generated/**`
+- Runtime source set: one markdown spec file (default path after download: `.fpf-upstream/FPF-Spec.md`)
+- Generated pattern/route markdown: `docs/generated/**` (not committed; run `bun run docs:generate` after `spec:download`)
 - Static docs build output: `doc_build/` (deterministic, ignored)
 - Validation/tuning corpus: outside the runtime path
 - No vector database
@@ -31,7 +31,7 @@ It uses:
 Copy `.env.example` to `.env` and set:
 
 ```bash
-FPF_SPEC_SOURCE_PATH=FPF-spec.md
+FPF_SPEC_SOURCE_PATH=.fpf-upstream/FPF-Spec.md
 FPF_RUNTIME_ARTIFACT_DIR=.runtime/fpf-index
 FPF_QUERY_DEFAULT_MODE=verbose
 FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1
@@ -48,6 +48,8 @@ FPF_MASTRA_OBSERVABILITY_INCLUDE_MODEL_CHUNKS=false
 FPF_MASTRA_OBSERVABILITY_LOG_LEVEL=info
 FPF_AI_TRACE_LOG_PATH=.runtime/logs/ai-traces.jsonl
 ```
+
+`FPF_SPEC_SOURCE_PATH` must be a **local filesystem path** (the runtime does not fetch `https://` URLs). The default when unset matches **`bun run spec:download`**: `.fpf-upstream/FPF-Spec.md` (gitignored). Run **`bun run spec:download`** after clone, or point `FPF_SPEC_SOURCE_PATH` at a local checkout of [github.com/venikman/fpf-sync](https://github.com/venikman/fpf-sync) such as [`FPF/FPF-Spec.md`](https://github.com/venikman/fpf-sync/blob/main/FPF/FPF-Spec.md). Override the download URL or output path with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`. Use the same `FPF_SPEC_SOURCE_PATH` in `.env`, your shell, and any MCP config (`server.json` `env`) so every entrypoint agrees.
 
 `FPF_QUERY_DEFAULT_MODE` applies to `query_fpf_spec` and `ask_fpf` when `mode` is omitted. `trace_fpf_path` stays `compact` by default.
 
@@ -81,6 +83,9 @@ If you want to force the LM Studio-native route instead, set:
 ## Commands
 
 ```bash
+bun install
+bun run spec:download
+bun run docs:generate
 bun run lint
 bun run check
 bun run test
@@ -221,10 +226,13 @@ Call trace_fpf_path with:
 
 ## Runtime surfaces
 
-- `src/mcp/tool-contracts.ts`: Zod-authored MCP input and output contracts
-- `src/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
-- `src/mastra/mcp/server.ts`: MCPServer definitions (public and full surfaces)
-- `src/mastra/index.ts`: Mastra instance registration
+- `src/adapters/mcp/tool-contracts.ts`: Zod-authored MCP input and output contracts
+- `src/adapters/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
+- `src/adapters/mcp/server.ts`: canonical MCPServer definitions (public and full surfaces)
+- `src/composition/`: canonical bridge layer for runtime/bootstrap composition
+- `src/compat/mastra/`: governed Mastra compatibility bootstrap layer
+- `src/mastra/mcp/server.ts`: compatibility shim for the legacy MCP server import path
+- `src/mastra/index.ts`: compatibility shim for direct `mastra build` / `mastra deploy`
 - `src/mastra/stdio.ts`: stdio entry point for MCP clients
 - `src/server.ts`: Hono HTTP server bootstrap for Bun
 - `src/runtime/`: compiler, retrieval, trace, inspect, and synthesis logic
@@ -234,7 +242,9 @@ Call trace_fpf_path with:
 ## Docs surface
 
 - `docs/`: hand-authored Rspress landing content
-- `scripts/generate-docs.ts`: compiler-backed docs generation into `docs/generated/`
+- `scripts/generate-docs.ts`: compiler-backed docs generation into `docs/generated/` (gitignored; run `docs:generate` after `spec:download`)
+- `scripts/generate-architecture-diagrams.ts`: standalone HTML diagram pack under `docs/architecture/html/` (also gitignored; run `bun run diagrams:generate` when you want local diagrams)
+- Full script-by-script reference: [docs/scripts.md](docs/scripts.md)
 - `rspress.config.ts`: docs site config
 
 ## MCP tool roles
@@ -253,7 +263,7 @@ Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other 
 
 On each refresh trigger the runtime:
 
-1. hashes `FPF-spec.md`
+1. hashes the spec file at `FPF_SPEC_SOURCE_PATH`
 2. reuses the snapshot if the hash matches
 3. otherwise recompiles a local vectorless index
 4. writes:
@@ -274,9 +284,10 @@ Artifacts are stored under `.runtime/fpf-index/`.
 
 ## Docs surfaces
 
-- `FPF-spec.md`: authored source of truth
-- `docs/generated/**`: canonical generated markdown collection
+- Spec source: path from `FPF_SPEC_SOURCE_PATH` (canonical upstream lives in [fpf-sync](https://github.com/venikman/fpf-sync))
+- `docs/generated/**`: produced locally by `docs:generate` (not committed; CI runs it before lint and deploy runs it via `docs:build`)
 - `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
+- Where `.mastra`, `.runtime`, `dist`, `doc_build`, and `docs` come from: [docs/architecture/artifact-directories.md](docs/architecture/artifact-directories.md)
 
 The docs pipeline does not use an LLM step. `bun run docs:generate` writes the canonical markdown collection, and `bun run docs:build` builds the static viewer from that collection.
 

@@ -1,12 +1,13 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 import { beforeAll, describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { generateDocsSite } from '../src/docs/generate.js';
 import {
   buildDocsNavigation,
@@ -18,8 +19,22 @@ import type { Snapshot } from '../src/runtime/types.js';
 
 const execFileAsync = promisify(execFile);
 
+async function copyNonGeneratedDocs(srcRoot: string, dstRoot: string) {
+  const entries = await readdir(srcRoot, { withFileTypes: true, recursive: true });
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (!/\.(md|mdx)$/.test(entry.name)) continue;
+    const fullPath = resolve(entry.parentPath, entry.name);
+    const relPath = relative(srcRoot, fullPath);
+    if (relPath.startsWith('generated/') || relPath.startsWith('architecture/html/')) continue;
+    const target = resolve(dstRoot, relPath);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(fullPath, target);
+  }
+}
+
 describe('docs projection', () => {
-  const canonicalSourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const canonicalSourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   let snapshot: Snapshot;
 
   beforeAll(async () => {
@@ -111,6 +126,8 @@ describe('docs projection', () => {
         builtAt: '2026-04-11T19:34:21.498Z',
       });
 
+      expect(result.ownerContext).toBe('Ctx.Docs');
+      expect(result.lifecycleState).toBe('evidence');
       expect(result.generatedFiles).toBeGreaterThan(100);
       expect(
         await readFile(resolve(docsRoot, 'generated/patterns/A.2.md'), 'utf8'),
@@ -150,11 +167,7 @@ describe('docs projection', () => {
         docsRoot,
         builtAt: '2026-04-11T19:34:21.498Z',
       });
-      await copyFile(resolve(process.cwd(), 'docs/index.mdx'), resolve(docsRoot, 'index.mdx'));
-      await copyFile(
-        resolve(process.cwd(), 'docs/mcp-interface.md'),
-        resolve(docsRoot, 'mcp-interface.md'),
-      );
+      await copyNonGeneratedDocs(resolve(process.cwd(), 'docs'), docsRoot);
 
       await execFileAsync(
         'node',
@@ -165,8 +178,12 @@ describe('docs projection', () => {
             ...process.env,
             FPF_DOCS_ROOT: docsRoot,
             FPF_DOCS_OUT_DIR: outDir,
+            RSPRESS_PERSISTENT_CACHE: 'false',
           },
-          timeout: 120_000,
+          // Building ~825 generated pages + non-generated docs with the
+          // persistent cache disabled consistently takes 1.5-2.5 min on
+          // GitHub's ubuntu-latest runners. Give it headroom.
+          timeout: 300_000,
         },
       );
 
@@ -185,5 +202,5 @@ describe('docs projection', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 120_000);
+  }, 360_000);
 });

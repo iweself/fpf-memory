@@ -1,6 +1,11 @@
+import { parseDocsConfig } from '../src/adapters/infra/config/env.js';
 import { generateDocsSite } from '../src/docs/generate.js';
 
-const result = await generateDocsSite();
+const docsConfig = parseDocsConfig(process.env);
+const result = await generateDocsSite({
+  sourcePath: docsConfig.sourcePath,
+  docsRoot: docsConfig.docsRoot,
+});
 
 process.stdout.write(
   `${JSON.stringify(

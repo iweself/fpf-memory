@@ -5,6 +5,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+SPEC_PATH="${FPF_SPEC_SOURCE_PATH:-.fpf-upstream/FPF-Spec.md}"
+[[ "$SPEC_PATH" = /* ]] || SPEC_PATH="$ROOT_DIR/$SPEC_PATH"
+if [[ ! -f "$SPEC_PATH" ]]; then
+  printf 'Missing spec at %s — run: bun run spec:download\n' "$SPEC_PATH" >&2
+  exit 1
+fi
+
 QUERY_TEXT="${FPF_VERIFY_QUERY:-What is U.BoundedContext?}"
 CLI_MODE="${FPF_VERIFY_MODE:-verbose}"
 MAS_LOG="${FPF_MASTRA_LOG_PATH:-.runtime/logs/mastra.log}"

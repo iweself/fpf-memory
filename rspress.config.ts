@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { defineConfig } from '@rspress/core';
 
+import { DEFAULT_SOURCE_PATH } from './src/core/constants.js';
 import { buildDocsNavigation } from './src/docs/projection.js';
 import { compileFpfSource } from './src/runtime/compiler.js';
 
@@ -12,7 +13,7 @@ const outDir = process.env.FPF_DOCS_OUT_DIR ?? 'doc_build';
 
 const sourcePath = resolve(
   process.cwd(),
-  process.env.FPF_SPEC_SOURCE_PATH ?? 'FPF-spec.md',
+  process.env.FPF_SPEC_SOURCE_PATH ?? DEFAULT_SOURCE_PATH,
 );
 const sourceText = readFileSync(sourcePath, 'utf8');
 const sourceHash = `sha256:${createHash('sha256').update(sourceText).digest('hex')}`;
@@ -29,7 +30,7 @@ export default defineConfig({
   outDir,
   base: '/fpf-memory/',
   title: 'FPF Reference',
-  description: 'Compiler-backed FPF reference docs generated from FPF-spec.md.',
+  description: 'Compiler-backed FPF reference docs generated from the configured spec source.',
   globalStyles: resolve(process.cwd(), 'src/docs/density.css'),
   route: {
     cleanUrls: true,
@@ -37,7 +38,16 @@ export default defineConfig({
   markdown: {
     link: {
       checkDeadLinks: {
-        excludes: ['/drr/DRR-0001-mcp-first-class-interface/'],
+        // Skip relative links (`./foo.md`, `../README.md`, `../src/foo.ts`).
+        // The new architecture/scripts docs intentionally link back to source
+        // files and sibling .md pages with relative paths so they remain
+        // navigable on GitHub; rspress can't resolve those routes. Absolute
+        // internal links (sidebar entries, cross-page `/foo/bar`) are still
+        // dead-link checked.
+        excludes: (url: string) =>
+          url === '/drr/DRR-0001-mcp-first-class-interface/' ||
+          url.startsWith('./') ||
+          url.startsWith('../'),
       },
     },
   },
@@ -137,6 +147,10 @@ export default defineConfig({
               text: 'MCP Interface',
               link: '/mcp-interface/',
             },
+            {
+              text: 'Automation scripts',
+              link: '/scripts/',
+            },
           ],
         },
       ],
@@ -151,6 +165,10 @@ export default defineConfig({
             {
               text: 'DRR-0001',
               link: '/drr/DRR-0001-mcp-first-class-interface/',
+            },
+            {
+              text: 'Automation scripts',
+              link: '/scripts/',
             },
           ],
         },
@@ -171,6 +189,29 @@ export default defineConfig({
             {
               text: 'MCP Interface',
               link: '/mcp-interface/',
+            },
+            {
+              text: 'Automation scripts',
+              link: '/scripts/',
+            },
+          ],
+        },
+      ],
+      '/scripts/': [
+        {
+          text: 'Additional',
+          items: [
+            {
+              text: 'Automation scripts',
+              link: '/scripts/',
+            },
+            {
+              text: 'MCP Interface',
+              link: '/mcp-interface/',
+            },
+            {
+              text: 'DRR-0001',
+              link: '/drr/DRR-0001-mcp-first-class-interface/',
             },
           ],
         },

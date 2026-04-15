@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { compileFpfSource } from '../src/runtime/compiler.js';
 import { normalizeQuery } from '../src/runtime/query-normalizer.js';
 import { seedCandidates } from '../src/runtime/candidate-seeder.js';
@@ -37,7 +38,7 @@ async function getSnapshot(): Promise<Snapshot> {
   if (cachedSnapshot) {
     return cachedSnapshot;
   }
-  const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const sourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   const sourceText = await readFile(sourcePath, 'utf8');
   const sourceHash = createHash('sha256').update(sourceText).digest('hex');
   const output = compileFpfSource({

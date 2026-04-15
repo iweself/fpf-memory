@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from '@rstest/core';
 
+import { DEFAULT_SOURCE_PATH } from '../src/core/constants.js';
 import { compileFpfSource, type CompilerOutput } from '../src/runtime/compiler.js';
 import { parseLabeledRelations, parseSource } from '../src/runtime/source-parser.js';
 
@@ -25,7 +26,7 @@ async function getCompilerOutput(): Promise<CompilerOutput> {
   if (cachedOutput) {
     return cachedOutput;
   }
-  const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
+  const sourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
   const sourceText = await readFile(sourcePath, 'utf8');
   const sourceHash = createHash('sha256').update(sourceText).digest('hex');
   cachedOutput = compileFpfSource({
@@ -91,7 +92,7 @@ describe('Compiler / Parser stage', () => {
   });
 
   it('parses typed relations from plain-text catalog dependency cells', async () => {
-    const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
+    const sourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
     const sourceText = await readFile(sourcePath, 'utf8');
     const ir = parseSource(sourceText);
     const relations = ir.metadata['A.1.1']?.relations ?? [];
@@ -310,7 +311,7 @@ describe('Compiler / Validation stage', () => {
 // ---------------------------------------------------------------------------
 describe('Compiler / Snapshot determinism stage', () => {
   it('produces byte-identical snapshot when compiled twice with the same input', async () => {
-    const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
+    const sourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
     const sourceText = await readFile(sourcePath, 'utf8');
     const sourceHash = createHash('sha256').update(sourceText).digest('hex');
     const builtAt = '2025-01-01T00:00:00.000Z';
@@ -325,7 +326,7 @@ describe('Compiler / Snapshot determinism stage', () => {
   });
 
   it('produces structurally different output when source text changes', async () => {
-    const sourcePath = resolve(process.cwd(), 'FPF-spec.md');
+    const sourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
     const sourceText = await readFile(sourcePath, 'utf8');
     const builtAt = '2025-01-01T00:00:00.000Z';
 

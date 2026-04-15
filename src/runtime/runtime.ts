@@ -10,7 +10,6 @@ import {
 } from './constants.js';
 import { compileFpfSource } from './compiler.js';
 import { buildIndexingView, classifyChange } from './indexing-view.js';
-import { createSynthesizerFromEnv } from './lm-studio-synthesizer.js';
 import { QueryEngine } from './query-engine.js';
 import { resolveRuntimePath } from './path-resolution.js';
 import {
@@ -37,7 +36,6 @@ import type {
   TraceResult,
 } from './types.js';
 import { normalizeForLookup, tokenize, scoreOverlap } from './text.js';
-import { getRuntimeObservabilitySummary } from '../observability/runtime-observability.js';
 
 export interface FpfRuntimeOptions {
   sourcePath?: string;
@@ -45,6 +43,7 @@ export interface FpfRuntimeOptions {
   synthesizer?: LocalAnswerSynthesizer;
   maxSessions?: number;
   persistSessionCache?: boolean;
+  observability?: RuntimeStatus['observability'];
 }
 
 export class FpfRuntime {
@@ -53,14 +52,14 @@ export class FpfRuntime {
   private readonly artifactPaths: Record<keyof typeof ARTIFACT_FILENAMES, string>;
   private readonly synthesizer?: LocalAnswerSynthesizer;
   private readonly sessionCache: SessionCache;
+  private readonly observabilitySummary: RuntimeStatus['observability'];
 
   constructor(options: FpfRuntimeOptions = {}) {
-    const sourcePath = options.sourcePath ?? process.env.FPF_SPEC_SOURCE_PATH ?? DEFAULT_SOURCE_PATH;
+    const sourcePath = options.sourcePath ?? DEFAULT_SOURCE_PATH;
     const sourceResolution = resolveRuntimePath(sourcePath, {
       kind: 'file',
     });
-    const artifactDir =
-      options.artifactDir ?? process.env.FPF_RUNTIME_ARTIFACT_DIR ?? DEFAULT_ARTIFACT_DIR;
+    const artifactDir = options.artifactDir ?? DEFAULT_ARTIFACT_DIR;
     const artifactResolution = resolveRuntimePath(
       resolve(sourceResolution.root, artifactDir),
       {
@@ -76,9 +75,17 @@ export class FpfRuntime {
         resolve(this.artifactDir, filename),
       ]),
     ) as Record<keyof typeof ARTIFACT_FILENAMES, string>;
-    this.synthesizer = options.synthesizer ?? createSynthesizerFromEnv();
-    const persistSession =
-      options.persistSessionCache ?? process.env.FPF_PERSIST_SESSION_CACHE === 'true';
+    this.synthesizer = options.synthesizer;
+    this.observabilitySummary =
+      options.observability ?? {
+        configured: false,
+        filePath: '',
+        format: 'flat',
+        includeInternalSpans: false,
+        logLevel: 'info',
+        excludeModelChunks: true,
+      };
+    const persistSession = options.persistSessionCache ?? false;
     this.sessionCache = new SessionCache({
       maxSessions: options.maxSessions ?? 50,
       persistPath: persistSession
@@ -236,7 +243,7 @@ export class FpfRuntime {
             ...this.synthesizer.describe(),
           }
         : { configured: false },
-      observability: getRuntimeObservabilitySummary(),
+      observability: this.observabilitySummary,
       sessionCache: this.sessionCache.summary(),
     };
   }
