@@ -30,7 +30,7 @@ jobs:
       - name: Smoke-check generated docs
         run: |
           test -f docs/generated/patterns/A.1.md
-          generated_count=$(find docs/generated -name '*.md' | wc -l)
+          generated_count=$(find docs/generated -name '*.md' -print | grep -c .)
           echo "Generated $generated_count markdown files under docs/generated"
           test "$generated_count" -gt 100
 

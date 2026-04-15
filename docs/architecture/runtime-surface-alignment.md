@@ -9,7 +9,7 @@ Route: `A.1.1 -> A.15 -> A.15.2/A.15.3 -> B.5.1`, landing on `F.17`.
 - `Ctx.Run.MCP`: MCP tool contracts, tool wiring, and stdio/server composition
 - `Ctx.Run.Hosted`: hosted Mastra/Hono bootstrap and deploy-facing runtime surface
 - `Ctx.Docs`: deterministic docs generation and publication projection
-- `Ctx.Build`: build artefact manifests and hosted staging
+- `Ctx.Build`: build artifact manifests and hosted staging
 - `Ctx.Infra`: env parsing, logging, observability, filesystem and model-adapter concerns
 - `Ctx.Compat.Mastra`: explicit compatibility bootstrap layer for Mastra-required import-time surfaces
 

@@ -19,7 +19,7 @@ It uses:
 ## Scope
 
 - Runtime source set: one markdown spec file (default path after download: `.fpf-upstream/FPF-Spec.md`)
-- Generated pattern/route markdown: `docs/**` under `generated/` (not committed; run `bun run docs:generate` after `spec:download`)
+- Generated pattern/route markdown: `docs/generated/**` (not committed; run `bun run docs:generate` after `spec:download`)
 - Static docs build output: `doc_build/` (deterministic, ignored)
 - Validation/tuning corpus: outside the runtime path
 - No vector database
@@ -226,8 +226,8 @@ Call trace_fpf_path with:
 
 ## Runtime surfaces
 
-- `src/mcp/tool-contracts.ts`: Zod-authored MCP input and output contracts
-- `src/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
+- `src/adapters/mcp/tool-contracts.ts`: Zod-authored MCP input and output contracts
+- `src/adapters/mcp/tools.ts`: canonical snake_case MCP tools and `ask_fpf`
 - `src/adapters/mcp/server.ts`: canonical MCPServer definitions (public and full surfaces)
 - `src/composition/`: canonical bridge layer for runtime/bootstrap composition
 - `src/compat/mastra/`: governed Mastra compatibility bootstrap layer
