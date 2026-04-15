@@ -180,7 +180,10 @@ describe('docs projection', () => {
             FPF_DOCS_OUT_DIR: outDir,
             RSPRESS_PERSISTENT_CACHE: 'false',
           },
-          timeout: 120_000,
+          // Building ~825 generated pages + non-generated docs with the
+          // persistent cache disabled consistently takes 1.5-2.5 min on
+          // GitHub's ubuntu-latest runners. Give it headroom.
+          timeout: 300_000,
         },
       );
 
@@ -199,5 +202,5 @@ describe('docs projection', () => {
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
-  }, 120_000);
+  }, 360_000);
 });
