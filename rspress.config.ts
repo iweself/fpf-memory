@@ -38,7 +38,16 @@ export default defineConfig({
   markdown: {
     link: {
       checkDeadLinks: {
-        excludes: ['/drr/DRR-0001-mcp-first-class-interface/'],
+        // Skip relative links (`./foo.md`, `../README.md`, `../src/foo.ts`).
+        // The new architecture/scripts docs intentionally link back to source
+        // files and sibling .md pages with relative paths so they remain
+        // navigable on GitHub; rspress can't resolve those routes. Absolute
+        // internal links (sidebar entries, cross-page `/foo/bar`) are still
+        // dead-link checked.
+        excludes: (url: string) =>
+          url === '/drr/DRR-0001-mcp-first-class-interface/' ||
+          url.startsWith('./') ||
+          url.startsWith('../'),
       },
     },
   },

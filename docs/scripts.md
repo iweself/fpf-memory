@@ -156,5 +156,5 @@ Parsed via [`parseDocsConfig`](../src/adapters/infra/config/env.ts).
 
 ## Related
 
-- [Artifact directories](architecture/artifact-directories.md) — where outputs land on disk.
+- [Artifact directories](./architecture/artifact-directories.md) — where outputs land on disk.
 - [README](../README.md) — environment variables and first-time clone steps.

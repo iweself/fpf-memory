@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 import { beforeAll, describe, expect, it } from '@rstest/core';
@@ -18,6 +18,20 @@ import { compileFpfSource } from '../src/runtime/compiler.js';
 import type { Snapshot } from '../src/runtime/types.js';
 
 const execFileAsync = promisify(execFile);
+
+async function copyNonGeneratedDocs(srcRoot: string, dstRoot: string) {
+  const entries = await readdir(srcRoot, { withFileTypes: true, recursive: true });
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (!/\.(md|mdx)$/.test(entry.name)) continue;
+    const fullPath = resolve(entry.parentPath, entry.name);
+    const relPath = relative(srcRoot, fullPath);
+    if (relPath.startsWith('generated/') || relPath.startsWith('architecture/html/')) continue;
+    const target = resolve(dstRoot, relPath);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(fullPath, target);
+  }
+}
 
 describe('docs projection', () => {
   const canonicalSourcePath = resolve(process.cwd(), DEFAULT_SOURCE_PATH);
@@ -153,11 +167,7 @@ describe('docs projection', () => {
         docsRoot,
         builtAt: '2026-04-11T19:34:21.498Z',
       });
-      await copyFile(resolve(process.cwd(), 'docs/index.mdx'), resolve(docsRoot, 'index.mdx'));
-      await copyFile(
-        resolve(process.cwd(), 'docs/mcp-interface.md'),
-        resolve(docsRoot, 'mcp-interface.md'),
-      );
+      await copyNonGeneratedDocs(resolve(process.cwd(), 'docs'), docsRoot);
 
       await execFileAsync(
         'node',
