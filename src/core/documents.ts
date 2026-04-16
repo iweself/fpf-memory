@@ -328,8 +328,10 @@ function renderPatternPage(snapshot: Snapshot, pattern: PatternRecord): string {
       title: pattern.title,
       description: pattern.part ?? pattern.cluster ?? 'Generated pattern page from the compiler snapshot.',
     }),
+    renderBreadcrumb(buildPatternBreadcrumb(pattern)),
+    '',
     `# ${pattern.title}`,
-    `> Pattern ${inlineCode(pattern.id)} · ${pattern.status}${pattern.type ? ` · ${pattern.type}` : ''}${pattern.normativity ? ` · ${pattern.normativity}` : ''}`,
+    `> Pattern ${patternIdChip(pattern.id)} · ${pattern.status}${pattern.type ? ` · ${pattern.type}` : ''}${pattern.normativity ? ` · ${pattern.normativity}` : ''}`,
   ];
 
   if (pattern.part) {
@@ -365,10 +367,11 @@ function renderPatternPage(snapshot: Snapshot, pattern: PatternRecord): string {
   }
 
   if (relations.length > 0) {
-    lines.push('', '## Relations', '');
+    lines.push('', '## Relations', '', '<div class="fpf-relations">');
     for (const relation of relations) {
-      lines.push(`- ${formatRelation(snapshot, relation)}`);
+      lines.push(formatRelation(snapshot, relation));
     }
+    lines.push('</div>');
   }
 
   const sectionLines = renderSectionTree(snapshot, pattern.id);
@@ -415,6 +418,11 @@ function renderRoutePage(snapshot: Snapshot, route: RouteRecord): string {
       title: route.name,
       description: route.description,
     }),
+    renderBreadcrumb([
+      { text: 'Routes', link: '/generated/routes/index' },
+      { text: route.name },
+    ]),
+    '',
     `# ${route.name}`,
     `> Route ${inlineCode(route.id)}`,
   ];
@@ -456,6 +464,12 @@ function renderPrefacePage(snapshot: Snapshot, sectionId: string): string {
       title: section.title,
       description: `Generated reference page for ${sectionId}.`,
     }),
+    renderBreadcrumb([
+      { text: 'Preface', link: '/generated/preface/index' },
+      ...(section.path[0] && section.path[0] !== section.title ? [{ text: section.path[0] }] : []),
+      { text: section.title },
+    ]),
+    '',
     `# ${section.title}`,
     `> Preface node ${inlineCode(sectionId)}`,
   ];
@@ -528,15 +542,107 @@ function appendNodeIdList(
   lines.push('', `## ${heading}`, '');
   for (const nodeId of nodeIds) {
     const prefix = ordered ? '1.' : '-';
-    lines.push(`${prefix} ${formatNodeReference(snapshot, nodeId)}`);
+    const chip = isPatternIdShape(nodeId) ? `${patternIdChip(nodeId)} ` : '';
+    lines.push(`${prefix} ${chip}${formatNodeReference(snapshot, nodeId)}`);
   }
 }
 
+// Keep this anchored regex aligned with `ID_PATTERN` in `src/core/text.ts` so
+// the generator only renders pattern-ID chips for strings the compiler itself
+// treats as valid IDs.
+function isPatternIdShape(nodeId: string): boolean {
+  return /^[A-Z]\.\d+(?:\.[A-Za-z0-9]+)*(?::[A-Za-z0-9.]+)?$/u.test(nodeId);
+}
+
 function formatRelation(snapshot: Snapshot, relation: RelationEdge): string {
-  return `${inlineCode(relation.from)} --${relation.relation}--> ${formatNodeReference(
-    snapshot,
-    relation.to,
-  )}`;
+  const target = formatNodeReferenceHtml(snapshot, relation.to);
+  const kindLabel = humanizeRelation(relation.relation);
+  return `<div class="fpf-relation">${patternIdChip(relation.from)}<span class="fpf-relation-kind">${escapeHtml(kindLabel)}</span>${target}</div>`;
+}
+
+function humanizeRelation(kind: RelationEdge['relation']): string {
+  return kind.replace(/_/g, ' ');
+}
+
+function formatNodeReferenceHtml(snapshot: Snapshot, nodeId: string): string {
+  const node = snapshot.compiledNodes[nodeId];
+  const docTarget = node ? resolveDocTarget(snapshot, nodeId) : undefined;
+  if (docTarget) {
+    return `<a class="fpf-relation-target" href="${escapeHtml(docTarget.docRef.staticPath)}">${escapeHtml(docTarget.title)}</a>`;
+  }
+  return `<code>${escapeHtml(nodeId)}</code>`;
+}
+
+// Emit `fpf-pid--<letter>` unconditionally for any leading A–Z. The Part-specific
+// palette lives in `src/docs/theme.css` (`.fpf-pid--a` … `.fpf-pid--g`); letters
+// without a matching modifier class fall back to the neutral `.fpf-pid` default,
+// so the CSS stays the single source of truth for which Parts have colours.
+function patternIdChip(id: string): string {
+  const first = id.charAt(0);
+  const modifier = /^[A-Z]$/u.test(first) ? ` fpf-pid--${first.toLowerCase()}` : '';
+  return `<span class="fpf-pid${modifier}">${escapeHtml(id)}</span>`;
+}
+
+interface BreadcrumbSegment {
+  text: string;
+  link?: string;
+}
+
+function renderBreadcrumb(segments: BreadcrumbSegment[]): string {
+  if (segments.length === 0) {
+    return '';
+  }
+  const parts: string[] = [];
+  segments.forEach((segment, index) => {
+    if (index > 0) {
+      parts.push(`<span class="fpf-breadcrumb-separator" aria-hidden="true">›</span>`);
+    }
+    if (segment.link && index < segments.length - 1) {
+      parts.push(`<a href="${escapeHtml(segment.link)}">${escapeHtml(segment.text)}</a>`);
+    } else {
+      parts.push(`<span>${escapeHtml(segment.text)}</span>`);
+    }
+  });
+  return `<nav class="fpf-breadcrumb" aria-label="Breadcrumb">${parts.join('')}</nav>`;
+}
+
+function buildPatternBreadcrumb(pattern: PatternRecord): BreadcrumbSegment[] {
+  const segments: BreadcrumbSegment[] = [
+    { text: 'Patterns', link: '/generated/patterns/index' },
+  ];
+
+  // Split `pattern.part` into a "Part X" prefix and the cluster name that
+  // follows it, but only on the first dash/en-dash/em-dash that has spaces
+  // on *both* sides. Requiring surrounding whitespace keeps intra-word
+  // hyphens intact — e.g. "Part B — Trans-disciplinary Reasoning" must
+  // stay as ("Part B", "Trans-disciplinary Reasoning") instead of being
+  // chopped into ("Part B", "Trans", "disciplinary Reasoning").
+  const partLabelMatch = pattern.part?.match(/^(.+?)\s+[-–—]\s+(.+)$/u);
+  if (partLabelMatch) {
+    const head = partLabelMatch[1]!.trim();
+    const tail = partLabelMatch[2]!.trim();
+    if (head) {
+      segments.push({ text: head });
+    }
+    if (tail) {
+      segments.push({ text: tail });
+    }
+  } else if (pattern.part) {
+    segments.push({ text: pattern.part.trim() });
+  } else if (pattern.cluster) {
+    segments.push({ text: pattern.cluster });
+  }
+  segments.push({ text: pattern.id });
+  return segments;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function dedupeRelations(relations: RelationEdge[]): RelationEdge[] {
