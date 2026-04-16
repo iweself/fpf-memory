@@ -82,7 +82,6 @@ bun run build
 bun run docs:generate
 bun run docs:build
 bun run docs:dev
-./scripts/verify-runtime.sh
 bun run start
 bun run cli -- status
 bun run cli -- refresh
@@ -118,11 +117,7 @@ bun run start
 
 ## Codex Setup
 
-Decision record for this interface choice:
-
-- [DRR-0001: MCP As The First-Class Codex Interface](docs/drr/DRR-0001-mcp-first-class-interface.md)
-
-The DRR records the MCP-first boundary choice; the current Codex default is the hosted public MCP.
+The current Codex default is the hosted public MCP.
 
 Equivalent `~/.codex/config.toml` entry:
 
@@ -163,13 +158,7 @@ bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext co
 bun run cli -- inspect --selector "A.1.1"
 ```
 
-Run the end-to-end verification script for the real CLI, MCP stdio, and hosted Hono startup paths:
-
-```bash
-./scripts/verify-runtime.sh
-```
-
-The verification script also checks the direct stdio launcher (same entry as `bun run mcp`; add `FPF_MCP_SURFACE=full` for expert-tool work):
+The direct stdio launcher (same entry as `bun run mcp`; add `FPF_MCP_SURFACE=full` for expert-tool work):
 
 ```bash
 FPF_MCP_SURFACE=full bun src/mastra/stdio.ts
@@ -232,8 +221,6 @@ Call trace_fpf_path with:
 
 - `docs/`: hand-authored Rspress landing content
 - `scripts/generate-docs.ts`: compiler-backed docs generation into `docs/generated/` (gitignored; run `docs:generate` after `spec:download`)
-- `scripts/generate-architecture-diagrams.ts`: standalone HTML diagram pack under `docs/architecture/html/` (also gitignored; run `bun run diagrams:generate` when you want local diagrams)
-- Full script-by-script reference: [docs/scripts.md](docs/scripts.md)
 - `rspress.config.ts`: docs site config
 
 ## MCP tool roles
@@ -276,7 +263,6 @@ Artifacts are stored under `.runtime/fpf-index/`.
 - Spec source: path from `FPF_SPEC_SOURCE_PATH` (canonical upstream lives in [fpf-sync](https://github.com/venikman/fpf-sync))
 - `docs/generated/**`: produced locally by `docs:generate` (not committed; CI runs it before lint and deploy runs it via `docs:build`)
 - `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
-- Canonical root-folder contract and generated-output origins: [docs/architecture/artifact-directories.md](docs/architecture/artifact-directories.md)
 
 The docs pipeline does not use an LLM step. `bun run docs:generate` writes the canonical markdown collection, and `bun run docs:build` builds the static viewer from that collection.
 
@@ -286,18 +272,3 @@ The docs pipeline does not use an LLM step. `bun run docs:generate` writes the c
 - `.runtime/logs/mastra-observability.json`: runtime observability snapshot containing manual LM Studio `model_generation` traces
 - `.runtime/logs/ai-traces.jsonl`: request/response/error traces for local LM Studio synthesis calls
 
-## Real Verification
-
-Run:
-
-```bash
-bun run docs:build
-./scripts/verify-runtime.sh
-```
-
-The script verifies:
-
-- the real `cli` path updates `.runtime/logs/mastra.log`
-- the real `mcp` stdio startup path writes a startup record to `.runtime/logs/mastra.log`
-- the real `start` path writes a hosted-runtime startup record to `.runtime/logs/mastra.log`
-- the LM Studio path updates `.runtime/logs/mastra-observability.json` and `.runtime/logs/ai-traces.jsonl` when either `FPF_LOCAL_LLM_BASE_URL` or `FPF_LOCAL_LLM_MODEL` is set; the missing half falls back to the repo defaults
