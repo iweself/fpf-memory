@@ -20,7 +20,16 @@ import type { Snapshot } from '../src/runtime/types.js';
 const execFileAsync = promisify(execFile);
 
 async function copyNonGeneratedDocs(srcRoot: string, dstRoot: string) {
-  const entries = await readdir(srcRoot, { withFileTypes: true, recursive: true });
+  let entries;
+  try {
+    entries = await readdir(srcRoot, { withFileTypes: true, recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+
   for (const entry of entries) {
     if (!entry.isFile()) continue;
     if (!/\.(md|mdx)$/.test(entry.name)) continue;
@@ -183,14 +192,20 @@ describe('docs projection', () => {
       expect(
         await readFile(resolve(docsRoot, 'generated/patterns/index.md'), 'utf8'),
       ).toContain('# Pattern Catalog');
-      // The docs root itself serves the pattern catalog so `/fpf-memory/`
-      // lands on the catalog with no separate home page. The rendered body
-      // mirrors `/generated/patterns/` (same renderer, different title).
+      // The home page is a short landing, not a second copy of the catalog
+      // (the 237-link wall lives at `/generated/patterns/index`). It links
+      // into the four navigable surfaces and surfaces the hosted endpoint.
       const rootIndex = await readFile(resolve(docsRoot, 'index.md'), 'utf8');
       expect(rootIndex).toContain('title: "FPF Reference"');
       expect(rootIndex).toContain('# FPF Reference');
-      expect(rootIndex).toContain('## Part A - Kernel Architecture Cluster');
-      expect(rootIndex).toContain('/generated/patterns/A.1.1');
+      expect(rootIndex).toContain('## Navigate');
+      expect(rootIndex).toContain('[Patterns](/generated/patterns/index)');
+      expect(rootIndex).toContain('[Routes](/generated/routes/index)');
+      expect(rootIndex).toContain('[Glossary](/generated/patterns/H.1)');
+      expect(rootIndex).toContain('[Change log](/generated/patterns/I.3)');
+      expect(rootIndex).toContain('## MCP endpoint');
+      expect(rootIndex).toContain('fpf-memory.server.mastra.cloud');
+      expect(rootIndex).toContain('https://github.com/venikman/fpf-memory#run-and-test-mcp');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
@@ -230,9 +245,6 @@ describe('docs projection', () => {
 
       expect(await readFile(resolve(outDir, 'index.html'), 'utf8')).toContain(
         'FPF Reference',
-      );
-      expect(await readFile(resolve(outDir, 'mcp-interface.html'), 'utf8')).toContain(
-        'read_fpf_doc',
       );
       expect(
         await readFile(resolve(outDir, 'generated/patterns/A.2.html'), 'utf8'),

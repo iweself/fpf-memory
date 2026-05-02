@@ -13,6 +13,12 @@
     "cli": "bun src/cli.ts",
     "mcp": "bun src/mastra/stdio.ts",
     "spec:download": "bun scripts/download-upstream-spec.ts",
+    "publish:current": "bun scripts/publish-current.ts",
+    "validate:published": "bun scripts/validate-published-current.ts",
+    "evaluate:work": "bun src/cli.ts evaluate-work --target current-pr --base origin/main --format markdown",
+    "e2e:report": "bun scripts/e2e-report.ts",
+    "stage:from-published": "bun scripts/stage-from-published.ts",
+    "mastra:build": "bun scripts/mastra-build.ts",
     "build": "bun run build:runtime && bun run build:mcp",
     "build:runtime": "bun build ./src/cli.ts ./src/server.ts --outdir dist --target bun",
     "build:mcp": "tsup src/mastra/stdio.ts --format esm --out-dir dist --no-splitting && bun scripts/fixup-stdio-build.ts",
@@ -21,12 +27,13 @@
     "docs:dev:fresh": "bun run docs:generate && RSPRESS_PERSISTENT_CACHE=false rspress",
     "docs:build": "bun run docs:generate && RSPRESS_PERSISTENT_CACHE=false rspress build",
     "docs:preview": "RSPRESS_PERSISTENT_CACHE=false rspress preview",
+    "hooks:install": "bun scripts/install-hooks.ts",
     "lint": "rslint --type-check src tests scripts/*.ts *.config.ts",
     "check": "tsc --noEmit",
     "check:boundaries": "bun scripts/check-boundaries.ts",
     "test": "rstest run",
-    "predeploy": "bun run spec:download && bun scripts/prepare-deploy.ts",
-    "deploy": "bun run predeploy && bunx mastra build && bunx mastra server deploy --yes"
+    "predeploy": "bun run stage:from-published",
+    "deploy": "bun run predeploy && bun run mastra:build && bunx mastra server deploy --yes"
   },
   "license": "ISC",
   "type": "module",
@@ -49,6 +56,7 @@
     "@types/node": "^25.6.0",
     "bun-types": "^1.3.12",
     "mastra": "^1.5.0",
+    "playwright": "^1.59.1",
     "tsup": "^8.5.1",
     "typescript": "^6.0.2"
   }

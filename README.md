@@ -2,7 +2,7 @@
 
 > **📖 Live reference: [venikman.github.io/fpf-memory](https://venikman.github.io/fpf-memory/)** — searchable pattern catalog, routes, and preface. Type an ID like `A.2` or `route:project-alignment` in the search box to jump in.
 
-Local **FPF spec** runtime built around the `LocalFPFSpecKnowledgeRuntime` use case. The markdown source is **not committed**; after clone run `bun run spec:download` (or set `FPF_SPEC_SOURCE_PATH` to any local file, for example a checkout of [fpf-sync](https://github.com/venikman/fpf-sync)).
+Local **FPF spec** runtime built around the `LocalFPFSpecKnowledgeRuntime` use case. The repo carries a committed publication surface under `published/current/**` for runtime/docs/deploy consumption, while local memory preparation refreshes that surface from a gitignored upstream working copy (`bun run spec:download` or `FPF_PUBLISH_SOURCE_PATH`).
 
 It uses:
 
@@ -20,8 +20,9 @@ It uses:
 
 ## Scope
 
-- Runtime source set: one markdown spec file (default path after download: `.fpf-upstream/FPF-Spec.md`)
-- Generated pattern/route markdown: `docs/generated/**` (not committed; run `bun run docs:generate` after `spec:download`)
+- Runtime source set: one markdown spec file (default runtime path: `published/current/FPF-Spec.md`)
+- Local publish source: `.fpf-upstream/FPF-Spec.md` (gitignored) or any local checkout wired via `FPF_PUBLISH_SOURCE_PATH`
+- Generated pattern/route markdown: `docs/generated/**` (not committed; run `bun run docs:generate` against the published surface)
 - Static docs build output: `doc_build/` (deterministic, ignored)
 - Validation/tuning corpus: outside the runtime path
 - No vector database
@@ -33,7 +34,8 @@ It uses:
 Copy `.env.example` to `.env` and set:
 
 ```bash
-FPF_SPEC_SOURCE_PATH=.fpf-upstream/FPF-Spec.md
+FPF_SPEC_SOURCE_PATH=published/current/FPF-Spec.md
+FPF_PUBLISH_SOURCE_PATH=.fpf-upstream/FPF-Spec.md
 FPF_RUNTIME_ARTIFACT_DIR=.runtime/fpf-index
 FPF_QUERY_DEFAULT_MODE=verbose
 FPF_LOCAL_LLM_BASE_URL=http://localhost:1234/v1
@@ -50,7 +52,7 @@ FPF_MASTRA_OBSERVABILITY_LOG_LEVEL=info
 FPF_AI_TRACE_LOG_PATH=.runtime/logs/ai-traces.jsonl
 ```
 
-`FPF_SPEC_SOURCE_PATH` must be a **local filesystem path** (the runtime does not fetch `https://` URLs). The default when unset matches **`bun run spec:download`**: `.fpf-upstream/FPF-Spec.md` (gitignored). Run **`bun run spec:download`** after clone, or point `FPF_SPEC_SOURCE_PATH` at a local checkout of [github.com/venikman/fpf-sync](https://github.com/venikman/fpf-sync) such as [`FPF/FPF-Spec.md`](https://github.com/venikman/fpf-sync/blob/main/FPF/FPF-Spec.md). Override the download URL or output path with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`. Use the same `FPF_SPEC_SOURCE_PATH` in `.env`, your shell, and any MCP config (`server.json` `env`) so every entrypoint agrees.
+`FPF_SPEC_SOURCE_PATH` must be a **local filesystem path** (the runtime does not fetch `https://` URLs). The default when unset is the committed publication surface: `published/current/FPF-Spec.md`. Local memory preparation uses `FPF_PUBLISH_SOURCE_PATH`, which defaults to `.fpf-upstream/FPF-Spec.md` after `bun run spec:download`. You can instead point `FPF_PUBLISH_SOURCE_PATH` at a local checkout of [github.com/venikman/fpf-sync](https://github.com/venikman/fpf-sync) such as [`FPF/FPF-Spec.md`](https://github.com/venikman/fpf-sync/blob/main/FPF/FPF-Spec.md). Override the download URL or output path with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`. Keep `FPF_SPEC_SOURCE_PATH` aligned across `.env`, your shell, and any MCP config (`server.json` `env`) so every runtime/docs entrypoint agrees on the published file it should read.
 
 `FPF_QUERY_DEFAULT_MODE` applies to `query_fpf_spec` and `ask_fpf` when `mode` is omitted. `trace_fpf_path` stays `compact` by default.
 
@@ -74,6 +76,14 @@ The synthesizer posts to `{FPF_LOCAL_LLM_BASE_URL}/messages` with the Anthropic 
 ```bash
 bun install
 bun run spec:download
+bun run publish:current
+bun run evaluate:work
+bun run e2e:report -- cli
+bun run e2e:report -- docs
+bun run e2e:report -- deploy-dry-run
+bun run stage:from-published
+bun run mastra:build
+bun run hooks:install
 bun run docs:generate
 bun run lint
 bun run check
@@ -90,10 +100,38 @@ bun run cli -- query --question "How does it connect to role assignment?" --sess
 bun run cli -- inspect --selector "A.1.1"
 bun run cli -- read-doc --selector "A.1.1"
 bun run cli -- trace --question "How do U.RoleAssignment and U.BoundedContext connect?" --mode proof --session s1
+bun run cli -- evaluate-work --target current-pr --base origin/main --format markdown
+bun run cli -- evaluate-work --target current-pr --base origin/main --format json
 bun run cli -- lm-check --timeout-ms 60000
 bun run cli -- lm-check --base-url http://localhost:1234/v1 --api-key "$FPF_LOCAL_LLM_API_KEY" --timeout-ms 60000
 bun run mcp
 ```
+
+## FPF Work Evaluation
+
+Use the deterministic local evaluator when you want an FPF-grounded review of the current branch or worktree:
+
+```bash
+bun run evaluate:work
+bun run cli -- evaluate-work --target current-pr --base origin/main --format markdown
+bun run cli -- evaluate-work --target working-tree --base origin/main --format json
+bun run cli -- evaluate-work --spec ~/Downloads/FPF-Spec\(12\).md --out reports/fpf-work.md
+```
+
+The evaluator reads local git facts, the committed `published/current/**` surface, and the configured FPF spec. It does not call an LLM, fetch GitHub, or regenerate artifacts. By default it reads `FPF_SPEC_SOURCE_PATH` if set, otherwise `published/current/FPF-Spec.md`; it does not fall back to `.fpf-upstream/`.
+
+## E2E Video Reports
+
+Use `bun run e2e:report` whenever Codex needs to share an end-to-end verification run as video:
+
+```bash
+bun run e2e:report -- cli
+bun run e2e:report -- docs
+bun run e2e:report -- deploy-dry-run
+bun run e2e:report -- --name pr-review --command "bun run evaluate:work"
+```
+
+Artifacts are written to `.runtime/e2e-recordings/<timestamp>-<task>/` and are intentionally gitignored. Each run writes `commands.log`, `metadata.json`, `report.md`, `report.html`, and `e2e-report.webm`. Share the `e2e-report.webm` path or uploaded video link in PRs and final Codex responses. If Chromium is not installed for Playwright, run `bunx playwright install chromium` once and retry.
 
 ## Run And Test MCP
 
@@ -210,7 +248,7 @@ Call trace_fpf_path with:
 - `src/composition/`: canonical bridge layer for runtime/bootstrap composition
 - `src/compat/mastra/`: governed Mastra compatibility bootstrap layer
 - `src/mastra/mcp/server.ts`: compatibility shim for the legacy MCP server import path
-- `src/mastra/index.ts`: compatibility shim for direct `mastra build` / `mastra deploy`
+- `src/mastra/index.ts`: compatibility shim consumed by `bun run mastra:build` and Mastra deploy tooling
 - `src/mastra/stdio.ts`: stdio entry point for MCP clients
 - `src/server.ts`: Hono HTTP server bootstrap for Bun
 - `src/runtime/`: compiler, retrieval, trace, inspect, and synthesis logic
@@ -219,8 +257,8 @@ Call trace_fpf_path with:
 
 ## Docs surface
 
-- `docs/`: hand-authored Rspress landing content
-- `scripts/generate-docs.ts`: compiler-backed docs generation into `docs/generated/` (gitignored; run `docs:generate` after `spec:download`)
+- `docs/`: Rspress content root populated by generated pages plus any optional hand-authored pages
+- `scripts/generate-docs.ts`: compiler-backed docs generation into `docs/generated/` (gitignored; fed from `published/current/**` by default)
 - `rspress.config.ts`: docs site config
 
 ## MCP tool roles
@@ -260,8 +298,9 @@ Artifacts are stored under `.runtime/fpf-index/`.
 
 ## Docs surfaces
 
-- Spec source: path from `FPF_SPEC_SOURCE_PATH` (canonical upstream lives in [fpf-sync](https://github.com/venikman/fpf-sync))
-- `docs/generated/**`: produced locally by `docs:generate` (not committed; CI runs it before lint and deploy runs it via `docs:build`)
+- Spec source: path from `FPF_SPEC_SOURCE_PATH` (defaults to `published/current/FPF-Spec.md`; canonical upstream lives in [fpf-sync](https://github.com/venikman/fpf-sync))
+- Local publish source: path from `FPF_PUBLISH_SOURCE_PATH` (defaults to `.fpf-upstream/FPF-Spec.md` after `bun run spec:download`)
+- `docs/generated/**`: produced locally by `docs:generate` (not committed; CI and docs deploy read the committed publication surface and generate from it)
 - `doc_build/`: deterministic Rspress build output for the wiki-like static viewer
 
 The docs pipeline does not use an LLM step. `bun run docs:generate` writes the canonical markdown collection, and `bun run docs:build` builds the static viewer from that collection.
@@ -271,4 +310,3 @@ The docs pipeline does not use an LLM step. `bun run docs:generate` writes the c
 - `.runtime/logs/mastra.log`: structured runtime server/tool logs
 - `.runtime/logs/mastra-observability.json`: runtime observability snapshot containing manual LM Studio `model_generation` traces
 - `.runtime/logs/ai-traces.jsonl`: request/response/error traces for local LM Studio synthesis calls
-
