@@ -311,6 +311,18 @@ describe('Mastra MCP server', () => {
     expect(readRouteDocPayload.nodeId).toBe('route:project-alignment');
     expect(readRouteDocPayload.markdown).toContain('# project alignment');
 
+    const readBoundaryRouteDoc = await harness.request('tools/call', {
+      name: 'read_fpf_doc',
+      arguments: {
+        selector: 'route:boundary-burden',
+        kind: 'route',
+      },
+    });
+    const readBoundaryRouteDocPayload = asToolPayload(readBoundaryRouteDoc);
+    expect(readBoundaryRouteDocPayload.resolvedAs).toBe('route');
+    expect(readBoundaryRouteDocPayload.nodeId).toBe('route:boundary-burden');
+    expect(readBoundaryRouteDocPayload.markdown).toContain('# boundary burden');
+
     const ask = await harness.request('tools/call', {
       name: 'ask_fpf',
       arguments: {
@@ -319,6 +331,7 @@ describe('Mastra MCP server', () => {
     });
     const askPayload = asToolPayload(ask);
     expect(askPayload.mode).toBe('verbose');
+    expect(askPayload.ids).toContain('route:project-alignment');
     expect(askPayload.markdown).toContain('## Result');
     expect(askPayload.markdown).toContain('## Grounding');
   });

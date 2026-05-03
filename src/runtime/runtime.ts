@@ -225,6 +225,7 @@ export class FpfRuntime {
     }
 
     const currentSourceHash = await hashFile(this.sourcePath);
+    const synthesizer = await this.synthesizerStatus();
     return {
       sourcePath: this.sourcePath,
       sourceHash: existingSnapshot?.sourceHash,
@@ -237,15 +238,54 @@ export class FpfRuntime {
         existingSnapshot.sourceHash === currentSourceHash,
       compilerMode: 'local_vectorless',
       artifacts: await this.getArtifactPresence(),
-      synthesizer: this.synthesizer?.describe
-        ? {
-            configured: true,
-            ...this.synthesizer.describe(),
-          }
-        : { configured: false },
+      synthesizer,
       observability: this.observabilitySummary,
       sessionCache: this.sessionCache.summary(),
     };
+  }
+
+  private async synthesizerStatus(): Promise<RuntimeStatus['synthesizer']> {
+    if (!this.synthesizer) {
+      return {
+        configured: false,
+        availability: 'not_configured',
+      };
+    }
+
+    const base = this.synthesizer.describe
+      ? {
+          configured: true,
+          ...this.synthesizer.describe(),
+        }
+      : { configured: true };
+
+    if (!this.synthesizer.checkAvailability) {
+      const available = await this.synthesizer.isAvailable();
+      return {
+        ...base,
+        availability: available ? 'unknown' : 'unavailable',
+        checkedAt: new Date().toISOString(),
+      };
+    }
+
+    try {
+      return {
+        ...base,
+        ...(await this.synthesizer.checkAvailability()),
+      };
+    } catch (error) {
+      return {
+        ...base,
+        availability: 'unknown',
+        checkedAt: new Date().toISOString(),
+        failure: {
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Synthesizer availability check failed with an unknown error.',
+        },
+      };
+    }
   }
 
   async browse(

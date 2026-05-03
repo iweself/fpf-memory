@@ -303,6 +303,31 @@ describe('LmStudioSynthesizer', () => {
     expect(result.modelDiscovery.error).toContain('boom:http://localhost:1234/v1/models');
   });
 
+  it('reports synthesizer availability separately from index freshness', async () => {
+    const runtime = new FpfRuntime({
+      sourcePath,
+      artifactDir,
+      synthesizer: new LmStudioSynthesizer({
+        baseUrl: 'http://localhost:1234/v1',
+        model: 'google/gemma-4-31b',
+        fetchImpl: async () =>
+          new Response('ngrok 404', {
+            status: 404,
+            headers: { 'Content-Type': 'text/plain' },
+          }),
+      }),
+    });
+
+    const status = await runtime.status();
+
+    expect(status.fresh).toBe(true);
+    expect(status.synthesizer.configured).toBe(true);
+    expect(status.synthesizer.availability).toBe('unavailable');
+    expect(status.synthesizer.checkedAt).toBeDefined();
+    expect(status.synthesizer.failure?.httpStatus).toBe(404);
+    expect(status.synthesizer.failure?.endpoint).toBe('http://localhost:1234/v1/messages');
+  });
+
   it('falls back deterministically when LM Studio returns an error', async () => {
     const runtime = new FpfRuntime({
       sourcePath,

@@ -12,6 +12,7 @@ import { isAmbiguous, rankCandidates } from '../src/runtime/candidate-ranker.js'
 import { expandGrounding } from '../src/runtime/frontier-expander.js';
 import {
   buildPatternAnswer,
+  buildRouteAnswer,
   confidenceFromTrace,
   gapsFromTrace,
   prepareSynthesisSlices,
@@ -197,6 +198,18 @@ describe('Query / Seed coverage stage', () => {
     expect(routeFrontier.length).toBeGreaterThan(0);
   });
 
+  it('does not seed punctuation-wrapped stop words as lexeme candidates', async () => {
+    const snapshot = await getSnapshot();
+    const normalized = normalizeQuery(
+      'As a project lead, what route and questions should I use?',
+      snapshot,
+    );
+    const seeding = seedCandidates(normalized, snapshot);
+
+    expect(normalized.detected.lexemes).not.toContain(', and');
+    expect(seeding.candidateMap.has('lex:and')).toBe(false);
+  });
+
   it('produces few or low-scoring candidates for a completely unrelated question', async () => {
     const snapshot = await getSnapshot();
     const normalized = normalizeQuery('__FPFTEST_NONSENSE_999__', snapshot);
@@ -245,6 +258,41 @@ describe('Query / Ranker stage', () => {
       (id) => snapshot.compiledNodes[id]?.kind === 'route',
     );
     expect(routeNodes.length).toBeGreaterThan(0);
+  });
+
+  it('pins the project-alignment route when the route selector is explicit', async () => {
+    const snapshot = await getSnapshot();
+    const question =
+      'Using route:project-alignment, give a compact project kickoff work packet.';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+
+    expect(ranking.routeWins).toBe(true);
+    expect(ranking.initialNodeIds).toEqual(['route:project-alignment']);
+  });
+
+  it('selects project alignment for project kickoff and information-system modeling', async () => {
+    const snapshot = await getSnapshot();
+    const question = 'Give me a checklist for how to model my project information system.';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+
+    expect(ranking.routeWins).toBe(true);
+    expect(ranking.initialNodeIds).toEqual(['route:project-alignment']);
+  });
+
+  it('selects boundary burden for API boundary kickoff questions', async () => {
+    const snapshot = await getSnapshot();
+    const question =
+      'As a project lead, what small FPF route should I use to run a 30-minute project kickoff about an API boundary decision?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+
+    expect(ranking.routeWins).toBe(true);
+    expect(ranking.initialNodeIds).toEqual(['route:boundary-burden']);
   });
 });
 
@@ -380,6 +428,29 @@ describe('Query / Projection stability stage', () => {
 
     expect(result.groundingChain).toBeDefined();
     expect(result.groundingChain!.length).toBeGreaterThan(0);
+  });
+
+  it('projects route answers with route ID, acceptance check, and next move', async () => {
+    const snapshot = await getSnapshot();
+    const question = 'Give me a checklist for how to model my project information system.';
+    const trace = assembleTrace(question, 'compact', snapshot);
+
+    expect(trace.routeWins).toBe(true);
+    expect(trace.selectedNodeIds[0]).toBe('route:project-alignment');
+
+    const result = buildRouteAnswer(
+      question,
+      'compact',
+      'route:project-alignment',
+      trace,
+      snapshot,
+      false,
+    );
+
+    expect(result.ids[0]).toBe('route:project-alignment');
+    expect(result.ids).toContain('A.1.1');
+    expect(result.answer).toContain('Acceptance check:');
+    expect(result.answer).toContain('Next move:');
   });
 
   it('returns low confidence for completely unresolvable questions', async () => {

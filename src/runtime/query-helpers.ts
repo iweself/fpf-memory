@@ -72,6 +72,16 @@ export function scoreRouteQuery(
         score += 30;
         reasons.push('route-name');
       }
+      const selectorScore = scoreExplicitRouteSelector(normalizedQuestion, route);
+      if (selectorScore > 0) {
+        score += selectorScore;
+        reasons.push('route-selector');
+      }
+      const adoptionScore = scoreAdoptionRouteIntent(normalizedQuestion, route);
+      if (adoptionScore > 0) {
+        score += adoptionScore;
+        reasons.push('adoption-route-intent');
+      }
       if (normalizedQuestion.includes('route')) {
         score += 5;
         reasons.push('route-word');
@@ -79,6 +89,110 @@ export function scoreRouteQuery(
       return { route, score, reasons };
     })
     .sort((left, right) => right.score - left.score);
+}
+
+function scoreExplicitRouteSelector(normalizedQuestion: string, route: RouteRecord): number {
+  const routeId = normalizeForLookup(route.id);
+  const bareId = routeId.replace(/^route:/, '');
+  const underscoreId = routeId.replace(/^route:/, 'route_');
+  const spacedName = normalizeForLookup(route.name);
+  if (
+    normalizedQuestion.includes(routeId) ||
+    normalizedQuestion.includes(underscoreId) ||
+    normalizedQuestion.includes(`route ${bareId}`) ||
+    normalizedQuestion.includes(`route ${spacedName}`)
+  ) {
+    return 120;
+  }
+  return 0;
+}
+
+function scoreAdoptionRouteIntent(normalizedQuestion: string, route: RouteRecord): number {
+  switch (route.id) {
+    case 'route:project-alignment':
+      return scoreProjectAlignmentIntent(normalizedQuestion);
+    case 'route:boundary-burden':
+      return scoreBoundaryBurdenIntent(normalizedQuestion);
+    case 'route:boundary-unpacking':
+      return scoreBoundaryUnpackingIntent(normalizedQuestion);
+    default:
+      return 0;
+  }
+}
+
+function scoreProjectAlignmentIntent(normalizedQuestion: string): number {
+  const projectSignals = [
+    'project kickoff',
+    'project lead',
+    'new adopter',
+    'project information system',
+    'information system',
+    'model my project',
+    'align a project',
+    'align a new project',
+    'aligning a new project',
+    'first shared work surface',
+  ];
+  if (projectSignals.some((signal) => normalizedQuestion.includes(signal))) {
+    return 76;
+  }
+  if (
+    normalizedQuestion.includes('project') &&
+    (normalizedQuestion.includes('kickoff') ||
+      normalizedQuestion.includes('model') ||
+      normalizedQuestion.includes('align') ||
+      normalizedQuestion.includes('smallest') ||
+      normalizedQuestion.includes('work packet'))
+  ) {
+    return 64;
+  }
+  return 0;
+}
+
+function scoreBoundaryBurdenIntent(normalizedQuestion: string): number {
+  const boundarySignals = [
+    'api',
+    'boundary',
+    'interface',
+    'contract',
+    'protocol',
+    'slo',
+    'sla',
+    'acceptance',
+    'compliance',
+    'ownership',
+  ];
+  const jobSignals = [
+    'kickoff',
+    'project lead',
+    'route',
+    'smallest',
+    'work packet',
+    'decision',
+    'questions',
+  ];
+  if (
+    boundarySignals.some((signal) => normalizedQuestion.includes(signal)) &&
+    jobSignals.some((signal) => normalizedQuestion.includes(signal))
+  ) {
+    return 92;
+  }
+  return 0;
+}
+
+function scoreBoundaryUnpackingIntent(normalizedQuestion: string): number {
+  const unpackingSignals = [
+    'claim register',
+    'atomic claim',
+    'atomic claims',
+    'decompose',
+    'decomposed',
+    'unpack',
+    'unpacking',
+    'mixed sentence',
+    'mixed statements',
+  ];
+  return unpackingSignals.some((signal) => normalizedQuestion.includes(signal)) ? 96 : 0;
 }
 
 export function selectBestAnchors(
@@ -186,5 +300,11 @@ export function findLexemeMatches(
 }
 
 function isLowSignalLexemeKey(key: string): boolean {
-  return key.length < 3 || /^[a-z]+$/.test(key);
+  const normalized = normalizeForLookup(key);
+  const wordish = normalized.replace(/[^a-z0-9]+/g, ' ').trim();
+  return (
+    normalized.length < 3 ||
+    tokenize(wordish).length === 0 ||
+    /^[a-z]+$/.test(wordish)
+  );
 }
