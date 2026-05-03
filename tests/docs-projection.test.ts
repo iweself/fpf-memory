@@ -225,6 +225,7 @@ describe('docs projection', () => {
       expect(rootIndex).toContain('[Work packets](/work-packets)');
       expect(rootIndex).toContain('product-role feedback');
       expect(rootIndex).toContain('[MCP recipes](/mcp-recipes)');
+      expect(rootIndex).toContain('[Connect MCP](/connect-mcp)');
       expect(rootIndex).toContain('[Demo videos](/use-case-videos)');
       expect(rootIndex).toContain('## Navigate');
       expect(rootIndex).toContain('[Patterns](/generated/patterns/index)');
@@ -313,6 +314,21 @@ describe('docs projection', () => {
       );
       expect(await readFile(resolve(outDir, 'mcp-recipes.html'), 'utf8')).toContain(
         'Review a PR without full-spec paste',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'Connect fpf-memory MCP',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'Codex CLI',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'Claude Code',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'Pi MCP extension',
       );
       expect(await readFile(resolve(outDir, 'use-case-videos.html'), 'utf8')).toContain(
         'Product-level FPF use case recordings',

@@ -60,6 +60,10 @@ export default defineConfig({
         link: '/mcp-recipes',
       },
       {
+        text: 'Connect MCP',
+        link: '/connect-mcp',
+      },
+      {
         text: 'Demo Videos',
         link: '/use-case-videos',
       },
