@@ -148,6 +148,7 @@ export {
   scorePatternQuery,
   scoreRouteQuery,
   selectBestAnchors,
+  selectFastRouteMatch,
 } from './query-helpers.js';
 
 function buildHeuristicSeedRules(

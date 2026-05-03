@@ -11,6 +11,12 @@ import {
 } from './text.js';
 import type { AnchorRef, LexiconEntry, PatternRecord, RouteRecord, SectionRole } from './types.js';
 
+export interface FastRouteMatch {
+  routeId: string;
+  score: number;
+  reason: string;
+}
+
 export function isPartCDraftQuery(question: string): boolean {
   const normalized = normalizeForLookup(question);
   return normalized.includes('draft') && normalized.includes('part c');
@@ -91,6 +97,43 @@ export function scoreRouteQuery(
     .sort((left, right) => right.score - left.score);
 }
 
+export function selectFastRouteMatch(
+  question: string,
+  routes: Record<string, RouteRecord>,
+): FastRouteMatch | undefined {
+  const normalizedQuestion = normalizeForLookup(question);
+  const candidates = Object.values(routes)
+    .map((route) => {
+      const explicitScore = scoreExplicitRouteSelector(normalizedQuestion, route);
+      const adoptionScore = scoreAdoptionRouteIntent(normalizedQuestion, route);
+      const routeNameScore = normalizedQuestion.includes(normalizeForLookup(route.name))
+        ? 30
+        : 0;
+      const score = explicitScore + adoptionScore + routeNameScore;
+      const reasons = [
+        explicitScore > 0 ? 'route-selector' : '',
+        adoptionScore > 0 ? 'adoption-route-intent' : '',
+        routeNameScore > 0 ? 'route-name' : '',
+      ].filter(Boolean);
+      return {
+        route,
+        score,
+        reason: reasons.join(','),
+      };
+    })
+    .filter((candidate) => candidate.score >= 30)
+    .sort((left, right) => right.score - left.score || left.route.id.localeCompare(right.route.id));
+
+  const best = candidates[0];
+  return best
+    ? {
+        routeId: best.route.id,
+        score: best.score,
+        reason: best.reason,
+      }
+    : undefined;
+}
+
 function scoreExplicitRouteSelector(normalizedQuestion: string, route: RouteRecord): number {
   const routeId = normalizeForLookup(route.id);
   const bareId = routeId.replace(/^route:/, '');
@@ -132,6 +175,8 @@ function scoreProjectAlignmentIntent(normalizedQuestion: string): number {
     'align a new project',
     'aligning a new project',
     'first shared work surface',
+    'vocabulary is overloaded',
+    'overloaded across teams',
   ];
   if (projectSignals.some((signal) => normalizedQuestion.includes(signal))) {
     return 76;

@@ -454,6 +454,27 @@ describe('Query / Projection stability stage', () => {
     expect(result.answer).toContain('Next move:');
   });
 
+  it('uses a compact route trace shortcut for adoption kickoff queries', async () => {
+    const snapshot = await getSnapshot();
+    const engine = new QueryEngine(snapshot, false);
+    const trace = engine.trace(
+      'Project kickoff: align a project information system with roles and adoption next steps',
+      'compact',
+    );
+
+    expect(trace.routeWins).toBe(true);
+    expect(trace.selectedNodeIds[0]).toBe('route:project-alignment');
+    expect(trace.candidateScores).toEqual([
+      expect.objectContaining({
+        nodeId: 'route:project-alignment',
+        kind: 'route',
+      }),
+    ]);
+    expect(trace.frontierCandidates.every((candidate) => candidate.origin === 'route_expansion'))
+      .toBe(true);
+    expect(trace.retrievalHops).toHaveLength(1);
+  });
+
   it('returns low confidence for completely unresolvable questions', async () => {
     const snapshot = await getSnapshot();
     const trace = assembleTrace('__FPFTEST_NONSENSE_999__', 'compact', snapshot);
