@@ -320,7 +320,6 @@ function renderHomeMarkdown(
     '- [Work packets](/work-packets) — use FPF in project review, PR review, product-role feedback, specification work, role/promise/capability analysis, and agent workflows.',
     '- [Connect MCP](/connect-mcp) — plug the hosted MCP endpoint into chat clients, editors, and coding CLIs.',
     '- [MCP recipes](/mcp-recipes) — retrieve compact grounded slices from the hosted or local MCP server.',
-    '- [Demo videos](/use-case-videos) — record CSS-rendered walkthroughs that show how people and agents use FPF without a full-spec paste.',
     '',
     '## Navigate',
     '',

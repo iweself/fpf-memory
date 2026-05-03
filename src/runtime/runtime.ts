@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
+import { computeCompilerFingerprint } from '../build/compiler-fingerprint.js';
 import {
   ARTIFACT_FILENAMES,
   DEFAULT_ARTIFACT_DIR,
@@ -103,7 +104,12 @@ export class FpfRuntime {
     });
   }
 
-  async refresh(force = false, allowMemoryCache = false): Promise<BuildAudit> {
+  async refresh(
+    force = false,
+    options: boolean | { compilerFingerprint?: string; allowMemoryCache?: boolean } = {},
+  ): Promise<BuildAudit> {
+    const allowMemoryCache =
+      typeof options === 'boolean' ? options : options.allowMemoryCache ?? false;
     await mkdir(this.artifactDir, { recursive: true });
     const sourceFingerprint = await fingerprintFile(this.sourcePath);
     if (
@@ -120,9 +126,19 @@ export class FpfRuntime {
     }
 
     const currentSourceHash = await hashFile(this.sourcePath);
+    const currentCompilerFingerprint =
+      typeof options === 'object' && Object.hasOwn(options, 'compilerFingerprint')
+        ? options.compilerFingerprint
+        : await readCurrentCompilerFingerprint();
     await this.loadSessionCacheOnce(currentSourceHash);
     const existingSnapshot = await this.loadSnapshot();
-    const compatibleSnapshot = existingSnapshot && !snapshotNeedsRebuild(existingSnapshot);
+    const staleSnapshotShape = existingSnapshot
+      ? snapshotShapeNeedsRebuild(existingSnapshot)
+      : false;
+    const staleCompilerFingerprint = existingSnapshot
+      ? snapshotCompilerFingerprintChanged(existingSnapshot, currentCompilerFingerprint)
+      : false;
+    const compatibleSnapshot = existingSnapshot && !staleSnapshotShape && !staleCompilerFingerprint;
 
     if (!force && compatibleSnapshot && existingSnapshot.sourceHash === currentSourceHash) {
       const audit: BuildAudit = {
@@ -153,6 +169,7 @@ export class FpfRuntime {
     const { snapshot } = compileFpfSource({
       sourcePath: this.sourcePath,
       sourceHash: currentSourceHash,
+      compilerFingerprint: currentCompilerFingerprint,
       builtAt,
       sourceText,
     });
@@ -171,13 +188,13 @@ export class FpfRuntime {
       previousSourceHash: existingSnapshot?.sourceHash,
       builtAt,
       rebuilt: true,
-      reason: force
-        ? 'forced'
-        : existingSnapshot
-          ? compatibleSnapshot
-            ? 'source_hash_changed'
-            : 'missing_snapshot'
-          : 'missing_snapshot',
+      reason: refreshReasonForRebuild({
+        force,
+        existingSnapshot,
+        staleSnapshotShape,
+        staleCompilerFingerprint,
+        currentSourceHash,
+      }),
       validation: snapshot.validation,
       refreshClassification,
       compiler: buildCompilerSummary(snapshot),
@@ -241,11 +258,14 @@ export class FpfRuntime {
 
   async status(): Promise<RuntimeStatus> {
     let existingSnapshot = await this.loadSnapshot();
-    if (!existingSnapshot || snapshotNeedsRebuild(existingSnapshot)) {
-      await this.refresh(false).catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        console.warn(`[FpfRuntime.status] refresh(false) failed: ${message}`);
-      });
+    const currentCompilerFingerprint = await readCurrentCompilerFingerprint();
+    if (!existingSnapshot || snapshotNeedsRebuild(existingSnapshot, currentCompilerFingerprint)) {
+      await this.refresh(false, { compilerFingerprint: currentCompilerFingerprint }).catch(
+        (error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(`[FpfRuntime.status] refresh(false) failed: ${message}`);
+        },
+      );
       existingSnapshot = await this.loadSnapshot();
     }
 
@@ -259,7 +279,7 @@ export class FpfRuntime {
       currentSourceHash,
       fresh:
         existingSnapshot != null &&
-        !snapshotNeedsRebuild(existingSnapshot) &&
+        !snapshotNeedsRebuild(existingSnapshot, currentCompilerFingerprint) &&
         existingSnapshot.sourceHash === currentSourceHash,
       compilerMode: 'local_vectorless',
       artifacts: await this.getArtifactPresence(),
@@ -564,7 +584,45 @@ function buildCompilerSummary(snapshot: Snapshot): BuildAudit['compiler'] {
   };
 }
 
-function snapshotNeedsRebuild(snapshot: Snapshot): boolean {
+function refreshReasonForRebuild(params: {
+  force: boolean;
+  existingSnapshot: Snapshot | undefined;
+  staleSnapshotShape: boolean;
+  staleCompilerFingerprint: boolean;
+  currentSourceHash: string;
+}): BuildAudit['reason'] {
+  if (params.force) {
+    return 'forced';
+  }
+  if (!params.existingSnapshot || params.staleSnapshotShape) {
+    return 'missing_snapshot';
+  }
+  if (params.existingSnapshot.sourceHash !== params.currentSourceHash) {
+    return 'source_hash_changed';
+  }
+  if (params.staleCompilerFingerprint) {
+    return 'compiler_changed';
+  }
+  throw new Error('refreshReasonForRebuild called without a rebuild reason');
+}
+
+async function readCurrentCompilerFingerprint(): Promise<string | undefined> {
+  try {
+    return await computeCompilerFingerprint();
+  } catch {
+    return undefined;
+  }
+}
+
+function snapshotNeedsRebuild(
+  snapshot: Snapshot,
+  currentCompilerFingerprint?: string,
+): boolean {
+  return snapshotShapeNeedsRebuild(snapshot)
+    || snapshotCompilerFingerprintChanged(snapshot, currentCompilerFingerprint);
+}
+
+function snapshotShapeNeedsRebuild(snapshot: Snapshot): boolean {
   if (!Array.isArray(snapshot.heuristicSeedRules)) {
     return true;
   }
@@ -574,6 +632,16 @@ function snapshotNeedsRebuild(snapshot: Snapshot): boolean {
       !node.metadata ||
       typeof node.metadata.role !== 'string' ||
       typeof node.metadata.routeBearing !== 'boolean',
+  );
+}
+
+function snapshotCompilerFingerprintChanged(
+  snapshot: Snapshot,
+  currentCompilerFingerprint?: string,
+): boolean {
+  return Boolean(
+    currentCompilerFingerprint &&
+      snapshot.compilerFingerprint !== currentCompilerFingerprint,
   );
 }
 

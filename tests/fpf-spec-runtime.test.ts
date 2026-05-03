@@ -232,6 +232,40 @@ describe('FpfRuntime', () => {
     expect(trace.sufficient).toBe(true);
   });
 
+  it('returns the boundary-burden route for PR reviewer API contract prompts', async () => {
+    await runtime.refresh();
+    const question =
+      'For a PR/code reviewer checking an API contract change, return exact route or pattern IDs and acceptance checks without pasting the full FPF.';
+    const route = await runtime.query(question, 'compact');
+
+    expect(route.status).toBe('ok');
+    expect(route.ids.slice(0, 4)).toEqual([
+      'route:boundary-burden',
+      'A.6',
+      'A.6.B',
+      'A.6.C',
+    ]);
+    expect(route.ids).toEqual(expect.arrayContaining(['A.6.P', 'A.6.Q', 'A.6.A']));
+    expect(route.answer).toContain('route:boundary-burden');
+    expect(route.constraints).toContain(
+      'Do not open the whole FPF; read exact pattern pages only when a finding depends on wording.',
+    );
+
+    const ask = renderAskFpfResult(route);
+    expect(ask.ids.slice(0, 4)).toEqual([
+      'route:boundary-burden',
+      'A.6',
+      'A.6.B',
+      'A.6.C',
+    ]);
+    expect(ask.markdown).toContain('route:boundary-burden');
+
+    const trace = await runtime.trace(question, 'compact');
+    expect(trace.status).toBe('ok');
+    expect(trace.routeWins).toBe(true);
+    expect(trace.selectedNodeIds).toContain('route:boundary-burden');
+  });
+
   // This test chains `refresh()` (full snapshot build, ~16–18s on GitHub
   // ubuntu-latest runners) with many downstream inspect/readDoc/trace calls.
   // The default 20s global timeout consistently tips over on CI. Give it the

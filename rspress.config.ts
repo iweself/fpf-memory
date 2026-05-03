@@ -64,10 +64,6 @@ export default defineConfig({
         link: '/connect-mcp',
       },
       {
-        text: 'Demo Videos',
-        link: '/use-case-videos',
-      },
-      {
         text: 'Patterns',
         link: '/generated/patterns/index',
       },

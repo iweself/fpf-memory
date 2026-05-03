@@ -199,6 +199,32 @@ describe('Query / Seed coverage stage', () => {
     expect(routeFrontier.length).toBeGreaterThan(0);
   });
 
+  it('seeds the boundary route for reviewer API contract prompts', async () => {
+    const snapshot = await getSnapshot();
+    const normalized = normalizeQuery(
+      'For a PR/code reviewer checking an API contract change, return exact route or pattern IDs and acceptance checks without pasting the full FPF.',
+      snapshot,
+    );
+    const seeding = seedCandidates(normalized, snapshot);
+
+    const routeCandidate = seeding.candidateMap.get('route:boundary-burden');
+    expect(routeCandidate).toBeDefined();
+    expect(routeCandidate!.reasons).toContain('burden:boundary-review');
+    expect(routeCandidate!.score).toBeGreaterThanOrEqual(90);
+  });
+
+  it('does not seed the boundary route from substring-only change or ci matches', async () => {
+    const snapshot = await getSnapshot();
+    const normalized = normalizeQuery(
+      'What practices should change for specification compliance?',
+      snapshot,
+    );
+    const seeding = seedCandidates(normalized, snapshot);
+
+    const routeCandidate = seeding.candidateMap.get('route:boundary-burden');
+    expect(routeCandidate?.reasons ?? []).not.toContain('burden:boundary-review');
+  });
+
   it('does not seed punctuation-wrapped stop words as lexeme candidates', async () => {
     const snapshot = await getSnapshot();
     const normalized = normalizeQuery(
@@ -288,6 +314,18 @@ describe('Query / Ranker stage', () => {
     const snapshot = await getSnapshot();
     const question =
       'As a project lead, what small FPF route should I use to run a 30-minute project kickoff about an API boundary decision?';
+    const normalized = normalizeQuery(question, snapshot);
+    const seeding = seedCandidates(normalized, snapshot);
+    const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
+
+    expect(ranking.routeWins).toBe(true);
+    expect(ranking.initialNodeIds).toEqual(['route:boundary-burden']);
+  });
+
+  it('selects the boundary route for PR reviewer API contract prompts', async () => {
+    const snapshot = await getSnapshot();
+    const question =
+      'For a PR/code reviewer checking an API contract change, return exact route or pattern IDs and acceptance checks without pasting the full FPF.';
     const normalized = normalizeQuery(question, snapshot);
     const seeding = seedCandidates(normalized, snapshot);
     const ranking = rankCandidates(question, seeding.candidateMap, snapshot);
@@ -632,7 +670,9 @@ describe('Query / Synthesis isolation stage', () => {
 
     expect(trace.routeWins).toBe(true);
     expect(result.ids[0]).toBe('route:project-alignment');
-    expect(result.answer).toContain('project alignment is the matched first-practical route');
+    expect(result.answer).toContain(
+      'route:project-alignment (project alignment) is the matched first-practical route',
+    );
     expect(result.answer).toContain('Acceptance check:');
     expect(isAvailableCalled).toBe(false);
     expect(synthesizeCalled).toBe(false);
