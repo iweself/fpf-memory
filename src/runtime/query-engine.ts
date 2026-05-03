@@ -112,6 +112,10 @@ export class QueryEngine {
       ? buildRouteAnswer(question, mode, routeNodeId, trace, this.snapshot, this.rebuilt)
       : buildPatternAnswer(question, mode, trace, this.snapshot, this.rebuilt);
 
+    if (routeNodeId && shouldUseDeterministicRouteFastPath(mode, trace)) {
+      return deterministic;
+    }
+
     if (!this.synthesizer) {
       return deterministic;
     }
@@ -523,4 +527,11 @@ export class QueryEngine {
       snapshot: { ...this.snapshotRef(), rebuilt: this.rebuilt },
     };
   }
+}
+
+function shouldUseDeterministicRouteFastPath(
+  mode: AnswerMode,
+  trace: TraceResult,
+): boolean {
+  return mode === 'compact' && trace.routeWins && trace.status === 'ok';
 }

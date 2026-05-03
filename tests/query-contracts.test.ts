@@ -10,6 +10,7 @@ import { normalizeQuery } from '../src/runtime/query-normalizer.js';
 import { seedCandidates } from '../src/runtime/candidate-seeder.js';
 import { isAmbiguous, rankCandidates } from '../src/runtime/candidate-ranker.js';
 import { expandGrounding } from '../src/runtime/frontier-expander.js';
+import { QueryEngine } from '../src/runtime/query-engine.js';
 import {
   buildPatternAnswer,
   buildRouteAnswer,
@@ -585,6 +586,62 @@ describe('Query / Synthesis isolation stage', () => {
     );
 
     expect(synthesizeCalled).toBe(false);
+  });
+
+  it('skips synthesis for compact route answers even when a synthesizer is available', async () => {
+    const snapshot = await getSnapshot();
+    const question =
+      'Using route:project-alignment, give a compact project kickoff work packet.';
+    const trace = assembleTrace(question, 'compact', snapshot);
+    let isAvailableCalled = false;
+    let synthesizeCalled = false;
+    const synthesizer: LocalAnswerSynthesizer = {
+      isAvailable: async () => {
+        isAvailableCalled = true;
+        return true;
+      },
+      synthesize: async () => {
+        synthesizeCalled = true;
+        return { answer: 'unexpected synthesized route answer' };
+      },
+    };
+    const engine = new QueryEngine(snapshot, false, synthesizer);
+
+    const result = await engine.answerFromTrace(question, 'compact', trace);
+
+    expect(trace.routeWins).toBe(true);
+    expect(result.ids[0]).toBe('route:project-alignment');
+    expect(result.answer).toContain('project alignment is the matched first-practical route');
+    expect(result.answer).toContain('Acceptance check:');
+    expect(isAvailableCalled).toBe(false);
+    expect(synthesizeCalled).toBe(false);
+  });
+
+  it('still allows synthesis for non-compact route answers', async () => {
+    const snapshot = await getSnapshot();
+    const question =
+      'Using route:project-alignment, explain the project kickoff work packet.';
+    const trace = assembleTrace(question, 'verbose', snapshot);
+    let synthesizeCalled = false;
+    const synthesizer: LocalAnswerSynthesizer = {
+      isAvailable: async () => true,
+      synthesize: async () => {
+        synthesizeCalled = true;
+        return {
+          answer: 'synthesized verbose route answer',
+          confidence: 1,
+          gaps: [],
+        };
+      },
+    };
+    const engine = new QueryEngine(snapshot, false, synthesizer);
+
+    const result = await engine.answerFromTrace(question, 'verbose', trace);
+
+    expect(trace.routeWins).toBe(true);
+    expect(synthesizeCalled).toBe(true);
+    expect(result.ids[0]).toBe('route:project-alignment');
+    expect(result.answer).toBe('synthesized verbose route answer');
   });
 });
 
