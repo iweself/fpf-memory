@@ -17,6 +17,10 @@ import {
   SessionCache,
   type RetrievalSessionState,
 } from './session-cache.js';
+import {
+  collapseWhitespace,
+  findTokenPosition,
+} from './text-scan.js';
 import type {
   AnswerMode,
   BrowseCatalogResult,
@@ -723,41 +727,13 @@ function nodeToCatalogEntry(
 
 const SNIPPET_RADIUS = 80;
 
-function findTokenPosition(
-  searchableText: string,
-  lower: string,
-  token: string,
-): { pos: number; len: number } | undefined {
-  // Try literal substring match first.
-  const literalPos = lower.indexOf(token);
-  if (literalPos !== -1) {
-    return { pos: literalPos, len: token.length };
-  }
-
-  // For collapsed tokens (e.g. "a23" from "A.2.3"), try matching with
-  // optional non-alphanumeric separators between each character.
-  if (token.length > 0) {
-    const escaped = Array.from(token).map((c) =>
-      c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-    );
-    const pattern = new RegExp(escaped.join('[^a-z0-9]*'), 'i');
-    const match = pattern.exec(searchableText);
-    if (match && match.index !== undefined) {
-      return { pos: match.index, len: match[0].length };
-    }
-  }
-
-  return undefined;
-}
-
 function extractSnippet(searchableText: string, queryTokens: string[]): string {
-  const lower = searchableText.toLowerCase();
   let bestPos = 0;
   let bestLen = 0;
   let bestTokenLen = 0;
 
   for (const token of queryTokens) {
-    const hit = findTokenPosition(searchableText, lower, token);
+    const hit = findTokenPosition(searchableText, token);
     if (hit && token.length > bestTokenLen) {
       bestPos = hit.pos;
       bestLen = hit.len;
@@ -782,7 +758,7 @@ function extractSnippet(searchableText: string, queryTokens: string[]): string {
     }
   }
 
-  let snippet = searchableText.slice(start, end).replace(/\s+/g, ' ').trim();
+  let snippet = collapseWhitespace(searchableText.slice(start, end));
   if (start > 0) {
     snippet = `…${snippet}`;
   }
