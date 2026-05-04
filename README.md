@@ -52,7 +52,7 @@ On each refresh trigger the runtime:
 
 - **Bun** — preferred local runtime and package manager
 - **Zod** — repo-authored MCP contracts and validation
-- **Mastra** — MCP, logging, and observability boundary
+- **Mastra SDK** — MCP, logging, and observability adapter used inside the local/Vercel runtime
 - **Hono** — hosted server engine
 - **Rstest, Rslint, Rspress** — test, lint, docs
 
@@ -155,8 +155,11 @@ bun run cli -- lm-check --timeout-ms 60000
 ```bash
 bun run mcp                      # public surface
 FPF_MCP_SURFACE=full bun run mcp # full surface (expert tools)
-bun run start                    # hosted Mastra runtime on Hono
+bun run start                    # hosted HTTP runtime on Hono
 bun run smoke:mcp:http           # smoke-test the streamable HTTP endpoint
+bun run bench:mcp:qa             # hosted Q&A correctness gate
+bun run bench:mcp                # hosted latency/correctness benchmark
+bun run vercel:origin:build      # prebuild the direct Vercel-origin bundle
 ```
 
 ## FPF work evaluation
@@ -179,14 +182,14 @@ The evaluator reads local git facts, the committed `published/current/**` surfac
 The current Codex default is the hosted public MCP:
 
 ```text
-https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp
+https://fpf-memory-mcp-proxy.vercel.app/api/mcp/fpf_memory/mcp
 ```
 
 Equivalent `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.fpf_memory]
-url = "https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp"
+url = "https://fpf-memory-mcp-proxy.vercel.app/api/mcp/fpf_memory/mcp"
 ```
 
 This repo ships the same project-scoped configuration at `.codex/config.toml` and `.mcp.json`. Once the project is trusted, Codex can load the hosted `fpf_memory` server directly from the repo.
@@ -232,10 +235,20 @@ Call ask_fpf with:
 
 For a proof-style grounded answer, add `mode: "proof"`. For the raw structured envelope, call `query_fpf_spec` instead. For a deterministic retrieval/debug trace, call `trace_fpf_path`.
 
-The Vercel trusted-domain proxy spike is configured by the root `vercel.json`. Create a separate Vercel project from this repository (the config disables install + build so the deploy is rewrite-only), attach the trusted domain, and run the smoke against the preview URL before changing the canonical endpoint references:
+The Vercel proxy stays canonical for clients. The direct Vercel origin is the lower-level runtime target and remains useful as a canary and lower-latency comparison endpoint.
 
 ```bash
-FPF_MCP_SMOKE_URL=https://mcp.<your-domain>/api/mcp/fpf_memory/mcp bun run smoke:mcp:http
+bun run vercel:proxy:link
+bun run vercel:proxy:deploy
+FPF_MCP_SMOKE_URL=https://fpf-memory-mcp-proxy.vercel.app/api/mcp/fpf_memory/mcp bun run smoke:mcp:http
+
+bun run vercel:origin:link
+bun run vercel:origin:build
+bun run vercel:origin:deploy:prod
+FPF_MCP_SMOKE_URL=https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp bun run smoke:mcp:http
+
+bun run bench:mcp:qa -- --name proxy --url https://fpf-memory-mcp-proxy.vercel.app/api/mcp/fpf_memory/mcp --format markdown
+bun run bench:mcp:qa -- --name vercel-origin --url https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp --format markdown
 ```
 
 ## MCP tools
@@ -257,6 +270,8 @@ FPF_MCP_SMOKE_URL=https://mcp.<your-domain>/api/mcp/fpf_memory/mcp bun run smoke
 
 Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other MCP tools stay deterministic. Set `FPF_MCP_SURFACE=public` on the deployed server to restrict it to public tools only.
 
+When a configured synthesizer fails or reports unavailable, answer tools return `degraded` with low confidence and `candidateIds`; deterministic citations, relations, and constraints remain available as evidence. Deterministic retrieval tools still return normal `ok` envelopes.
+
 ## Project layout
 
 **Runtime surfaces**
@@ -267,7 +282,7 @@ Only `query_fpf_spec` and `ask_fpf` can use the optional synthesizer. All other 
 - `src/composition/` — canonical bridge layer for runtime/bootstrap composition
 - `src/compat/mastra/` — governed Mastra compatibility bootstrap layer
 - `src/mastra/mcp/server.ts` — compatibility shim for the legacy MCP server import path
-- `src/mastra/index.ts` — compatibility shim consumed by `bun run mastra:build` and Mastra deploy tooling
+- `src/mastra/index.ts` — compatibility shim consumed by `bun run mastra:build` for Vercel packaging
 - `src/mastra/stdio.ts` — stdio entry point for MCP clients
 - `src/server.ts` — Hono HTTP server bootstrap for Bun
 - `src/runtime/` — compiler, retrieval, trace, inspect, synthesis

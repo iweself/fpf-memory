@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
@@ -126,6 +126,32 @@ describe('FpfRuntime', () => {
     }
   });
 
+  it('seeds a writable artifact directory from a staged read-only snapshot', async () => {
+    const seededArtifactDir = resolve(tempRoot, 'seeded-artifacts');
+    const artifactSeedDir = resolve(tempRoot, 'hosted/fpf-index');
+    await mkdir(artifactSeedDir, { recursive: true });
+    await copyFile(
+      resolve(process.cwd(), 'published/current/fpf-index/snapshot.json'),
+      resolve(artifactSeedDir, ARTIFACT_FILENAMES.snapshot),
+    );
+
+    const seededRuntime = new FpfRuntime({
+      sourcePath: DEFAULT_SOURCE_PATH,
+      artifactDir: seededArtifactDir,
+      artifactSeedDir,
+    });
+    const audit = await seededRuntime.refresh();
+
+    expect(audit.rebuilt).toBe(false);
+    expect(audit.reason).toBe('snapshot_current');
+    expect(await readFile(resolve(seededArtifactDir, ARTIFACT_FILENAMES.snapshot), 'utf8')).toContain(
+      '"sourceHash"',
+    );
+    expect(await readFile(resolve(seededArtifactDir, ARTIFACT_FILENAMES.indexingView), 'utf8')).toContain(
+      '"patterns"',
+    );
+  });
+
   // Snapshot construction plus several downstream queries can cross the
   // default 20s timeout on GitHub runners under parallel load.
   it('builds a snapshot and keeps the key use-case IDs queryable', async () => {
@@ -168,7 +194,7 @@ describe('FpfRuntime', () => {
     expect(agentWorkflow.answer.length).toBeGreaterThan(0);
     expect(agentWorkflow.citations.length).toBeGreaterThan(0);
 
-    const deterministicOnly = new FpfRuntime({
+    const unavailableSynthesizer = new FpfRuntime({
       artifactDir: resolve(tempRoot, 'deterministic-artifacts'),
       sourcePath,
       synthesizer: {
@@ -178,12 +204,13 @@ describe('FpfRuntime', () => {
         },
       },
     });
-    const deterministicAnswer = await deterministicOnly.query(
+    const degradedAnswer = await unavailableSynthesizer.query(
       'What is U.BoundedContext?',
       'compact',
     );
-    expect(deterministicAnswer.status).toBe('ok');
-    expect(deterministicAnswer.ids).toContain('A.1.1');
+    expect(degradedAnswer.status).toBe('degraded');
+    expect(degradedAnswer.ids).toEqual([]);
+    expect(degradedAnswer.candidateIds).toContain('A.1.1');
 
     const creativity = await runtime.query(
       'How is creativity and open-ended search represented in FPF?',

@@ -19,9 +19,19 @@ interface VercelConfig {
 }
 
 describe('Vercel MCP proxy config', () => {
-  it('proxies only the hosted MCP and connection page paths to Mastra Cloud', async () => {
+  const retiredCloudHost = ['mastra', 'cloud'].join('.');
+
+  it('uses the hosted MCP origin build command for GitHub preview builds', async () => {
     const config = JSON.parse(
       await readFile(resolve(process.cwd(), 'vercel.json'), 'utf8'),
+    ) as VercelConfig;
+
+    expect(config.buildCommand).toBe('bun run vercel:origin:build');
+  });
+
+  it('proxies every public route to the validated Vercel origin', async () => {
+    const config = JSON.parse(
+      await readFile(resolve(process.cwd(), 'deploy/vercel-proxy/vercel.json'), 'utf8'),
     ) as VercelConfig;
 
     expect(config.framework).toBe(null);
@@ -29,29 +39,26 @@ describe('Vercel MCP proxy config', () => {
     expect(config.rewrites).toEqual([
       {
         source: '/api/mcp/fpf_memory/mcp',
-        destination: 'https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp',
+        destination: 'https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp',
       },
       {
         source: '/connect-mcp',
-        destination: 'https://fpf-memory.server.mastra.cloud/connect-mcp',
+        destination: 'https://fpf-memory-mcp-vercel-origin.vercel.app/connect-mcp',
       },
       {
         source: '/',
-        destination: 'https://fpf-memory.server.mastra.cloud/',
+        destination: 'https://fpf-memory-mcp-vercel-origin.vercel.app/',
       },
     ]);
+    expect(JSON.stringify(config)).not.toContain(retiredCloudHost);
   });
 
   it('disables Vercel build steps so the rewrite-only deploy does not need a public/ directory', async () => {
-    // The repo root has a Node project that builds to dist/, but Vercel
-    // is just acting as a rewrite-only edge proxy here — no static
-    // assets to ship. Without these directives Vercel's auto-detected
-    // build runs and then fails with `No Output Directory named "public"
-    // found`. Setting installCommand/buildCommand to null and
-    // outputDirectory to "." tells Vercel to skip install + build and
-    // treat the repo root as the (empty) static surface.
+    // The proxy project is just a rewrite-only edge proxy. Without these
+    // directives Vercel may auto-detect a build and then fail looking for
+    // a static output directory.
     const config = JSON.parse(
-      await readFile(resolve(process.cwd(), 'vercel.json'), 'utf8'),
+      await readFile(resolve(process.cwd(), 'deploy/vercel-proxy/vercel.json'), 'utf8'),
     ) as VercelConfig;
 
     expect(config.installCommand).toBe(null);
@@ -61,7 +68,7 @@ describe('Vercel MCP proxy config', () => {
 
   it('marks the MCP route as non-cacheable at browser and CDN layers', async () => {
     const config = JSON.parse(
-      await readFile(resolve(process.cwd(), 'vercel.json'), 'utf8'),
+      await readFile(resolve(process.cwd(), 'deploy/vercel-proxy/vercel.json'), 'utf8'),
     ) as VercelConfig;
 
     const mcpHeaders = config.headers?.find(

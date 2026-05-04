@@ -20,6 +20,7 @@ output.txt
 *.db
 *.db-*
 .mastra-project.json
+.vercel
 package-lock.json
 src/mastra/public
 .DS_Store
