@@ -79,6 +79,7 @@ bun run spec:download
 bun run publish:current
 bun run evaluate:work
 bun run stage:from-published
+bun run smoke:mcp:http
 bun run mastra:build
 bun run hooks:install
 bun run docs:generate
@@ -136,6 +137,15 @@ Start the hosted Mastra runtime locally on the Hono engine:
 ```bash
 bun run start
 ```
+
+Smoke-test the hosted streamable HTTP endpoint:
+
+```bash
+bun run smoke:mcp:http
+FPF_MCP_SMOKE_URL=https://mcp.<your-domain>/api/mcp/fpf_memory/mcp bun run smoke:mcp:http
+```
+
+The Vercel trusted-domain proxy spike lives under `deploy/vercel-proxy`. In Vercel, create a separate project with that directory as the project root, attach the trusted domain, and run the smoke against the preview URL before changing the canonical endpoint references.
 
 ## Codex Setup
 

@@ -64,6 +64,10 @@ export default defineConfig({
         link: '/connect-mcp',
       },
       {
+        text: 'Vercel Proxy',
+        link: '/vercel-proxy',
+      },
+      {
         text: 'Patterns',
         link: '/generated/patterns/index',
       },

@@ -16,6 +16,8 @@ https://fpf-memory.server.mastra.cloud/api/mcp/fpf_memory/mcp
 
 This endpoint is a remote MCP server over streamable HTTP. It exposes the public fpf-memory tools for catalog browsing, search, compact answers, exact generated doc reads, and index health.
 
+Trusted-domain proxy work is staged separately at [Vercel proxy](/vercel-proxy). Keep using the Mastra Cloud URL above until a deployed proxy passes the hosted HTTP smoke.
+
 Public tools:
 
 - `browse_fpf_catalog`
