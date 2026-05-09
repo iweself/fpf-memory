@@ -1,3 +1,6 @@
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 import { getSharedMcpComposition } from '../composition/mcp.js';
 
 export async function main(): Promise<void> {
@@ -32,4 +35,13 @@ function normalizeErrorMessage(error: unknown): string {
   } catch {
     return String(error);
   }
+}
+
+function isMainModule(metaUrl: string): boolean {
+  const entrypoint = process.argv[1];
+  return Boolean(entrypoint && metaUrl === pathToFileURL(resolve(entrypoint)).href);
+}
+
+if (isMainModule(import.meta.url)) {
+  void main();
 }

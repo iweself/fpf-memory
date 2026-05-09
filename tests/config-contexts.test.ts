@@ -20,13 +20,13 @@ describe('context config parsing', () => {
       FPF_RUNTIME_ARTIFACT_SEED_DIR: '/tmp/fpf/hosted/fpf-index',
       FPF_RUNTIME_MAX_SESSIONS: '12',
       FPF_PERSIST_SESSION_CACHE: 'true',
-      FPF_MASTRA_LOG_PATH: '/tmp/fpf/logs/mastra.log',
-      FPF_MASTRA_LOG_LEVEL: 'warn',
-      FPF_MASTRA_OBSERVABILITY_PATH: '/tmp/fpf/logs/observability.json',
-      FPF_MASTRA_OBSERVABILITY_FORMAT: 'tree',
-      FPF_MASTRA_OBSERVABILITY_INCLUDE_INTERNAL_SPANS: 'false',
-      FPF_MASTRA_OBSERVABILITY_INCLUDE_MODEL_CHUNKS: 'true',
-      FPF_MASTRA_OBSERVABILITY_LOG_LEVEL: 'error',
+      FPF_RUNTIME_LOG_PATH: '/tmp/fpf/logs/fpf-runtime.log',
+      FPF_RUNTIME_LOG_LEVEL: 'warn',
+      FPF_RUNTIME_OBSERVABILITY_PATH: '/tmp/fpf/logs/observability.json',
+      FPF_RUNTIME_OBSERVABILITY_FORMAT: 'tree',
+      FPF_RUNTIME_OBSERVABILITY_INCLUDE_INTERNAL_SPANS: 'false',
+      FPF_RUNTIME_OBSERVABILITY_INCLUDE_MODEL_CHUNKS: 'true',
+      FPF_RUNTIME_OBSERVABILITY_LOG_LEVEL: 'error',
       FPF_LOCAL_LLM_BASE_URL: 'http://localhost:1234',
       FPF_LOCAL_LLM_MODEL: 'google/gemma-4-31b',
       FPF_LOCAL_LLM_API_KEY: 'secret-token',
@@ -49,7 +49,7 @@ describe('context config parsing', () => {
       persistSessionCache: true,
     });
     expect(parseLoggingConfig(env)).toEqual({
-      filePath: '/tmp/fpf/logs/mastra.log',
+      filePath: '/tmp/fpf/logs/fpf-runtime.log',
       level: 'warn',
       serviceName: 'fpf-spec-runtime',
     });
@@ -120,6 +120,46 @@ describe('context config parsing', () => {
       port: 65535,
       surface: 'public',
     });
+  });
+
+  it('keeps one-release fallbacks for legacy Mastra observability env vars', () => {
+    const env = {
+      FPF_MASTRA_LOG_PATH: '/tmp/fpf/logs/mastra.log',
+      FPF_MASTRA_LOG_LEVEL: 'debug',
+      FPF_MASTRA_OBSERVABILITY_PATH: '/tmp/fpf/logs/mastra-observability.json',
+      FPF_MASTRA_OBSERVABILITY_FORMAT: 'normalized',
+      FPF_MASTRA_OBSERVABILITY_INCLUDE_INTERNAL_SPANS: 'false',
+      FPF_MASTRA_OBSERVABILITY_INCLUDE_MODEL_CHUNKS: 'true',
+      FPF_MASTRA_OBSERVABILITY_LOG_LEVEL: 'error',
+    } as NodeJS.ProcessEnv;
+
+    expect(parseLoggingConfig(env)).toEqual({
+      filePath: '/tmp/fpf/logs/mastra.log',
+      level: 'debug',
+      serviceName: 'fpf-spec-runtime',
+    });
+    expect(parseObservabilityConfig(env)).toEqual({
+      filePath: '/tmp/fpf/logs/mastra-observability.json',
+      format: 'normalized',
+      includeInternalSpans: false,
+      logLevel: 'error',
+      excludeModelChunks: false,
+      serviceName: 'fpf-spec-runtime',
+    });
+  });
+
+  it('prefers runtime env vars over legacy Mastra fallbacks', () => {
+    const env = {
+      FPF_RUNTIME_LOG_PATH: '/tmp/fpf/logs/runtime.log',
+      FPF_MASTRA_LOG_PATH: '/tmp/fpf/logs/mastra.log',
+      FPF_RUNTIME_OBSERVABILITY_PATH: '/tmp/fpf/logs/runtime-observability.json',
+      FPF_MASTRA_OBSERVABILITY_PATH: '/tmp/fpf/logs/mastra-observability.json',
+    } as NodeJS.ProcessEnv;
+
+    expect(parseLoggingConfig(env).filePath).toBe('/tmp/fpf/logs/runtime.log');
+    expect(parseObservabilityConfig(env).filePath).toBe(
+      '/tmp/fpf/logs/runtime-observability.json',
+    );
   });
 
   it('ignores GEMINI_AI_API_KEY — runtime only speaks Anthropic Messages', () => {
