@@ -1,12 +1,12 @@
 # FPF Spec Runtime
 
-> **Quick links:** [Website](https://venikman.github.io/fpf-memory/) · [Connect MCP](https://venikman.github.io/fpf-memory/connect-mcp) · [Hosted MCP endpoint](https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp)
+> **Quick links:** [Website](https://fpf.sh/) · [Connect MCP](https://fpf.sh/connect-mcp) · [Hosted MCP endpoint](https://mcp.fpf.sh/api/mcp/fpf_memory/mcp)
 >
-> **📖 Live reference:** [venikman.github.io/fpf-memory](https://venikman.github.io/fpf-memory/) — searchable pattern catalog, routes, and preface. Type an ID like `A.2` or `route:project-alignment` in the search box to jump in.
+> **📖 Live reference:** [fpf.sh](https://fpf.sh/) — searchable pattern catalog, routes, and preface. Type an ID like `A.2` or `route:project-alignment` in the search box to jump in.
 >
 > **🤖 Working with this repo as an agent?** See [`AGENTS.md`](./AGENTS.md) for the MCP tool guide and workspace conventions.
 >
-> **🧭 Coordinating repo automation?** See the [Automation Playbook](https://venikman.github.io/fpf-memory/automation-playbook) for role boundaries, access rules, merge authority, and draft-only publishing packets.
+> **🧭 Coordinating repo automation?** See the [Automation Playbook](https://fpf.sh/automation-playbook) for role boundaries, access rules, merge authority, and draft-only publishing packets.
 
 ## What is this?
 
@@ -214,14 +214,14 @@ The evaluator reads local git facts, the committed `published/current/**` surfac
 The current Codex default is the hosted public MCP:
 
 ```text
-https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp
+https://mcp.fpf.sh/api/mcp/fpf_memory/mcp
 ```
 
 Equivalent `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.fpf_memory]
-url = "https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp"
+url = "https://mcp.fpf.sh/api/mcp/fpf_memory/mcp"
 ```
 
 This repo ships the same project-scoped configuration at `.codex/config.toml` and `.mcp.json`. Once the project is trusted, Codex can load the hosted `fpf_memory` server directly from the repo.
@@ -273,15 +273,15 @@ The direct Vercel origin is canonical for clients. There is no separate Vercel f
 bun run vercel:origin:link
 bun run vercel:origin:build
 bun run vercel:origin:deploy:prod
-FPF_MCP_SMOKE_URL=https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp bun run smoke:mcp:http
+FPF_MCP_SMOKE_URL=https://mcp.fpf.sh/api/mcp/fpf_memory/mcp bun run smoke:mcp:http
 
-bun run bench:mcp:qa -- --name vercel-origin --url https://fpf-memory-mcp-vercel-origin.vercel.app/api/mcp/fpf_memory/mcp --format markdown
+bun run bench:mcp:qa -- --name vercel-origin --url https://mcp.fpf.sh/api/mcp/fpf_memory/mcp --format markdown
 ```
 
 Status API:
 
 ```text
-https://fpf-memory-mcp-vercel-origin.vercel.app/api/fpf/status
+https://mcp.fpf.sh/api/fpf/status
 ```
 
 ## MCP tools
