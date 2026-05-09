@@ -311,9 +311,9 @@ describe('LmStudioSynthesizer', () => {
         baseUrl: 'http://localhost:1234/v1',
         model: 'google/gemma-4-31b',
         fetchImpl: async () =>
-          new Response('ngrok 404', {
+          new Response('<!DOCTYPE html><html><body>ngrok 404</body></html>', {
             status: 404,
-            headers: { 'Content-Type': 'text/plain' },
+            headers: { 'Content-Type': 'text/html' },
           }),
       }),
     });
@@ -326,6 +326,8 @@ describe('LmStudioSynthesizer', () => {
     expect(status.synthesizer.checkedAt).toBeDefined();
     expect(status.synthesizer.failure?.httpStatus).toBe(404);
     expect(status.synthesizer.failure?.endpoint).toBe('http://localhost:1234/v1/messages');
+    expect(status.synthesizer.failure?.message).toContain('HTML error response omitted');
+    expect(status.synthesizer.failure?.message).not.toContain('<html>');
   });
 
   it('falls back deterministically when LM Studio returns an error', async () => {
@@ -338,9 +340,9 @@ describe('LmStudioSynthesizer', () => {
         traceLogPath: aiTraceLogPath,
         observabilityConfig: createObservabilityConfig(),
         fetchImpl: async () =>
-          new Response('server exploded', {
+          new Response('<h1>ngrok 404</h1>', {
             status: 500,
-            headers: { 'Content-Type': 'text/plain' },
+            headers: { 'Content-Type': 'text/html' },
           }),
       }),
     });
@@ -349,8 +351,10 @@ describe('LmStudioSynthesizer', () => {
     expect(result.status).toBe('degraded');
     expect(result.ids).toEqual([]);
     expect(result.candidateIds).toContain('A.1.1');
-    expect(result.confidence).toBeLessThanOrEqual(0.45);
+    expect(result.confidence).toBeNull();
     expect(result.gaps.some((gap) => gap.includes('Local synthesis skipped'))).toBe(true);
+    expect(result.gaps.join('\n')).toContain('HTML error response omitted');
+    expect(result.gaps.join('\n')).not.toContain('<h1>');
 
     const traceLog = await readFile(aiTraceLogPath, 'utf8');
     expect(traceLog).toContain('"phase":"response"');

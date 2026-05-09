@@ -232,11 +232,38 @@ function shouldApplySessionContext(
     return false;
   }
 
-  if (detectedIds.length === 0) {
+  if (/\bit\b|\bthat\b|\bthose\b|\bthem\b/.test(normalizedQuestion)) {
     return true;
   }
 
-  return /\bit\b|\bthat\b|\bthose\b|\bthem\b|\bconnect\b|\brelate\b|\balso\b/.test(
-    normalizedQuestion,
+  return detectedIds.length === 0 && isImplicitSessionFollowUp(normalizedQuestion);
+}
+
+const IMPLICIT_FOLLOW_UP_TOKENS = new Set([
+  'about',
+  'also',
+  'clarify',
+  'continue',
+  'definition',
+  'detail',
+  'details',
+  'elaborate',
+  'example',
+  'examples',
+  'explain',
+  'me',
+  'more',
+  'show',
+  'summarize',
+  'summary',
+  'tell',
+]);
+
+function isImplicitSessionFollowUp(normalizedQuestion: string): boolean {
+  const tokens = tokenize(normalizedQuestion);
+  return (
+    tokens.length > 0 &&
+    tokens.length <= 4 &&
+    tokens.every((token) => IMPLICIT_FOLLOW_UP_TOKENS.has(token))
   );
 }

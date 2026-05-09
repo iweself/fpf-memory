@@ -213,6 +213,7 @@ describe('FpfRuntime', () => {
     expect(degradedAnswer.status).toBe('degraded');
     expect(degradedAnswer.ids).toEqual([]);
     expect(degradedAnswer.candidateIds).toContain('A.1.1');
+    expect(degradedAnswer.confidence).toBeNull();
 
     const creativity = await runtime.query(
       'How is creativity and open-ended search represented in FPF?',
@@ -561,6 +562,44 @@ describe('FpfRuntime', () => {
     expect(second.selectedNodeIds).toEqual(
       expect.arrayContaining(['A.1.1', 'A.2.1', 'A.2.5']),
     );
+  });
+
+  it('reuses session context for low-information implicit follow-up prompts', async () => {
+    await runtime.refresh();
+
+    const sessionId = 's-implicit-followup';
+    const first = await runtime.trace('What is U.BoundedContext?', 'compact', false, sessionId);
+    expect(first.selectedNodeIds).toContain('A.1.1');
+
+    const followup = await runtime.trace('Show examples', 'proof', false, sessionId);
+
+    expect(followup.sessionApplied).toBe(true);
+    expect(followup.sessionReusedNodeIds).toContain('A.1.1');
+    expect(followup.selectedNodeIds).toContain('A.1.1');
+  });
+
+  it('does not let unrelated session context change top retrieval IDs', async () => {
+    await runtime.refresh();
+
+    const sessionId = 's-unrelated';
+    await runtime.query('What is C.16 measurement template discipline?', 'compact', false, sessionId);
+
+    const questions = [
+      'How does evidence graph preserve provenance?',
+      'Also, what is a holon?',
+      'How does evidence graph connect to provenance?',
+    ];
+
+    for (const question of questions) {
+      const fresh = await runtime.trace(question, 'verbose');
+      const sessioned = await runtime.trace(question, 'verbose', false, sessionId);
+
+      expect(sessioned.sessionApplied).toBe(false);
+      expect(sessioned.selectedNodeIds).toEqual(fresh.selectedNodeIds);
+      expect(sessioned.candidateScores.map((candidate) => candidate.nodeId)).toEqual(
+        fresh.candidateScores.map((candidate) => candidate.nodeId),
+      );
+    }
   });
 
   it('lists every Draft pattern in Part C grouped by cluster', async () => {
