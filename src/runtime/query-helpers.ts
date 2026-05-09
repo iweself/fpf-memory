@@ -11,6 +11,8 @@ import {
 } from './text.js';
 import type { AnchorRef, LexiconEntry, PatternRecord, RouteRecord, SectionRole } from './types.js';
 import {
+  AGENT_WORKFLOW_BOUNDED_RETRIEVAL_SIGNALS,
+  AGENT_WORKFLOW_JOB_SIGNALS,
   BOUNDARY_BURDEN_JOB_SIGNALS,
   BOUNDARY_BURDEN_SIGNALS,
   WRITING_OR_REVIEWING_PATTERN_SIGNALS,
@@ -189,6 +191,14 @@ function scoreAdoptionRouteIntent(normalizedQuestion: string, route: RouteRecord
 }
 
 function scoreProjectAlignmentIntent(normalizedQuestion: string): number {
+  if (
+    AGENT_WORKFLOW_JOB_SIGNALS.some((signal) => normalizedQuestion.includes(signal)) &&
+    AGENT_WORKFLOW_BOUNDED_RETRIEVAL_SIGNALS.some((signal) =>
+      normalizedQuestion.includes(signal),
+    )
+  ) {
+    return 88;
+  }
   const projectSignals = [
     'project kickoff',
     'project lead',

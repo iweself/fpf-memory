@@ -197,8 +197,16 @@ describe('FpfRuntime', () => {
       'How should I use FPF for agent workflow adoption without pasting the whole spec?',
       'compact',
     );
-    expect(agentWorkflow.status).toBe('ok');
-    expect(agentWorkflow.ids).toEqual(expect.arrayContaining(['E.8', 'E.19']));
+    if (routeIds.has('route:project-alignment')) {
+      expect(agentWorkflow.status).toBe('ok');
+      expect(agentWorkflow.ids).toEqual(
+        expect.arrayContaining(['route:project-alignment', 'A.1.1', 'A.15']),
+      );
+      expect(agentWorkflow.answer).toContain('route:project-alignment');
+    } else {
+      expect(['ok', 'ambiguous']).toContain(agentWorkflow.status);
+      expect(agentWorkflow.ids.every((id) => !id.startsWith('route:'))).toBe(true);
+    }
     expect(agentWorkflow.answer.length).toBeGreaterThan(0);
     expect(agentWorkflow.citations.length).toBeGreaterThan(0);
 

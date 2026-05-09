@@ -410,6 +410,29 @@ describe('direct MCP server', () => {
         true,
       );
     }
+
+    const agentQuery = await harness.request('tools/call', {
+      name: 'query_fpf_spec',
+      arguments: {
+        mode: 'compact',
+        question:
+          'Use fpf_memory MCP to build an agent work packet without pasting the full FPF. Return route/doc selector, IDs, what not to load, acceptance check, and next move.',
+      },
+    });
+    const agentQueryPayload = asToolPayload(agentQuery);
+    expect(agentQueryPayload.status).toBe('ok');
+    if (routeIds.has('route:project-alignment')) {
+      expect((agentQueryPayload.ids as string[]).slice(0, 3)).toEqual([
+        'route:project-alignment',
+        'A.1.1',
+        'A.15',
+      ]);
+      expect(agentQueryPayload.answer).toContain('route:project-alignment');
+    } else {
+      expect((agentQueryPayload.ids as string[]).every((id) => !id.startsWith('route:'))).toBe(
+        true,
+      );
+    }
   });
 
   it('defaults to public tools when FPF_MCP_SURFACE is unset', async () => {
