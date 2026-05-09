@@ -8,6 +8,11 @@ import {
   HOSTED_STAGED_MANIFEST_PATH,
   HOSTED_STAGED_SOURCE_PATH,
 } from '../core/constants.js';
+import {
+  HOSTED_FPF_STATUS_ROUTE,
+  HOSTED_HOME_ROUTES,
+  HOSTED_MCP_ROUTE,
+} from '../composition/hosted.js';
 
 export interface BuildVercelOriginOptions {
   rootDir?: string;
@@ -16,6 +21,20 @@ export interface BuildVercelOriginOptions {
 
 const OUTPUT_DIR = '.vercel/output';
 const FUNCTION_DIR = `${OUTPUT_DIR}/functions/index.func`;
+
+export interface VercelOriginOutputConfig {
+  version: 3;
+  routes: Array<{
+    src: string;
+    dest?: string;
+    headers?: Record<string, string>;
+    methods?: string[];
+    status?: number;
+    continue?: boolean;
+    check?: boolean;
+    caseSensitive?: boolean;
+  }>;
+}
 
 export async function buildVercelOrigin(
   options: BuildVercelOriginOptions = {},
@@ -55,14 +74,19 @@ async function bundleFunction(rootDir: string, functionDir: string): Promise<voi
 
 async function writeVercelConfig(outputDir: string): Promise<void> {
   await mkdir(outputDir, { recursive: true });
-  await writeJson(resolve(outputDir, 'config.json'), {
+  await writeJson(resolve(outputDir, 'config.json'), createVercelOriginOutputConfig());
+}
+
+export function createVercelOriginOutputConfig(): VercelOriginOutputConfig {
+  const dest = '/index';
+  return {
     version: 3,
     routes: [
-      { src: '^/$', dest: '/index' },
-      { src: '^/connect-mcp$', dest: '/index' },
-      { src: '^/api/mcp/fpf_memory/mcp$', dest: '/index' },
+      ...HOSTED_HOME_ROUTES.map((route) => ({ src: `^${route}$`, dest })),
+      { src: `^${HOSTED_FPF_STATUS_ROUTE}$`, dest },
+      { src: `^${HOSTED_MCP_ROUTE}$`, dest },
     ],
-  });
+  };
 }
 
 async function writeFunctionConfig(functionDir: string): Promise<void> {
