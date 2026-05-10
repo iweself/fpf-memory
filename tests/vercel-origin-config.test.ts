@@ -28,7 +28,7 @@ describe('Vercel MCP origin config', () => {
       'vercel link --project fpf-memory-mcp-vercel-origin',
     );
     expect(packageJson.scripts['vercel:origin:build']).toBe(
-      'bun run predeploy && bun run build:vercel-origin && bun run bench:vercel:function-size',
+      'bun run predeploy && bun run docs:build && bun run build:vercel-origin && bun run bench:vercel:function-size',
     );
     expect(packageJson.scripts.deploy).toBe('bun run vercel:origin:deploy:prod');
     const retiredScriptPrefix = ['vercel', 'pro' + 'xy'].join(':');
@@ -42,7 +42,39 @@ describe('Vercel MCP origin config', () => {
 
     expect(config.routes).toContainEqual({
       src: `^${HOSTED_FPF_STATUS_ROUTE}$`,
-      dest: '/index',
+      dest: '/_origin',
     });
+  });
+
+  it('only sends API surfaces to the function — everything else falls through to static docs', () => {
+    const config = createVercelOriginOutputConfig();
+    // The function only owns /api/* surfaces. Home and /connect-mcp are now
+    // served from the Rspress build output in .vercel/output/static, so
+    // they must NOT be listed in routes (otherwise Vercel routes them to
+    // the function and the static page is shadowed).
+    const srcRoutes = config.routes.flatMap((route) =>
+      'src' in route ? [route.src] : [],
+    );
+    expect(srcRoutes).not.toContain('^/$');
+    expect(srcRoutes).not.toContain('^/connect-mcp$');
+    // API routes remain.
+    expect(srcRoutes).toContain('^/api/mcp/fpf_memory/mcp$');
+  });
+
+  it('runs the filesystem phase before function routes so static docs win', () => {
+    const config = createVercelOriginOutputConfig();
+    // Vercel evaluates `routes` in order. To let .vercel/output/static
+    // serve `/`, `/start-here`, `/generated/patterns/A.6.9.html`, etc.
+    // before any function route fires, the filesystem-phase marker must
+    // come first. PR #106's initial push omitted this and the static
+    // tree was shadowed by the function — guard against regression.
+    const filesystemIndex = config.routes.findIndex(
+      (route) => 'handle' in route && route.handle === 'filesystem',
+    );
+    expect(filesystemIndex).toBe(0);
+    const firstFunctionRouteIndex = config.routes.findIndex(
+      (route) => 'src' in route,
+    );
+    expect(firstFunctionRouteIndex).toBeGreaterThan(filesystemIndex);
   });
 });
