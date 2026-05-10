@@ -306,35 +306,6 @@ document.addEventListener('keydown',function(e){
           { text: 'Recipes', link: '/mcp-recipes' },
           { text: 'Connect to clients', link: '/connect-mcp' },
           { text: 'Automation Playbook', link: '/automation-playbook' },
-          { text: 'Vercel hosting', link: '/vercel-hosting' },
-        ],
-      },
-      {
-        text: 'Reference',
-        items: [
-          // Direct route links — the four routes named on Start Here so
-          // a reader who already knows the work-shape skips the Route
-          // Catalog. Order matches Start Here's table.
-          {
-            text: 'Project alignment',
-            link: '/generated/routes/route_project-alignment',
-          },
-          {
-            text: 'Writing / reviewing patterns',
-            link: '/generated/routes/route_writing-or-reviewing-patterns',
-          },
-          {
-            text: 'Boundary unpacking',
-            link: '/generated/routes/route_boundary-unpacking-claim-routing',
-          },
-          {
-            text: 'Lawful comparison',
-            link: '/generated/routes/route_lawful-comparison-pool-selection-selected-set-publication',
-          },
-          { text: 'All routes', link: '/generated/routes/index' },
-          { text: 'Preface', link: '/generated/preface/index' },
-          { text: 'Glossary', link: '/generated/patterns/H.1' },
-          { text: 'Change log', link: '/generated/patterns/I.3' },
         ],
       },
     ],
@@ -344,9 +315,9 @@ document.addEventListener('keydown',function(e){
       //     full pattern tree.
       //   - `/generated/routes/...` get the routes tree.
       //   - The root `/` and authored pages (start-here, work-packets,
-      //     mcp-recipes, connect-mcp, automation-playbook, vercel-hosting)
-      //     get NO sidebar so the orientation surface stays focused on its
-      //     own task-first cards.
+      //     mcp-recipes, connect-mcp, automation-playbook) get NO sidebar
+      //     so the orientation surface stays focused on its own
+      //     task-first cards.
       '/patterns': [
         {
           text: 'Patterns',
