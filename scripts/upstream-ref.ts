@@ -1,6 +1,6 @@
 /**
- * Tracks the synchronized upstream FPF publication source at
- * github.com/venikman/fpf-sync. Automation resolves this moving ref to an
+ * Tracks the original upstream FPF publication source at
+ * github.com/ailev/FPF. Automation resolves this moving ref to an
  * immutable SHA before publishing so committed manifests still record
  * the exact upstream source.
  */

@@ -38,7 +38,7 @@ export interface PublishCurrentConfig {
   publishSourcePath: string;
   /** Tag committed into manifest.json so consumers know the upstream pin. */
   upstreamRef: string;
-  /** GitHub repository the upstream ref lives in. Default: venikman/fpf-sync. */
+  /** GitHub repository the upstream ref lives in. Default: ailev/FPF. */
   upstreamOwner?: string;
   upstreamRepo?: string;
   /** Path to the spec file inside the upstream repository. */

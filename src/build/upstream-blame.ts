@@ -25,12 +25,12 @@ export interface BlameLineInfo {
 export type LineBlameMap = Map<number, BlameLineInfo>;
 
 export interface UpstreamBlameOptions {
-  /** owner/repo — e.g. `venikman/fpf-sync`. */
+  /** owner/repo — e.g. `ailev/FPF`. */
   owner: string;
   repo: string;
   /** Branch / tag / SHA to blame against. Default `main`. */
   ref?: string;
-  /** Path to the spec file inside the upstream repo. Default `FPF/FPF-Spec.md`. */
+  /** Path to the spec file inside the upstream repo. Default `FPF-Spec.md`. */
   specPath?: string;
   /**
    * Local directory used as a persistent clone cache. Future runs

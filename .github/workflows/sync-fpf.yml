@@ -1,11 +1,11 @@
 name: Sync FPF Publication
 
-# Tracks the canonical synchronized FPF spec at github.com/venikman/fpf-sync.
-# fpf-sync can notify this repo with a repository_dispatch event; a six-hour
-# poll is the backstop. If the resolved upstream ref differs from
-# `published/current/manifest.json`, this workflow rebuilds the snapshot,
-# opens a PR, and lets the normal CI pipeline gate the merge. After a
-# two-hour review window, the workflow merges the PR only if every reported
+# Tracks the original FPF spec at github.com/ailev/FPF. A six-hour poll is
+# the freshness backstop; repository_dispatch is available for any upstream
+# notifier that can send `fpf-origin-updated`. If the resolved upstream ref
+# differs from `published/current/manifest.json`, this workflow rebuilds the
+# snapshot, opens a PR, and lets the normal CI pipeline gate the merge. After
+# a two-hour review window, the workflow merges the PR only if every reported
 # check/status is passing. The merge then triggers Vercel's prod deploy via
 # the Git integration.
 #
@@ -15,14 +15,14 @@ name: Sync FPF Publication
 # the same E2E gates that protect every other change to main.
 on:
   repository_dispatch:
-    types: [fpf-sync-updated]
+    types: [fpf-origin-updated]
   schedule:
     # Every 6 hours. Dispatch should usually win; this is the freshness backstop.
     - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       upstream_ref:
-        description: 'fpf-sync branch, tag, or commit SHA to publish'
+        description: 'ailev/FPF branch, tag, or commit SHA to publish'
         required: false
         default: ''
       spec_url:
@@ -43,14 +43,14 @@ concurrency:
 
 env:
   BUN_VERSION: '1.3.5'
-  FPF_UPSTREAM_OWNER: venikman
-  FPF_UPSTREAM_REPO: fpf-sync
-  FPF_UPSTREAM_SPEC_PATH: FPF/FPF-Spec.md
+  FPF_UPSTREAM_OWNER: ailev
+  FPF_UPSTREAM_REPO: FPF
+  FPF_UPSTREAM_SPEC_PATH: FPF-Spec.md
   VERCEL_FUNCTION_BUNDLE_PATH: .vercel/output/functions/_origin.func
 
 jobs:
   refresh:
-    name: Refresh published/current from venikman/fpf-sync
+    name: Refresh published/current from ailev/FPF
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -94,7 +94,7 @@ jobs:
             echo "spec_url=$SPEC_URL"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Download upstream spec from venikman/fpf-sync
+      - name: Download upstream spec from ailev/FPF
         env:
           FPF_UPSTREAM_REF: ${{ steps.upstream.outputs.ref }}
           FPF_UPSTREAM_SPEC_URL: ${{ steps.upstream.outputs.spec_url }}
@@ -130,7 +130,7 @@ jobs:
                   src/docs/generated-search-id-registry.ts
 
           if git diff --cached --quiet; then
-            echo "published/current already represents venikman/fpf-sync ${{ steps.upstream.outputs.ref }}; nothing to commit."
+            echo "published/current already represents ailev/FPF ${{ steps.upstream.outputs.ref }}; nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             git reset HEAD -- . || true
             exit 0

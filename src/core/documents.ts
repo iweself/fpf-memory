@@ -550,7 +550,7 @@ function renderHomeMarkdown(
     '',
     'The **First Principles Framework (FPF)** is a structured framework for thinking and coordinating work. It reads like a technical specification rather than a management book — named patterns, definitions, and review rules — with the goal of helping teams model complex work, make reasoning inspectable, and keep decisions stable across engineering, research, and management.',
     '',
-    'FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The synchronized upstream publication source this runtime tracks is [`github.com/venikman/fpf-sync`](https://github.com/venikman/fpf-sync), specifically `FPF/FPF-Spec.md` on `main` by default. This site is a wiki projection; the MCP server above is a programmatic projection.',
+    'FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The upstream publication source this runtime tracks is [`github.com/ailev/FPF`](https://github.com/ailev/FPF), specifically `FPF-Spec.md` on `main` by default. This site is a wiki projection; the MCP server above is a programmatic projection.',
     '',
     '> **Cite this spec.** If you use FPF, please cite: Levenchuk, Anatoly. *First Principles Framework (FPF).* GitHub repository: <https://github.com/ailev/FPF>',
   ];

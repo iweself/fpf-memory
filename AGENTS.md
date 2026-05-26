@@ -32,13 +32,13 @@ For every non-trivial Codex implementation or review-fix task, run the closest r
 
 ## Learned User Preferences
 
-- Prefer not treating a repo-root spec checkout as the source of truth; use `bun run spec:download` or set `FPF_PUBLISH_SOURCE_PATH` to a local checkout (for example `fpf-sync`) when refreshing the committed `published/current/**` surface.
+- Prefer `bun run spec:download` or set `FPF_PUBLISH_SOURCE_PATH` to a local checkout of Anatoly Levenchuk's upstream FPF repo when refreshing the committed `published/current/**` surface.
 - Keep `FPF_SPEC_SOURCE_PATH` aligned across shell or project `.env`, MCP host configuration (`server.json` `env`), and any other entrypoints so CLI, MCP, and docs builds use the same spec file.
 - When strategy, architecture, adoption UX, or wording needs a real second opinion, prepare a focused external GPT-5.5 Pro critique prompt for the user to run manually; do not depend on that channel for repo facts, tests, deploy evidence, or automation.
 
 ## Learned Workspace Facts
 
-- Default raw upstream for `bun run spec:download` is `venikman/fpf-sync` on `main` at `FPF/FPF-Spec.md`, overridable with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`; downloaded output defaults to `.fpf-upstream/FPF-Spec.md` (gitignored).
+- Default raw upstream for `bun run spec:download` is `ailev/FPF` on `main` at `FPF-Spec.md`, overridable with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`; downloaded output defaults to `.fpf-upstream/FPF-Spec.md` (gitignored).
 - `FPF_SPEC_SOURCE_PATH` must be a local filesystem path; GitHub blob or other HTTPS URLs are not valid values (download or sync first, then point at the file).
 - CI and full docs builds in this repo consume the committed `published/current/**` surface (spec + snapshot + manifest). The local pre-push hook prepares it with `bun run publish:current`.
 - The FPF work evaluator is deterministic and local-only: it reads git/filesystem evidence, does not fetch GitHub, does not call an LLM, and does not fall back to `.fpf-upstream`.

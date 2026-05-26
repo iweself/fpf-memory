@@ -1,7 +1,7 @@
 export const DEFAULT_UPSTREAM_REF = 'main';
-export const DEFAULT_UPSTREAM_OWNER = 'venikman';
-export const DEFAULT_UPSTREAM_REPO = 'fpf-sync';
-export const DEFAULT_UPSTREAM_SPEC_PATH = 'FPF/FPF-Spec.md';
+export const DEFAULT_UPSTREAM_OWNER = 'ailev';
+export const DEFAULT_UPSTREAM_REPO = 'FPF';
+export const DEFAULT_UPSTREAM_SPEC_PATH = 'FPF-Spec.md';
 export const DEFAULT_UPSTREAM_REPO_URL = `https://github.com/${DEFAULT_UPSTREAM_OWNER}/${DEFAULT_UPSTREAM_REPO}`;
 
 export interface UpstreamSpecSourceConfig {
