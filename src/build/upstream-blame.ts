@@ -3,6 +3,11 @@ import { mkdir, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 
+import {
+  DEFAULT_UPSTREAM_REF,
+  DEFAULT_UPSTREAM_SPEC_PATH,
+} from './upstream-source.js';
+
 const execFileAsync = promisify(execFile);
 
 /**
@@ -20,12 +25,12 @@ export interface BlameLineInfo {
 export type LineBlameMap = Map<number, BlameLineInfo>;
 
 export interface UpstreamBlameOptions {
-  /** owner/repo — e.g. `ailev/FPF`. */
+  /** owner/repo — e.g. `venikman/fpf-sync`. */
   owner: string;
   repo: string;
   /** Branch / tag / SHA to blame against. Default `main`. */
   ref?: string;
-  /** Path to the spec file inside the upstream repo. Default `FPF-Spec.md`. */
+  /** Path to the spec file inside the upstream repo. Default `FPF/FPF-Spec.md`. */
   specPath?: string;
   /**
    * Local directory used as a persistent clone cache. Future runs
@@ -40,8 +45,6 @@ export interface UpstreamBlameOptions {
   allowNetwork?: boolean;
 }
 
-const DEFAULT_REF = 'main';
-const DEFAULT_SPEC_PATH = 'FPF-Spec.md';
 const DEFAULT_CLONE_PATH = '.fpf-upstream-clone';
 
 /**
@@ -56,8 +59,8 @@ const DEFAULT_CLONE_PATH = '.fpf-upstream-clone';
 export async function loadUpstreamLineBlame(
   options: UpstreamBlameOptions,
 ): Promise<LineBlameMap | undefined> {
-  const ref = options.ref ?? DEFAULT_REF;
-  const specPath = options.specPath ?? DEFAULT_SPEC_PATH;
+  const ref = options.ref ?? DEFAULT_UPSTREAM_REF;
+  const specPath = options.specPath ?? DEFAULT_UPSTREAM_SPEC_PATH;
   const clonePath = resolve(process.cwd(), options.clonePath ?? DEFAULT_CLONE_PATH);
   const allowNetwork = options.allowNetwork ?? true;
   const remoteUrl = `https://github.com/${options.owner}/${options.repo}.git`;

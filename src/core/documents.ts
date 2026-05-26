@@ -550,7 +550,7 @@ function renderHomeMarkdown(
     '',
     'The **First Principles Framework (FPF)** is a structured framework for thinking and coordinating work. It reads like a technical specification rather than a management book — named patterns, definitions, and review rules — with the goal of helping teams model complex work, make reasoning inspectable, and keep decisions stable across engineering, research, and management.',
     '',
-    'FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The canonical source is [`github.com/ailev/FPF`](https://github.com/ailev/FPF) — that repository is the source of truth. This site is a wiki projection; the MCP server above is a programmatic projection.',
+    'FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The synchronized upstream publication source this runtime tracks is [`github.com/venikman/fpf-sync`](https://github.com/venikman/fpf-sync), specifically `FPF/FPF-Spec.md` on `main` by default. This site is a wiki projection; the MCP server above is a programmatic projection.',
     '',
     '> **Cite this spec.** If you use FPF, please cite: Levenchuk, Anatoly. *First Principles Framework (FPF).* GitHub repository: <https://github.com/ailev/FPF>',
   ];
@@ -569,7 +569,7 @@ function renderHomeProvenanceDetail(manifest?: PublicationManifestSummary): stri
   const shortRef = manifest.upstreamRef.slice(0, 8);
 
   // Prefer upstream commit metadata when present: link the date to the
-  // exact ailev/FPF commit and the short SHA to the same URL so the
+  // exact upstream commit and the short SHA to the same URL so the
   // reader can open the diff this snapshot was projected from.
   if (manifest.upstreamCommittedAt && manifest.upstreamRepoUrl) {
     const upstreamDate = formatPublishedDate(manifest.upstreamCommittedAt);

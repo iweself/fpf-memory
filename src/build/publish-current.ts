@@ -23,6 +23,11 @@ import {
   loadUpstreamLineBlame,
   type LineBlameMap,
 } from './upstream-blame.js';
+import {
+  DEFAULT_UPSTREAM_OWNER,
+  DEFAULT_UPSTREAM_REPO,
+  DEFAULT_UPSTREAM_SPEC_PATH,
+} from './upstream-source.js';
 
 const publicationSnapshotInputSchema = publicationSnapshotSchema.extend({
   compilerFingerprint: z.string().optional(),
@@ -33,9 +38,11 @@ export interface PublishCurrentConfig {
   publishSourcePath: string;
   /** Tag committed into manifest.json so consumers know the upstream pin. */
   upstreamRef: string;
-  /** GitHub repository the upstream ref lives in. Default: ailev/FPF. */
+  /** GitHub repository the upstream ref lives in. Default: venikman/fpf-sync. */
   upstreamOwner?: string;
   upstreamRepo?: string;
+  /** Path to the spec file inside the upstream repository. */
+  upstreamSpecPath?: string;
   /** Label shown on the wiki; defaults to `latest-published`. */
   channel: string;
   /** Overridable to make the module testable against a temp tree. */
@@ -61,11 +68,9 @@ export interface PublishCurrentConfig {
     owner: string;
     repo: string;
     ref: string;
+    specPath: string;
   }) => Promise<LineBlameMap | undefined>;
 }
-
-const FALLBACK_UPSTREAM_OWNER = 'ailev';
-const FALLBACK_UPSTREAM_REPO = 'FPF';
 
 async function defaultResolveUpstreamCommit(
   ref: string,
@@ -142,11 +147,12 @@ export async function publishCurrent(
   const snapshotSourcePath = resolve(runtimeArtifactDir, ARTIFACT_FILENAMES.snapshot);
   const snapshotBytes = await readFile(snapshotSourcePath);
   // Resolve the upstream ref to an immutable SHA + commit date so the
-  // manifest records exactly which `ailev/FPF` revision this snapshot
+  // manifest records exactly which upstream revision this snapshot
   // is a projection of. The "Last Updated" footer on every doc page
   // and the home-page provenance line both read this date.
-  const upstreamOwner = config.upstreamOwner ?? FALLBACK_UPSTREAM_OWNER;
-  const upstreamRepo = config.upstreamRepo ?? FALLBACK_UPSTREAM_REPO;
+  const upstreamOwner = config.upstreamOwner ?? DEFAULT_UPSTREAM_OWNER;
+  const upstreamRepo = config.upstreamRepo ?? DEFAULT_UPSTREAM_REPO;
+  const upstreamSpecPath = config.upstreamSpecPath ?? DEFAULT_UPSTREAM_SPEC_PATH;
   const resolveCommit = config.resolveUpstreamCommit ?? defaultResolveUpstreamCommit;
   const upstreamCommit = await resolveCommit(
     config.upstreamRef,
@@ -168,11 +174,13 @@ export async function publishCurrent(
         owner: upstreamOwner,
         repo: upstreamRepo,
         ref: upstreamCommit.sha,
+        specPath: upstreamSpecPath,
       })
     : await loadUpstreamLineBlame({
         owner: upstreamOwner,
         repo: upstreamRepo,
         ref: upstreamCommit.sha,
+        specPath: upstreamSpecPath,
       });
 
   const enrichedSnapshotBytes = lineBlame

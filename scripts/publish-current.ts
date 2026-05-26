@@ -4,6 +4,7 @@ import {
   DEFAULT_UPSTREAM_OWNER,
   DEFAULT_UPSTREAM_REF,
   DEFAULT_UPSTREAM_REPO,
+  DEFAULT_UPSTREAM_SPEC_PATH,
 } from './upstream-ref.js';
 
 const publishSourcePath = (
@@ -16,10 +17,13 @@ const upstreamOwner = (
 const upstreamRepo = (
   process.env.FPF_UPSTREAM_REPO ?? DEFAULT_UPSTREAM_REPO
 ).trim();
+const upstreamSpecPath = (
+  process.env.FPF_UPSTREAM_SPEC_PATH ?? DEFAULT_UPSTREAM_SPEC_PATH
+).trim();
 const channel = (process.env.FPF_PUBLISH_CHANNEL ?? 'latest-published').trim();
 
 const manifest = await publishCurrent(
-  { publishSourcePath, upstreamRef, upstreamOwner, upstreamRepo, channel },
+  { publishSourcePath, upstreamRef, upstreamOwner, upstreamRepo, upstreamSpecPath, channel },
   process.env,
 );
 

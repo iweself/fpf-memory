@@ -1,12 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-import { DEFAULT_UPSTREAM_URL } from './upstream-ref.js';
+import { parseUpstreamSpecSourceEnv } from './upstream-ref.js';
 
-const DEFAULT_URL = DEFAULT_UPSTREAM_URL;
 const DEFAULT_OUTPUT = '.fpf-upstream/FPF-Spec.md';
 
-const url = (process.env.FPF_UPSTREAM_SPEC_URL ?? DEFAULT_URL).trim();
+const upstreamSource = parseUpstreamSpecSourceEnv(process.env);
+const url = upstreamSource.url;
 const outputPath = resolve(
   process.cwd(),
   (process.env.FPF_DOWNLOAD_SPEC_OUTPUT ?? DEFAULT_OUTPUT).trim(),
@@ -28,6 +28,10 @@ process.stdout.write(
   `${JSON.stringify(
     {
       url,
+      owner: upstreamSource.owner,
+      repo: upstreamSource.repo,
+      ref: upstreamSource.ref,
+      specPath: upstreamSource.specPath,
       outputPath,
       bytes: Buffer.byteLength(text, 'utf8'),
     },

@@ -1,29 +1,34 @@
 name: Sync FPF Publication
 
-# Polls the canonical FPF spec at github.com/ailev/FPF (Anatoly
-# Levenchuk's repository, the original source) once a day. If the
-# upstream main HEAD differs from `published/current/manifest.json`,
-# rebuilds the snapshot, opens a PR, and lets the normal CI pipeline
-# (lint, type, tests, build, Vercel preview, Playwright E2E) gate the
-# merge. After a two-hour review window, the workflow merges the PR
-# only if every reported check/status is passing. The merge then
-# triggers Vercel's prod deploy via the Git integration.
+# Tracks the canonical synchronized FPF spec at github.com/venikman/fpf-sync.
+# fpf-sync can notify this repo with a repository_dispatch event; a six-hour
+# poll is the backstop. If the resolved upstream ref differs from
+# `published/current/manifest.json`, this workflow rebuilds the snapshot,
+# opens a PR, and lets the normal CI pipeline gate the merge. After a
+# two-hour review window, the workflow merges the PR only if every reported
+# check/status is passing. The merge then triggers Vercel's prod deploy via
+# the Git integration.
 #
 # Earlier versions auto-pushed to main; that was changed to PR mode
 # because upstream-spec changes are higher-risk than human PRs (no
 # author review, content can change parser behavior). PR mode keeps
 # the same E2E gates that protect every other change to main.
 on:
+  repository_dispatch:
+    types: [fpf-sync-updated]
   schedule:
-    # Daily at 06:00 UTC (~02:00 EST / 23:00 PST). Off-peak for both
-    # GitHub Actions runners and the delayed Vercel deploy that follows merge.
-    - cron: '0 6 * * *'
+    # Every 6 hours. Dispatch should usually win; this is the freshness backstop.
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       upstream_ref:
-        description: 'ailev/FPF branch, tag, or commit SHA to publish'
+        description: 'fpf-sync branch, tag, or commit SHA to publish'
         required: false
-        default: 'main'
+        default: ''
+      spec_url:
+        description: 'Optional raw FPF-Spec.md URL; requires upstream_ref for provenance'
+        required: false
+        default: ''
 
 permissions:
   actions: write
@@ -38,11 +43,14 @@ concurrency:
 
 env:
   BUN_VERSION: '1.3.5'
+  FPF_UPSTREAM_OWNER: venikman
+  FPF_UPSTREAM_REPO: fpf-sync
+  FPF_UPSTREAM_SPEC_PATH: FPF/FPF-Spec.md
   VERCEL_FUNCTION_BUNDLE_PATH: .vercel/output/functions/_origin.func
 
 jobs:
   refresh:
-    name: Refresh published/current from ailev/FPF
+    name: Refresh published/current from venikman/fpf-sync
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -56,13 +64,46 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Download upstream spec from ailev/FPF
+      - name: Resolve upstream input
+        id: upstream
+        env:
+          PAYLOAD_SHA: ${{ github.event.client_payload.sha || github.event.client_payload.after || '' }}
+          PAYLOAD_REF: ${{ github.event.client_payload.ref || github.event.client_payload.branch || '' }}
+          PAYLOAD_SPEC_URL: ${{ github.event.client_payload.spec_url || '' }}
+          MANUAL_REF: ${{ github.event.inputs.upstream_ref || '' }}
+          MANUAL_SPEC_URL: ${{ github.event.inputs.spec_url || '' }}
+        run: |
+          set -euo pipefail
+
+          UPSTREAM_REF="${PAYLOAD_SHA:-${PAYLOAD_REF:-$MANUAL_REF}}"
+          SPEC_URL="${PAYLOAD_SPEC_URL:-$MANUAL_SPEC_URL}"
+
+          if [ -n "$SPEC_URL" ] && [ -z "$UPSTREAM_REF" ]; then
+            echo "::error::spec_url requires client_payload.sha/after/ref/branch or manual upstream_ref so manifest provenance is verifiable."
+            exit 1
+          fi
+
+          if [ -z "$UPSTREAM_REF" ]; then
+            UPSTREAM_REF="main"
+          fi
+          UPSTREAM_REF="${UPSTREAM_REF#refs/heads/}"
+          UPSTREAM_REF="${UPSTREAM_REF#refs/tags/}"
+
+          {
+            echo "ref=$UPSTREAM_REF"
+            echo "spec_url=$SPEC_URL"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download upstream spec from venikman/fpf-sync
+        env:
+          FPF_UPSTREAM_REF: ${{ steps.upstream.outputs.ref }}
+          FPF_UPSTREAM_SPEC_URL: ${{ steps.upstream.outputs.spec_url }}
         run: bun run spec:download
 
       - name: Publish current channel
         env:
           FPF_PUBLISH_SOURCE_PATH: .fpf-upstream/FPF-Spec.md
-          FPF_UPSTREAM_REF: ${{ inputs.upstream_ref || 'main' }}
+          FPF_UPSTREAM_REF: ${{ steps.upstream.outputs.ref }}
         run: bun run publish:current
 
       - name: Validate published surface
@@ -89,17 +130,21 @@ jobs:
                   src/docs/generated-search-id-registry.ts
 
           if git diff --cached --quiet; then
-            echo "published/current already represents ailev/FPF HEAD; nothing to commit."
+            echo "published/current already represents venikman/fpf-sync ${{ steps.upstream.outputs.ref }}; nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
             git reset HEAD -- . || true
             exit 0
           fi
 
           UPSTREAM_REF=$(jq -r .upstreamRef published/current/manifest.json)
+          UPSTREAM_REPO_URL=$(jq -r .upstreamRepoUrl published/current/manifest.json)
+          UPSTREAM_REPO_LABEL="${UPSTREAM_REPO_URL#https://github.com/}"
           UPSTREAM_DATE=$(jq -r .upstreamCommittedAt published/current/manifest.json)
           {
             echo "changed=true"
             echo "upstream_ref=$UPSTREAM_REF"
+            echo "upstream_repo_url=$UPSTREAM_REPO_URL"
+            echo "upstream_repo_label=$UPSTREAM_REPO_LABEL"
             echo "short_ref=${UPSTREAM_REF:0:8}"
             echo "short_date=${UPSTREAM_DATE:0:10}"
           } >> "$GITHUB_OUTPUT"
@@ -118,12 +163,12 @@ jobs:
           delete-branch: true
           base: main
           commit-message: |
-            publish: sync FPF spec from ailev/FPF (${{ steps.detect.outputs.short_ref }} · ${{ steps.detect.outputs.short_date }})
-          title: 'chore: sync FPF spec from ailev/FPF (${{ steps.detect.outputs.short_date }})'
+            publish: sync FPF spec from ${{ steps.detect.outputs.upstream_repo_label }} (${{ steps.detect.outputs.short_ref }} · ${{ steps.detect.outputs.short_date }})
+          title: 'chore: sync FPF spec from ${{ steps.detect.outputs.upstream_repo_label }} (${{ steps.detect.outputs.short_date }})'
           body: |
-            Auto-detected new commit on `ailev/FPF` main.
+            Auto-detected new commit on `${{ steps.detect.outputs.upstream_repo_label }}`.
 
-            - **Upstream commit**: [`${{ steps.detect.outputs.upstream_ref }}`](https://github.com/ailev/FPF/commit/${{ steps.detect.outputs.upstream_ref }})
+            - **Upstream commit**: [`${{ steps.detect.outputs.upstream_ref }}`](${{ steps.detect.outputs.upstream_repo_url }}/commit/${{ steps.detect.outputs.upstream_ref }})
             - **Author date**: ${{ steps.detect.outputs.short_date }}
 
             CI gates this merge: lint, type, tests, hosted MCP build, Vercel preview deploy, and Playwright E2E. After a two-hour review window, the sync workflow will merge this PR automatically if every reported check/status is passing.

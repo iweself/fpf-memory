@@ -14,7 +14,7 @@
 
 The **First Principles Framework (FPF)** is a structured framework for thinking and coordinating work. It is written more like a technical specification than like a management book: there are named patterns, definitions, and review rules. Its job is to help teams model complex work, make reasoning inspectable, and keep decisions stable across engineering, research, and management.
 
-FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The canonical source is [`github.com/ailev/FPF`](https://github.com/ailev/FPF) — that repository is the source of truth. **This repository is a runtime + slim wiki projection of the published spec**, not the spec itself.
+FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The synchronized upstream publication source this runtime tracks is [`github.com/venikman/fpf-sync`](https://github.com/venikman/fpf-sync), specifically `FPF/FPF-Spec.md` on `main` by default. **This repository is a runtime + slim wiki projection of the published spec**, not the spec itself.
 
 ## What is this repo?
 
@@ -88,10 +88,10 @@ Out:
 
 `.github/workflows/sync-fpf.yml` keeps both public surfaces current when FPF changes upstream in [fpf-sync](https://github.com/venikman/fpf-sync):
 
-- Fast path: `fpf-sync` can send this repo a `repository_dispatch` event named `fpf-sync-updated` with `client_payload.sha`/`after`, `client_payload.ref`/`branch`, or `client_payload.spec_url`.
-- Backstops: the workflow also runs every 6 hours and can be triggered manually with a branch, tag, commit SHA, or raw spec URL.
-- Work performed: download `FPF/FPF-Spec.md`, run `publish:current`, validate `published/current/**`, build the GitHub Pages website, build the Vercel-origin MCP bundle, deploy the website, and commit the publication files only when they changed.
-- Hosted MCP handoff: the resulting `main` push gives Vercel's Git integration the refreshed bundle inputs. If the repository secret `VERCEL_DEPLOY_HOOK_URL` is configured, the workflow also triggers that deploy hook after the publication commit.
+- Fast path: `fpf-sync` can send this repo a `repository_dispatch` event named `fpf-sync-updated` with `client_payload.sha`/`after`, `client_payload.ref`/`branch`, and optionally `client_payload.spec_url`.
+- Backstops: the workflow also runs every 6 hours and can be triggered manually with a branch, tag, commit SHA, or raw spec URL paired with an explicit upstream ref.
+- Work performed: download `FPF/FPF-Spec.md`, run `publish:current`, validate `published/current/**`, build the static docs, build the Vercel-origin MCP bundle, and open a publication PR only when files changed.
+- Hosted MCP handoff: after the review window and required checks pass, the workflow squash-merges the PR. The resulting `main` push gives Vercel's Git integration the refreshed `fpf.sh` inputs.
 
 Minimal dispatch payload from `fpf-sync`:
 
@@ -112,6 +112,10 @@ Copy `.env.example` to `.env`. The most common settings:
 | ----------------------------------------- | ------------------------------------ | --------------------------------------------------------------------- |
 | `FPF_SPEC_SOURCE_PATH`                    | `published/current/FPF-Spec.md`      | Local path to the spec the runtime reads (must be a filesystem path). |
 | `FPF_PUBLISH_SOURCE_PATH`                 | `.fpf-upstream/FPF-Spec.md`          | Local source used by `publish:current`.                               |
+| `FPF_UPSTREAM_OWNER`                      | `venikman`                           | GitHub owner for upstream publication provenance and downloads.        |
+| `FPF_UPSTREAM_REPO`                       | `fpf-sync`                           | GitHub repo for upstream publication provenance and downloads.         |
+| `FPF_UPSTREAM_REF`                        | `main`                               | Branch, tag, or SHA used by `spec:download` and `publish:current`.     |
+| `FPF_UPSTREAM_SPEC_PATH`                  | `FPF/FPF-Spec.md`                    | Path to the spec inside the upstream repo.                             |
 | `FPF_RUNTIME_ARTIFACT_DIR`                | `.runtime/fpf-index`                 | Where compiled artifacts are written.                                 |
 | `FPF_QUERY_DEFAULT_MODE`                  | `verbose`                            | Default `mode` for `query_fpf_spec` and `ask_fpf`.                    |
 | `FPF_LOCAL_LLM_BASE_URL`                  | `http://localhost:1234/v1`           | Optional LM Studio endpoint. Omit to stay fully deterministic.        |
@@ -125,7 +129,7 @@ Copy `.env.example` to `.env`. The most common settings:
 <details>
 <summary>Detailed notes on these variables</summary>
 
-`FPF_SPEC_SOURCE_PATH` must be a **local filesystem path** — the runtime does not fetch `https://` URLs. The default is the committed publication surface: `published/current/FPF-Spec.md`. Local memory preparation uses `FPF_PUBLISH_SOURCE_PATH`, which defaults to `.fpf-upstream/FPF-Spec.md` after `bun run spec:download`. You can instead point `FPF_PUBLISH_SOURCE_PATH` at a local checkout of [github.com/venikman/fpf-sync](https://github.com/venikman/fpf-sync) such as [`FPF/FPF-Spec.md`](https://github.com/venikman/fpf-sync/blob/main/FPF/FPF-Spec.md). `bun run spec:download` tracks `fpf-sync` `main` by default; the sync workflow resolves that moving branch to an exact commit SHA before writing `published/current/manifest.json`. Override the download URL or output path with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`. Keep `FPF_SPEC_SOURCE_PATH` aligned across `.env`, your shell, and any MCP config (`server.json` `env`) so every runtime/docs entrypoint agrees on the published file it should read.
+`FPF_SPEC_SOURCE_PATH` must be a **local filesystem path** — the runtime does not fetch `https://` URLs. The default is the committed publication surface: `published/current/FPF-Spec.md`. Local memory preparation uses `FPF_PUBLISH_SOURCE_PATH`, which defaults to `.fpf-upstream/FPF-Spec.md` after `bun run spec:download`. You can instead point `FPF_PUBLISH_SOURCE_PATH` at a local checkout of [github.com/venikman/fpf-sync](https://github.com/venikman/fpf-sync) such as [`FPF/FPF-Spec.md`](https://github.com/venikman/fpf-sync/blob/main/FPF/FPF-Spec.md). `bun run spec:download` tracks `fpf-sync` `main` by default; the sync workflow resolves one upstream ref and passes it to both download and publish before writing `published/current/manifest.json`. Override owner/repo/ref/spec path with `FPF_UPSTREAM_OWNER`, `FPF_UPSTREAM_REPO`, `FPF_UPSTREAM_REF`, and `FPF_UPSTREAM_SPEC_PATH`; override the raw download URL or output path with `FPF_UPSTREAM_SPEC_URL` and `FPF_DOWNLOAD_SPEC_OUTPUT`. In automation, a raw `spec_url` must be paired with an explicit ref or SHA so manifest provenance remains verifiable. Keep `FPF_SPEC_SOURCE_PATH` aligned across `.env`, your shell, and any MCP config (`server.json` `env`) so every runtime/docs entrypoint agrees on the published file it should read.
 
 `FPF_QUERY_DEFAULT_MODE` applies to `query_fpf_spec` and `ask_fpf` when `mode` is omitted. `trace_fpf_path` stays `compact` by default.
 
@@ -341,7 +345,7 @@ The docs pipeline does not use an LLM step. `bun run docs:generate` writes the c
 
 **Spec sources**
 
-- `FPF_SPEC_SOURCE_PATH` — runtime spec path (default `published/current/FPF-Spec.md`; canonical upstream lives in [ailev/FPF](https://github.com/ailev/FPF))
+- `FPF_SPEC_SOURCE_PATH` — runtime spec path (default `published/current/FPF-Spec.md`; synchronized upstream lives in [venikman/fpf-sync](https://github.com/venikman/fpf-sync))
 - `FPF_PUBLISH_SOURCE_PATH` — local publish source (default `.fpf-upstream/FPF-Spec.md` after `bun run spec:download`)
 
 ## Logs
