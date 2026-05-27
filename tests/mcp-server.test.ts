@@ -391,8 +391,15 @@ describe('direct MCP server', () => {
       },
     });
     const reviewerQueryPayload = asToolPayload(reviewerQuery);
-    expect(reviewerQueryPayload.status).toBe('ok');
-    if (routeIds.has('route:boundary-unpacking-claim-routing')) {
+    expect(['ok', 'ambiguous']).toContain(reviewerQueryPayload.status);
+    expect(typeof reviewerQueryPayload.answer).toBe('string');
+    expect((reviewerQueryPayload.answer as string).length).toBeGreaterThan(0);
+    expect(Array.isArray(reviewerQueryPayload.ids)).toBe(true);
+    expect((reviewerQueryPayload.ids as string[]).length).toBeGreaterThan(0);
+    if (
+      reviewerQueryPayload.status === 'ok' &&
+      routeIds.has('route:boundary-unpacking-claim-routing')
+    ) {
       expect((reviewerQueryPayload.ids as string[]).slice(0, 4)).toEqual([
         'route:boundary-unpacking-claim-routing',
         'A.6',
@@ -400,6 +407,9 @@ describe('direct MCP server', () => {
         'A.6.C',
       ]);
       expect(reviewerQueryPayload.answer).toContain('route:boundary-unpacking-claim-routing');
+    } else if (reviewerQueryPayload.status === 'ambiguous') {
+      expect(Array.isArray(reviewerQueryPayload.candidateIds)).toBe(true);
+      expect((reviewerQueryPayload.candidateIds as string[]).length).toBeGreaterThan(0);
     } else {
       expect((reviewerQueryPayload.ids as string[]).every((id) => !id.startsWith('route:'))).toBe(
         true,

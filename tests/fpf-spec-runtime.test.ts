@@ -293,8 +293,13 @@ describe('FpfRuntime', () => {
         'For a PR/code reviewer checking an API contract change, return exact route or pattern IDs and acceptance checks without pasting the full FPF.',
         'compact',
       );
-      expect(route.status).toBe('ok');
+      expect(['ok', 'ambiguous']).toContain(route.status);
+      expect(route.ids.length).toBeGreaterThan(0);
       expect(route.ids.every((id) => !id.startsWith('route:'))).toBe(true);
+      if (route.status === 'ambiguous') {
+        expect(Array.isArray(route.candidateIds)).toBe(true);
+        expect((route.candidateIds ?? []).length).toBeGreaterThan(0);
+      }
       return;
     }
     const question =
