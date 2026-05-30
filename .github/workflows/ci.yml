@@ -61,6 +61,12 @@ jobs:
         # here so the broken push doesn't reach the deploy jobs.
         run: bun run validate:published
 
+      - name: Monitor generated and curated content quality
+        # Validate the committed publication projection before build jobs.
+        # This catches stale route selectors in curated pages and route catalog
+        # holes against the same published snapshot the deploy will serve.
+        run: bun run monitor:content -- --mode local --format markdown --fail-on-breach
+
   lint:
     name: Lint + boundaries
     runs-on: ubuntu-latest

@@ -1,0 +1,36 @@
+name: FPF Content Quality Monitor
+
+on:
+  schedule:
+    # Separate from the sync freshness sentinel: this checks that production
+    # pages still project the published FPF snapshot without stale selectors.
+    - cron: '37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fpf-content-quality
+  cancel-in-progress: false
+
+env:
+  BUN_VERSION: '1.3.5'
+  FPF_CONTENT_QUALITY_BASE_URL: https://fpf.sh
+
+jobs:
+  monitor:
+    name: Check fpf.sh content quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - run: bun install --frozen-lockfile
+
+      - name: Evaluate hosted generated and curated pages
+        run: bun run monitor:content -- --mode live --format markdown --fail-on-breach
