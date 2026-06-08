@@ -593,6 +593,7 @@ function renderHomeMarkdown(
 function renderHomeNavigateLine(snapshot: Snapshot): string {
   const links: DocsNavLink[] = [
     { text: 'Start here', link: '/start-here' },
+    { text: 'Quick connect', link: '/connect-local' },
     { text: 'Connect MCP', link: '/connect-mcp' },
     { text: 'Pattern Catalog', link: '/patterns' },
     { text: 'Routes', link: '/routes' },

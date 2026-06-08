@@ -202,5 +202,5 @@ export function renderHomeMcpToolsMarkdown(): string {
 }
 
 export function renderHomeMcpEndpointLine(): string {
-  return `Endpoint: \`${HOSTED_MCP_ENDPOINT}\` · Legacy blocked during May 2026 mitigation: \`${LEGACY_HOSTED_MCP_ENDPOINT}\` · Status: [${HOSTED_MCP_STATUS_URL}](${HOSTED_MCP_STATUS_URL}) · [Connect setup →](/connect-mcp)`;
+  return `Endpoint: \`${HOSTED_MCP_ENDPOINT}\` · Legacy blocked during May 2026 mitigation: \`${LEGACY_HOSTED_MCP_ENDPOINT}\` · Status: [${HOSTED_MCP_STATUS_URL}](${HOSTED_MCP_STATUS_URL}) · [Quick connect →](/connect-local) · [Full setup →](/connect-mcp)`;
 }

@@ -6,7 +6,7 @@ outline: deep
 
 # Connect FPF Reference MCP
 
-Use this page when you want ChatGPT, Claude, an editor, or a coding CLI to retrieve bounded FPF context through the hosted MCP server.
+Use this page to connect ChatGPT, Claude, editors, or coding CLIs to the hosted FPF Reference MCP server so they can retrieve bounded public FPF context by stable IDs, routes, and generated docs.
 
 MCP origin landing (shorter mirror): [mcp.fpf.sh](https://mcp.fpf.sh/).
 
@@ -34,6 +34,30 @@ https://mcp.fpf.sh/api/mcp/fpf_reference/mcp
 
 This endpoint is the direct Vercel-hosted MCP origin over streamable HTTP. It exposes the public FPF Reference tools for catalog browsing, search, compact answers, exact generated doc reads, and index health.
 
+Use this URL only in an MCP client configuration. Do not open it in a browser tab.
+
+## Expected success
+
+A working client should show:
+
+- tools named `browse_fpf_catalog`, `search_fpf`, `ask_fpf`, `query_fpf_spec`, `read_fpf_doc`, and `get_fpf_index_status`;
+- `get_fpf_index_status` returning index, build, and source freshness data;
+- the first route prompt returning `route:project-alignment` with compact bounded next steps.
+
+## First successful call
+
+After adding the server, make the first success concrete:
+
+1. Call `get_fpf_index_status`.
+2. Confirm the response reports a loadable index and the expected upstream source details.
+3. Run a compact route query:
+
+```txt
+Use only fpf_reference. Call query_fpf_spec with question: "Project kickoff: align a project information system with roles and adoption next steps" and mode "compact". Return the route ID, ordered IDs, acceptance check, and next move.
+```
+
+A good response should include `route:project-alignment` in `ids`, then bounded next steps rather than a full FPF paste.
+
 The legacy endpoint is blocked during the May 2026 cost incident mitigation:
 
 ```txt
@@ -41,6 +65,8 @@ https://mcp.fpf.sh/api/mcp/fpf_memory/mcp
 ```
 
 Keep the route entry until the scheduled compatibility review on 2026-06-30 so old clients fail cheaply with a migration signal instead of falling through to an expensive timeout. Existing users with the old URL or `fpf_memory` client name should move to the canonical endpoint above.
+
+After 2026-06-30, record the review outcome on this page and either remove the legacy route note or replace it with the current migration policy.
 
 It is a JSON-RPC endpoint, not a web page. A bare browser GET returns **405 Method Not Allowed** because standalone MCP SSE streams are disabled on the hosted endpoint. Paste the canonical URL into your client's MCP config; do not open it in a tab.
 
@@ -61,20 +87,64 @@ Public tools:
 - `read_fpf_doc`
 - `get_fpf_index_status`
 
-## First successful call
+## Source and self-hosting
 
-After adding the server, ask your client to call `get_fpf_index_status`. Then run a compact route query:
+Yes, you can run FPF Reference MCP locally or self-host it. The source repo is [`github.com/venikman/fpf-memory`](https://github.com/venikman/fpf-memory). The upstream FPF specification it indexes is authored by [Anatoly Levenchuk](https://github.com/ailev) in [`github.com/ailev/FPF`](https://github.com/ailev/FPF); this repo is the MCP/runtime and docs projection, not the FPF spec itself.
 
-```txt
-Use only fpf_reference. Call query_fpf_spec with question: "Project kickoff: align a project information system with roles and adoption next steps" and mode "compact". Return the route ID, ordered IDs, acceptance check, and next move.
+For a local stdio MCP server:
+
+```sh
+git clone https://github.com/venikman/fpf-memory.git
+cd fpf-memory
+bun install
+bun run mcp
 ```
 
-**Success checklist**
+For the full local surface with expert inspection tools:
 
-- `get_fpf_index_status` reports a loadable index.
-- The compact query returns `route:project-alignment` in `ids` with bounded next steps, not a full FPF paste.
+```sh
+FPF_MCP_SURFACE=full bun run mcp
+```
 
-Verify the six public tools are advertised: `browse_fpf_catalog`, `search_fpf`, `ask_fpf`, `query_fpf_spec`, `read_fpf_doc`, `get_fpf_index_status`.
+For a local streamable HTTP server:
+
+```sh
+bun run start
+```
+
+The default local HTTP endpoint is:
+
+```txt
+http://localhost:4111/api/mcp/fpf_reference/mcp
+```
+
+Set `PORT` to change the local HTTP port. If you self-host for remote clients, put that HTTP server behind your own HTTPS reverse proxy or deployment platform and use the same `/api/mcp/fpf_reference/mcp` route. The committed `published/current/**` surface works out of the box; run `bun run spec:download` and `bun run publish:current` only when you want to refresh your local copy from upstream FPF.
+
+## Connector metadata
+
+Suggested connector name:
+
+```txt
+FPF Reference
+```
+
+Suggested description:
+
+```txt
+Retrieve bounded public First Principles Framework reference context by stable FPF IDs, routes, patterns, and generated docs. Use for FPF lookup, route selection, compact answers, and exact citation-backed reads.
+```
+
+## Troubleshooting
+
+| Symptom | Meaning | Fix |
+| --- | --- | --- |
+| Browser shows `405 Method Not Allowed` | Expected. This is not a web page. | Use the URL inside an MCP client configuration. |
+| Client shows no tools | URL is wrong, the client did not initialize the server, or the connector is not enabled in the chat. | Recheck the canonical URL, refresh or restart the client, and verify the connection logs. |
+| Looking for source or self-hosting instructions | FPF Reference MCP is the runtime repo; upstream FPF is the spec repo. | Use [`github.com/venikman/fpf-memory`](https://github.com/venikman/fpf-memory) for this MCP runtime and [`github.com/ailev/FPF`](https://github.com/ailev/FPF) for the upstream FPF spec. |
+| Old `fpf_memory` endpoint fails | Expected during migration mitigation. | Use `https://mcp.fpf.sh/api/mcp/fpf_reference/mcp`. |
+| Client asks for auth or OAuth | Unexpected for the public reference tools unless the client requires connector auth metadata. | Check client settings. No bearer token should be needed for public tools. |
+| Test prompt does not return `route:project-alignment` | The tool connected, but routing or index behavior may be off. | Run `get_fpf_index_status`, then retry `query_fpf_spec` with `mode: compact`. |
+| Timeout | Hosted endpoint, index, or client transport issue. | Check `https://mcp.fpf.sh/api/fpf/status` first, then retry from the MCP client. |
 
 ## ChatGPT
 
@@ -84,8 +154,9 @@ Use this path for ChatGPT custom apps/connectors.
 2. Go to Apps & Connectors.
 3. Enable developer mode under Advanced settings if your plan or workspace requires it.
 4. Create a new custom app or connector.
-5. Set the connector URL to the hosted endpoint above.
-6. Create the connector, confirm the advertised tools, then open a new chat and add the connector from the composer tools menu.
+5. Use the suggested connector name and description above.
+6. Set the connector URL to the hosted endpoint above.
+7. Create the connector, confirm the advertised tools, then open a new chat and add the connector from the composer tools menu.
 
 Reference: [OpenAI Apps SDK - connect from ChatGPT](https://developers.openai.com/apps-sdk/deploy/connect-chatgpt).
 

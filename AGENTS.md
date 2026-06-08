@@ -41,6 +41,8 @@ For every non-trivial Codex implementation or review-fix task, run the closest r
 - Prefer `bun run spec:download` or set `FPF_PUBLISH_SOURCE_PATH` to a local checkout of Anatoly Levenchuk's upstream FPF repo when refreshing the committed `published/current/**` surface.
 - Keep `FPF_SPEC_SOURCE_PATH` aligned across shell or project `.env`, MCP host configuration (`server.json` `env`), and any other entrypoints so CLI, MCP, and docs builds use the same spec file.
 - When strategy, architecture, adoption UX, or wording needs a real second opinion, prepare a focused external GPT-5.5 Pro critique prompt for the user to run manually; do not depend on that channel for repo facts, tests, deploy evidence, or automation.
+- Default MCP adoption path is the hosted endpoint at `mcp.fpf.sh`; document local stdio only for operators and contributors (README, AGENTS.md), not first-time adopters.
+- Change adoption copy (endpoints, FPF-vs-MCP explainer, client setup) in `src/core/public-copy.ts`; avoid hardcoding those strings in wiki markdown or hosted HTML.
 
 ## Learned Workspace Facts
 
@@ -49,3 +51,7 @@ For every non-trivial Codex implementation or review-fix task, run the closest r
 - CI and full docs builds in this repo consume the committed `published/current/**` surface (spec + snapshot + manifest). The local pre-push hook prepares it with `bun run publish:current`.
 - The FPF work evaluator is deterministic and local-only: it reads git/filesystem evidence, does not fetch GitHub, does not call an LLM, and does not fall back to `.fpf-upstream`.
 - `docs/` is the Rspress content root; `docs/generated/**` is produced from the configured spec via `docs:generate` (gitignored), separate from the static site output under `doc_build/`.
+- `src/core/public-copy.ts` is the SSOT for adoption copy (endpoints, tool names, FPF-vs-MCP explainer, first-successful-call copy, client setup); `tests/public-copy-parity.test.ts` locks wiki, hosted HTML, and connect-docs alignment.
+- fpf.sh uses a two-manual IA: Manual A (adoption — `/`, `start-here`, `connect-mcp`, work packets) vs Manual B (reference catalog — `/patterns`, `/routes`, generated preface/patterns/routes).
+- `docs/patterns.md` and `docs/routes.md` are gitignored short-URL alias pages emitted by the docs generator; `/` is task-first orientation, full pattern catalog at `/patterns`.
+- Playwright e2e defaults to production `https://fpf.sh` unless `FPF_E2E_BASE_URL` is set (preview CI passes the Vercel preview URL).

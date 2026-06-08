@@ -77,3 +77,18 @@ test('connect-mcp page mentions the canonical MCP endpoint', async ({
   await expect(page.getByRole('heading', { name: 'First successful call' }))
     .toBeVisible();
 });
+
+test('connect-local page stays focused on hosted server values', async ({
+  page,
+}) => {
+  await page.goto('/connect-local');
+  await expect(page).toHaveTitle(/What Do I Need To Run\?|FPF Reference/);
+  await expect(
+    page.getByRole('heading', { name: 'What do I need to run?', level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText('You do not need to run an FPF server.')).toBeVisible();
+  await expect(
+    page.getByText('https://mcp.fpf.sh/api/mcp/fpf_reference/mcp').first(),
+  ).toBeVisible();
+  await expect(page.getByText('bun run start')).toHaveCount(0);
+});

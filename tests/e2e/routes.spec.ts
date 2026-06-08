@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 const STATIC_PATHS = [
   '/',
   '/start-here',
+  '/connect-local',
   '/connect-mcp',
   '/patterns',
   '/automation-playbook',

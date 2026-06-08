@@ -78,11 +78,12 @@ async function copyNonGeneratedDocs(srcRoot: string, dstRoot: string) {
     const fullPath = resolve(entry.parentPath, entry.name);
     const relPath = relative(srcRoot, fullPath);
     if (relPath.startsWith('generated/') || relPath.startsWith('architecture/html/')) continue;
-    // `docs/index.md` (orientation page at `/`) and `docs/patterns.md`
-    // (the short-URL Pattern Catalog at `/patterns`) are both generator
-    // output. Skip them in the copy pass so the freshly generated copies
-    // win over any stale dev-machine copies.
-    if (relPath === 'index.md' || relPath === 'patterns.md') continue;
+    // `docs/index.md` (orientation page at `/`), `docs/patterns.md`
+    // (the short-URL Pattern Catalog at `/patterns`), and `docs/routes.md`
+    // (the short-URL Route Catalog at `/routes`) are all generator output.
+    // Skip them in the copy pass so the freshly generated copies win over any
+    // stale dev-machine copies.
+    if (relPath === 'index.md' || relPath === 'patterns.md' || relPath === 'routes.md') continue;
     const target = resolve(dstRoot, relPath);
     await mkdir(dirname(target), { recursive: true });
     await copyFile(fullPath, target);
@@ -499,6 +500,7 @@ describe('docs projection', () => {
       expect(rootIndex).toContain('| Looking up an exact ID | [Pattern Catalog](/patterns)');
       expect(rootIndex).toContain('## Reference shortcuts');
       expect(rootIndex).toContain('[Start here](/start-here)');
+      expect(rootIndex).toContain('[Quick connect](/connect-local)');
       expect(rootIndex).toContain('[Connect MCP](/connect-mcp)');
       expect(rootIndex).toContain('[Pattern Catalog](/patterns)');
       expect(rootIndex).toContain('[Adoption guide](/start-here) · [Reference catalog](/patterns)');
@@ -574,6 +576,7 @@ describe('docs projection', () => {
 
     expect(rootIndex).toContain('[Start here](/start-here)');
     expect(rootIndex).toContain('[Pattern Catalog](/patterns)');
+    expect(rootIndex).toContain('[Quick connect](/connect-local)');
     expect(rootIndex).not.toContain('[Glossary](/generated/patterns/');
     expect(rootIndex).not.toContain('[Change log](/generated/patterns/');
   });
@@ -718,6 +721,12 @@ describe('docs projection', () => {
       expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
         'Pi MCP extension',
       );
+      const connectLocal = await readFile(resolve(outDir, 'connect-local.html'), 'utf8');
+      expect(connectLocal).toContain('What do I need to run?');
+      expect(connectLocal).toContain('You do not need to run an FPF server.');
+      expect(connectLocal).toContain('https://mcp.fpf.sh/api/mcp/fpf_reference/mcp');
+      expect(connectLocal).not.toContain('bun run start');
+      expect(connectLocal).not.toContain('git clone');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
