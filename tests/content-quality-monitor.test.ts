@@ -331,6 +331,12 @@ function makeCuratedDocs(overrides: Record<string, string> = {}): ContentQuality
       text: 'Use route:writing-or-reviewing-patterns and /generated/patterns/A.3.',
     },
     {
+      label: 'connect-local',
+      path: '/connect-local',
+      sourcePath: 'docs/connect-local.md',
+      text: 'Call get_fpf_index_status.',
+    },
+    {
       label: 'connect-mcp',
       path: '/connect-mcp',
       sourcePath: 'docs/connect-mcp.md',

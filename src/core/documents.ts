@@ -552,7 +552,7 @@ function renderHomeMarkdown(
     '- `read_fpf_doc` — exact canonical page for a selector (preview + full modes)',
     '- `get_fpf_index_status` — snapshot freshness, source hash, build time',
     '',
-    'Endpoint: `https://mcp.fpf.sh/api/mcp/fpf_reference/mcp` · Legacy blocked during May 2026 mitigation: `https://mcp.fpf.sh/api/mcp/fpf_memory/mcp` · Status: [`mcp.fpf.sh/api/fpf/status`](https://mcp.fpf.sh/api/fpf/status) · [Connect setup →](/connect-mcp)',
+    'Endpoint: `https://mcp.fpf.sh/api/mcp/fpf_reference/mcp` · Legacy blocked during May 2026 mitigation: `https://mcp.fpf.sh/api/mcp/fpf_memory/mcp` · Status: [`mcp.fpf.sh/api/fpf/status`](https://mcp.fpf.sh/api/fpf/status) · [Quick connect →](/connect-local) · [Full setup →](/connect-mcp)',
     '',
     '## FPF — the framework this server projects',
     '',
@@ -573,6 +573,7 @@ function renderHomeMarkdown(
 function renderHomeNavigateLine(snapshot: Snapshot): string {
   const links: DocsNavLink[] = [
     { text: 'Start here', link: '/start-here' },
+    { text: 'Quick connect', link: '/connect-local' },
     { text: 'Connect MCP', link: '/connect-mcp' },
     { text: 'Patterns', link: '/generated/patterns/index' },
     { text: 'Routes', link: '/generated/routes/index' },
