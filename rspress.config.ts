@@ -308,6 +308,7 @@ document.addEventListener('keydown',function(e){
       {
         text: 'MCP',
         items: [
+          { text: 'Quick connect', link: '/connect-local' },
           { text: 'Recipes', link: '/mcp-recipes' },
           { text: 'Connect to clients', link: '/connect-mcp' },
           { text: 'Automation Playbook', link: '/automation-playbook' },

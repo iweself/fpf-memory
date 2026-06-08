@@ -28,6 +28,7 @@ export const CONTENT_QUALITY_CURATED_DOCS = [
   { label: 'home', path: '/', sourcePath: 'docs/index.md' },
   { label: 'start-here', path: '/start-here', sourcePath: 'docs/start-here.md' },
   { label: 'work-packets', path: '/work-packets', sourcePath: 'docs/work-packets.md' },
+  { label: 'connect-local', path: '/connect-local', sourcePath: 'docs/connect-local.md' },
   { label: 'connect-mcp', path: '/connect-mcp', sourcePath: 'docs/connect-mcp.md' },
   { label: 'mcp-recipes', path: '/mcp-recipes', sourcePath: 'docs/mcp-recipes.md' },
   {
@@ -315,6 +316,7 @@ export function evaluateContentQuality(
     : true;
   const monitoredMcpDocs = new Set(curatedDocs.map((doc) => doc.label));
   const mcpPagesPresent = [
+    'connect-local',
     'connect-mcp',
     'mcp-recipes',
     'automation-playbook',

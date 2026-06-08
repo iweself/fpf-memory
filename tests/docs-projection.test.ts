@@ -488,6 +488,7 @@ describe('docs projection', () => {
       expect(rootIndex).toContain('Cite this spec');
       expect(rootIndex).toContain('## Navigate');
       expect(rootIndex).toContain('[Start here](/start-here)');
+      expect(rootIndex).toContain('[Quick connect](/connect-local)');
       expect(rootIndex).toContain('[Connect MCP](/connect-mcp)');
       expect(rootIndex).toContain('[Patterns](/generated/patterns/index)');
       expect(rootIndex).toContain('[Routes](/generated/routes/index)');
@@ -553,6 +554,7 @@ describe('docs projection', () => {
       buildDocsProjection(alternateSnapshot).pagesByMarkdownPath['docs/index.md']?.markdown ?? '';
 
     expect(rootIndex).toContain('[Start here](/start-here)');
+    expect(rootIndex).toContain('[Quick connect](/connect-local)');
     expect(rootIndex).toContain('[Patterns](/generated/patterns/index)');
     expect(rootIndex).not.toContain('[Glossary](/generated/patterns/');
     expect(rootIndex).not.toContain('[Change log](/generated/patterns/');
@@ -678,6 +680,12 @@ describe('docs projection', () => {
       expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
         'Pi MCP extension',
       );
+      const connectLocal = await readFile(resolve(outDir, 'connect-local.html'), 'utf8');
+      expect(connectLocal).toContain('What do I need to run?');
+      expect(connectLocal).toContain('You do not need to run an FPF server.');
+      expect(connectLocal).toContain('https://mcp.fpf.sh/api/mcp/fpf_reference/mcp');
+      expect(connectLocal).not.toContain('bun run start');
+      expect(connectLocal).not.toContain('git clone');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
