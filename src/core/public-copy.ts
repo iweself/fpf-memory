@@ -67,7 +67,7 @@ export interface ClientSetupSection {
   id: string;
   title: string;
   summary: string;
-  body: string[];
+  body: readonly string[];
   code?: string;
   href: string;
 }

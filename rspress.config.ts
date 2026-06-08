@@ -306,9 +306,13 @@ document.addEventListener('keydown',function(e){
         link: '/work-packets',
       },
       {
-        text: 'Pattern Catalog',
-        link: '/patterns',
-        activeMatch: '/patterns/?($|\\?|#)',
+        text: 'Reference',
+        activeMatch: '/patterns/|/routes/|/generated/preface/',
+        items: [
+          { text: 'Pattern Catalog', link: '/patterns' },
+          { text: 'Route Catalog', link: '/routes' },
+          { text: 'Preface', link: '/generated/preface/index' },
+        ],
       },
       {
         text: 'MCP',
@@ -324,7 +328,7 @@ document.addEventListener('keydown',function(e){
       // Sidebar scope is now narrow:
       //   - `/patterns` and every `/generated/patterns/...` page get the
       //     full pattern tree.
-      //   - `/generated/routes/...` get the routes tree.
+      //   - `/routes` and `/generated/routes/...` get the routes tree.
       //   - The root `/` and authored pages (start-here, work-packets,
       //     mcp-recipes, connect-mcp, automation-playbook) get NO sidebar
       //     so the orientation surface stays focused on its own
@@ -357,13 +361,30 @@ document.addEventListener('keydown',function(e){
           ],
         },
       ],
+      '/routes': [
+        {
+          text: 'Routes',
+          items: [
+            {
+              text: 'Route Catalog',
+              link: '/routes',
+            },
+            ...navigation.routes.map((group) => ({
+              text: group.text,
+              collapsible: true,
+              collapsed: true,
+              items: group.items,
+            })),
+          ],
+        },
+      ],
       '/generated/routes/': [
         {
           text: 'Routes',
           items: [
             {
               text: 'Route Catalog',
-              link: '/generated/routes/index',
+              link: '/routes',
             },
             ...navigation.routes.map((group) => ({
               text: group.text,

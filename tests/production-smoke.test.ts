@@ -5,6 +5,10 @@ import {
   runProductionSmoke,
   type ExpectedPublication,
 } from '../src/build/production-smoke.js';
+import {
+  FIRST_SUCCESSFUL_CALL_HEADING,
+  WIKI_CONNECT_MCP_URL,
+} from '../src/core/public-copy.js';
 
 const EXPECTED: ExpectedPublication = {
   upstreamRef: '1234567890abcdef1234567890abcdef12345678',
@@ -61,6 +65,20 @@ describe('semantic production smoke', () => {
     expect(formatProductionSmokeMarkdown(report)).toContain('legacy_runtime_fresh');
   });
 
+  it('breaches when the wiki root loses the orientation doorway', async () => {
+    const report = await runProductionSmoke({
+      websiteBaseUrl: 'https://docs.example.test',
+      mcpBaseUrl: 'https://mcp.example.test',
+      expectedPublication: EXPECTED,
+      fetchImpl: createSmokeFetch({
+        websiteRootText: mcpLandingText(),
+      }),
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.summary).toContain('fpf.sh root orientation doorway');
+  });
+
   it('breaches when old fpf_memory onboarding is primary or unlabeled', async () => {
     const report = await runProductionSmoke({
       websiteBaseUrl: 'https://docs.example.test',
@@ -83,8 +101,8 @@ describe('semantic production smoke', () => {
       mcpBaseUrl: 'https://mcp.example.test',
       expectedPublication: EXPECTED,
       fetchImpl: createSmokeFetch({
-        websiteConnectText: pageText('406 Not Acceptable'),
-        mcpConnectText: pageText('406 Not Acceptable'),
+        websiteConnectText: wikiConnectText('406 Not Acceptable'),
+        mcpConnectText: mcpLandingText('406 Not Acceptable'),
       }),
     });
 
@@ -167,16 +185,16 @@ function createSmokeFetch(overrides: {
     }
 
     if (url.hostname === 'docs.example.test' && url.pathname === '/') {
-      return htmlResponse(overrides.websiteRootText ?? pageText());
+      return htmlResponse(overrides.websiteRootText ?? websiteOrientationText());
     }
     if (url.hostname === 'docs.example.test' && url.pathname === '/connect-mcp') {
-      return htmlResponse(overrides.websiteConnectText ?? pageText('405 Method Not Allowed'));
+      return htmlResponse(overrides.websiteConnectText ?? wikiConnectText('405 Method Not Allowed'));
     }
     if (url.hostname === 'mcp.example.test' && url.pathname === '/') {
-      return htmlResponse(overrides.mcpRootText ?? pageText('405 Method Not Allowed'));
+      return htmlResponse(overrides.mcpRootText ?? mcpLandingText('405 Method Not Allowed'));
     }
     if (url.hostname === 'mcp.example.test' && url.pathname === '/connect-mcp') {
-      return htmlResponse(overrides.mcpConnectText ?? pageText('405 Method Not Allowed'));
+      return htmlResponse(overrides.mcpConnectText ?? mcpLandingText('405 Method Not Allowed'));
     }
 
     return new Response('not found', { status: 404 });
@@ -242,12 +260,33 @@ function handleMcpPost(init: RequestInit | undefined): Response {
   }, { status: 400 });
 }
 
-function pageText(extra = ''): string {
+function websiteOrientationText(extra = ''): string {
+  return [
+    '<title>FPF Reference</title>',
+    'FPF Reference',
+    'Choose your entry point',
+    'Pattern Catalog',
+    '/patterns',
+    extra,
+  ].join(' ');
+}
+
+function wikiConnectText(extra = ''): string {
+  return [
+    mcpLandingText(extra),
+    'FPF vs MCP',
+    'not agent memory',
+    FIRST_SUCCESSFUL_CALL_HEADING,
+  ].join(' ');
+}
+
+function mcpLandingText(extra = ''): string {
   return [
     '<title>FPF Reference MCP</title>',
     'FPF Reference',
     'https://mcp.fpf.sh/api/mcp/fpf_reference/mcp',
     'fpf_reference',
+    WIKI_CONNECT_MCP_URL,
     'Legacy https://mcp.fpf.sh/api/mcp/fpf_memory/mcp is blocked during mitigation.',
     extra,
   ].join(' ');

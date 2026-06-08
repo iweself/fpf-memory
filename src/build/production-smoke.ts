@@ -1,5 +1,9 @@
 import { validatePublishedSurface } from './published-surface.js';
 import {
+  FIRST_SUCCESSFUL_CALL_HEADING,
+  WIKI_CONNECT_MCP_URL,
+} from '../core/public-copy.js';
+import {
   HOSTED_FPF_STATUS_ROUTE,
   HOSTED_MCP_ROUTE,
 } from '../composition/hosted.js';
@@ -130,10 +134,10 @@ export async function runProductionSmoke(
   ]);
 
   checks.push(
-    ...checkCanonicalOnboardingPage('fpf.sh root', websiteRoot),
-    ...checkCanonicalOnboardingPage('fpf.sh connect-mcp', websiteConnect),
-    ...checkCanonicalOnboardingPage('mcp.fpf.sh root', mcpRoot),
-    ...checkCanonicalOnboardingPage('mcp.fpf.sh connect-mcp', mcpConnect),
+    ...checkWebsiteOrientationPage('fpf.sh root', websiteRoot),
+    ...checkWikiConnectPage('fpf.sh connect-mcp', websiteConnect),
+    ...checkMcpOriginLandingPage('mcp.fpf.sh root', mcpRoot),
+    ...checkMcpOriginLandingPage('mcp.fpf.sh connect-mcp', mcpConnect),
     ...checkGetDocs(websiteConnect),
     ...checkGetDocs(mcpConnect),
   );
@@ -233,7 +237,71 @@ async function fetchPage(
   };
 }
 
-function checkCanonicalOnboardingPage(
+function checkWebsiteOrientationPage(
+  label: string,
+  page: PageEvidence,
+): ProductionSmokeCheck[] {
+  return [
+    ...checkPublicProductPage(label, page),
+    {
+      characteristic: `${label} orientation doorway`,
+      status:
+        page.text.includes('Choose your entry point')
+        && /Pattern Catalog|\/patterns/u.test(page.text)
+          ? 'pass'
+          : 'fail',
+      evidence: 'task-first orientation surface is present',
+      url: page.url,
+    },
+  ];
+}
+
+function checkWikiConnectPage(
+  label: string,
+  page: PageEvidence,
+): ProductionSmokeCheck[] {
+  return [
+    ...checkCanonicalMcpOnboardingCopy(label, page),
+    {
+      characteristic: `${label} adoption explainer`,
+      status:
+        /FPF vs MCP|not agent memory|not a workflow engine/iu.test(page.text)
+          ? 'pass'
+          : 'fail',
+      evidence: 'FPF-vs-MCP framing is present on the wiki connect guide',
+      url: page.url,
+    },
+    {
+      characteristic: `${label} first successful call`,
+      status: page.text.includes(FIRST_SUCCESSFUL_CALL_HEADING) ? 'pass' : 'fail',
+      evidence: `documents ${FIRST_SUCCESSFUL_CALL_HEADING}`,
+      url: page.url,
+    },
+  ];
+}
+
+function checkMcpOriginLandingPage(
+  label: string,
+  page: PageEvidence,
+): ProductionSmokeCheck[] {
+  return [
+    ...checkCanonicalMcpOnboardingCopy(label, page),
+    {
+      characteristic: `${label} wiki connect cross-link`,
+      status: page.text.includes(WIKI_CONNECT_MCP_URL) ? 'pass' : 'fail',
+      evidence: 'links to the canonical wiki connect guide',
+      url: page.url,
+    },
+    {
+      characteristic: `${label} hosted landing surface`,
+      status: !page.text.includes('Choose your entry point') ? 'pass' : 'fail',
+      evidence: 'MCP origin landing is not the wiki orientation home',
+      url: page.url,
+    },
+  ];
+}
+
+function checkPublicProductPage(
   label: string,
   page: PageEvidence,
 ): ProductionSmokeCheck[] {
@@ -264,6 +332,23 @@ function checkCanonicalOnboardingPage(
       url: page.url,
     },
     {
+      characteristic: `${label} legacy route boundary`,
+      status: legacyLabeled && legacyNotPrimary && !lower.includes('use fpf_memory') ? 'pass' : 'fail',
+      evidence: hasLegacyName
+        ? 'legacy fpf_memory mention is labeled and follows fpf_reference'
+        : 'no legacy fpf_memory onboarding path presented',
+      url: page.url,
+    },
+  ];
+}
+
+function checkCanonicalMcpOnboardingCopy(
+  label: string,
+  page: PageEvidence,
+): ProductionSmokeCheck[] {
+  return [
+    ...checkPublicProductPage(label, page),
+    {
       characteristic: `${label} canonical MCP route`,
       status:
         page.text.includes('fpf_reference')
@@ -272,14 +357,6 @@ function checkCanonicalOnboardingPage(
           ? 'pass'
           : 'fail',
       evidence: 'canonical server name and hosted endpoint are present',
-      url: page.url,
-    },
-    {
-      characteristic: `${label} legacy route boundary`,
-      status: legacyLabeled && legacyNotPrimary && !lower.includes('use fpf_memory') ? 'pass' : 'fail',
-      evidence: hasLegacyName
-        ? 'legacy fpf_memory mention is labeled and follows fpf_reference'
-        : 'no legacy fpf_memory onboarding path presented',
       url: page.url,
     },
   ];

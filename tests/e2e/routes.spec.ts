@@ -10,6 +10,7 @@ const STATIC_PATHS = [
   '/automation-playbook',
   '/mcp-recipes',
   '/work-packets',
+  '/routes',
   '/generated/routes/index',
   '/generated/patterns/A.6.9',
   '/generated/patterns/F.9',

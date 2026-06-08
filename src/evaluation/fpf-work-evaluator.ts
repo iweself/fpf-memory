@@ -434,7 +434,7 @@ function scoreUnifiedTermSheet(
   ].filter(isDefined);
   const hasSlimNavigation =
     contains(facts, 'docsIndex', '[Pattern Catalog](/patterns)') &&
-    contains(facts, 'docsIndex', '[Routes](/generated/routes/index)');
+    contains(facts, 'docsIndex', '[Routes](/routes)');
   const hasTermRoutes = OPTIONAL_TERM_LINKS.every((link) =>
     containsOptionalTermLink(facts, link),
   );
@@ -836,24 +836,30 @@ function parsePublicationManifestSummary(
   if (!manifestText) return undefined;
 
   try {
-    const parsed = JSON.parse(manifestText) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(manifestText);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return undefined;
+    }
+    const manifest = parsed as Record<string, unknown>;
     if (
-      typeof parsed.channel !== 'string' ||
-      typeof parsed.sourceHash !== 'string' ||
-      typeof parsed.upstreamRef !== 'string' ||
-      typeof parsed.publishedAt !== 'string'
+      typeof manifest.channel !== 'string' ||
+      typeof manifest.sourceHash !== 'string' ||
+      typeof manifest.upstreamRef !== 'string' ||
+      typeof manifest.publishedAt !== 'string'
     ) {
       return undefined;
     }
     return {
-      channel: parsed.channel,
-      sourceHash: parsed.sourceHash,
-      upstreamRef: parsed.upstreamRef,
-      publishedAt: parsed.publishedAt,
+      channel: manifest.channel,
+      sourceHash: manifest.sourceHash,
+      upstreamRef: manifest.upstreamRef,
+      publishedAt: manifest.publishedAt,
       upstreamRepoUrl:
-        typeof parsed.upstreamRepoUrl === 'string' ? parsed.upstreamRepoUrl : undefined,
+        typeof manifest.upstreamRepoUrl === 'string' ? manifest.upstreamRepoUrl : undefined,
       upstreamCommittedAt:
-        typeof parsed.upstreamCommittedAt === 'string' ? parsed.upstreamCommittedAt : undefined,
+        typeof manifest.upstreamCommittedAt === 'string'
+          ? manifest.upstreamCommittedAt
+          : undefined,
     };
   } catch {
     return undefined;

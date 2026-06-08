@@ -101,6 +101,7 @@ export function buildDocsProjection(
     buildPatternIndexPage(snapshot),
     buildPatternsAliasPage(snapshot),
     buildRouteIndexPage(snapshot),
+    buildRoutesAliasPage(snapshot),
     buildPrefaceIndexPage(snapshot),
     buildRootIndexPage(snapshot, manifest),
   ];
@@ -532,6 +533,8 @@ function renderHomeMarkdown(
     '',
     `Hosted **FPF Reference** MCP server + slim wiki projection of the **First Principles Framework (FPF)**. ${patternCount} pattern pages, ${routeCount} working routes, and the preface — addressable by stable FPF IDs, browsable here and queryable through MCP.`,
     '',
+    '[Adoption guide](/start-here) · [Reference catalog](/patterns)',
+    '',
     '## Choose your entry point',
     '',
     '| If you are... | Start with | Good first action |',
@@ -539,7 +542,7 @@ function renderHomeMarkdown(
     '| New to FPF | [Start Here](/start-here) | Pick the work shape before opening the full catalog. |',
     '| Connecting an agent or editor | [Connect MCP](/connect-mcp) | Add `fpf_reference`, then run `get_fpf_index_status`. |',
     '| Reviewing a project, PR, or design change | [Work Packets](/work-packets) | Use the PR/code review packet or product-role feedback packet. |',
-    '| Looking up an exact ID | [Pattern Catalog](/patterns) or [Routes](/generated/routes/index) | Search an ID like `A.2.3` or a route like `route:project-alignment`. |',
+    '| Looking up an exact ID | [Pattern Catalog](/patterns) or [Routes](/routes) | Search an ID like `A.2.3` or a route like `route:project-alignment`. |',
     '',
     '## Reference shortcuts',
     '',
@@ -592,7 +595,7 @@ function renderHomeNavigateLine(snapshot: Snapshot): string {
     { text: 'Start here', link: '/start-here' },
     { text: 'Connect MCP', link: '/connect-mcp' },
     { text: 'Pattern Catalog', link: '/patterns' },
-    { text: 'Routes', link: '/generated/routes/index' },
+    { text: 'Routes', link: '/routes' },
   ];
 
   const orderedPatterns = sortedPatterns(snapshot);
@@ -660,14 +663,55 @@ function formatPublishedDate(value: string): string {
 }
 
 function buildRouteIndexPage(snapshot: Snapshot): GeneratedDocPage {
+  return {
+    kind: 'index',
+    title: 'Route Catalog',
+    markdownPath: `${GENERATED_ROOT}/routes/index.md`,
+    staticPath: '/generated/routes/index',
+    markdown: renderRouteCatalogMarkdown(snapshot, {
+      title: 'Route Catalog',
+      description: 'Generated route pages from the compiler snapshot.',
+    }),
+  };
+}
+
+/**
+ * The Route Catalog at the short URL `/routes`. Same content as
+ * `/generated/routes/index`; both URLs work so existing deep-links keep
+ * resolving while the Reference nav uses the cleaner short form.
+ */
+function buildRoutesAliasPage(snapshot: Snapshot): GeneratedDocPage {
+  return {
+    kind: 'index',
+    title: 'Route Catalog',
+    markdownPath: `${DOCS_ROOT}/routes.md`,
+    staticPath: '/routes',
+    markdown: renderRouteCatalogMarkdown(snapshot, {
+      title: 'Route Catalog',
+      description: 'Generated route pages from the compiler snapshot.',
+      heading: 'Route Catalog',
+    }),
+  };
+}
+
+function renderRouteCatalogMarkdown(
+  snapshot: Snapshot,
+  options: {
+    title: string;
+    description: string;
+    heading?: string;
+  },
+): string {
   const routes = Object.values(snapshot.routeGraph.nodes);
   const lines = [
     renderFrontMatter({
-      title: 'Route Catalog',
-      description: 'Generated route pages from the compiler snapshot.',
+      title: options.title,
+      description: options.description,
       outline: false,
     }),
-    '# Route Catalog',
+    `# ${options.heading ?? options.title}`,
+    '',
+    'New here? Start at the [orientation page](/) — work packets, MCP recipes, and the right entry point per task. Use this catalog when you know the work shape but need the exact route ID or ordered steps.',
     '',
     '## What this page is',
     '',
@@ -697,13 +741,7 @@ function buildRouteIndexPage(snapshot: Snapshot): GeneratedDocPage {
     }
   }
 
-  return {
-    kind: 'index',
-    title: 'Route Catalog',
-    markdownPath: `${GENERATED_ROOT}/routes/index.md`,
-    staticPath: '/generated/routes/index',
-    markdown: `${lines.join('\n')}\n`,
-  };
+  return `${lines.join('\n')}\n`;
 }
 
 function buildPrefaceIndexPage(snapshot: Snapshot): GeneratedDocPage {
@@ -945,7 +983,7 @@ function renderRoutePage(snapshot: Snapshot, route: RouteRecord): string {
       description: route.description,
     }),
     renderBreadcrumb([
-      { text: 'Routes', link: '/generated/routes/index' },
+      { text: 'Routes', link: '/routes' },
       { text: route.name },
     ]),
     '',

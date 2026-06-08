@@ -501,7 +501,8 @@ describe('docs projection', () => {
       expect(rootIndex).toContain('[Start here](/start-here)');
       expect(rootIndex).toContain('[Connect MCP](/connect-mcp)');
       expect(rootIndex).toContain('[Pattern Catalog](/patterns)');
-      expect(rootIndex).toContain('[Routes](/generated/routes/index)');
+      expect(rootIndex).toContain('[Adoption guide](/start-here) · [Reference catalog](/patterns)');
+      expect(rootIndex).toContain('[Routes](/routes)');
       const glossaryTarget = resolveDocTarget(
         snapshot,
         findPatternByTitleFragment(snapshot, 'alphabetic glossary').id,
@@ -540,6 +541,12 @@ describe('docs projection', () => {
       expect(rootIndex).not.toContain('Demo videos');
       expect(patternsAlias).not.toContain('use-case-videos');
       expect(patternsAlias).not.toContain('Demo videos');
+
+      const routesAlias = await readFile(resolve(docsRoot, 'routes.md'), 'utf8');
+      expect(routesAlias).toContain('title: "Route Catalog"');
+      expect(routesAlias).toContain('# Route Catalog');
+      expect(routesAlias).toContain('[orientation page](/)');
+      expect(routesAlias).toContain('Routes are generated FPF working paths');
     } finally {
       await rm(tempRoot, { recursive: true, force: true });
     }
