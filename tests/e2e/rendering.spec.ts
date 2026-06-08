@@ -1,15 +1,55 @@
 import { expect, test } from '@playwright/test';
 
-test('homepage renders the FPF Reference chapter list', async ({ page }) => {
+test('homepage renders the FPF Reference entry surface', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/FPF Reference/);
   await expect(page.getByRole('heading', { name: 'FPF Reference', level: 1 }))
     .toBeVisible();
-  // The chapter list shows Part headings as ## H2s. At least Part A and the
-  // last Part J should be present in the published spec; missing chapters
-  // indicate the rspress build dropped routes or the catalog regressed.
-  await expect(page.getByRole('heading', { name: /^Part A\b/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /^Part J\b/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Choose your entry point' }))
+    .toBeVisible();
+  await expect(page.getByText('Connecting an agent or editor')).toBeVisible();
+  await expect(page.getByText('Reviewing a project, PR, or design change'))
+    .toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reference shortcuts' }))
+    .toBeVisible();
+});
+
+test('homepage hydrates without React warnings and installs shims', async ({
+  page,
+}) => {
+  const hydrationMessages: string[] = [];
+  page.on('console', (message) => {
+    const text = message.text();
+    if (
+      /hydrateRoot recoverable error|Minified React error #418|Hydration failed|hydrating|did not match/i
+        .test(text)
+    ) {
+      hydrationMessages.push(text);
+    }
+  });
+
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('#fpf-skip-link')).toHaveText('Skip to main content');
+  await expect(page.locator('#fpf-keyhelp-float')).toBeVisible();
+  await expect(page.locator('.rp-search-button--mobile')).toHaveAttribute('role', 'button');
+  const firstFocusableId = await page.evaluate(() => {
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    const first = candidates.find((element) => {
+      if (element.hasAttribute('disabled') || element.getAttribute('aria-hidden') === 'true') {
+        return false;
+      }
+      return true;
+    });
+    return first?.id ?? '';
+  });
+
+  expect(firstFocusableId).toBe('fpf-skip-link');
+  expect(hydrationMessages).toEqual([]);
 });
 
 test('a generated pattern page renders body and an auto-linked ID', async ({
@@ -34,4 +74,6 @@ test('connect-mcp page mentions the canonical MCP endpoint', async ({
   await expect(
     page.getByText('https://mcp.fpf.sh/api/mcp/fpf_reference/mcp').first(),
   ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'First successful call' }))
+    .toBeVisible();
 });

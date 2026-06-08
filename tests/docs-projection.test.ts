@@ -186,6 +186,10 @@ describe('docs projection', () => {
     );
     if (firstRoute) {
       expect(routePage).toContain('It is not a website route or application navigation route');
+      expect(routePage).toContain('## Use this route when');
+      expect(routePage).toContain('## Copyable compact prompt');
+      expect(routePage).toContain(`Find the smallest useful context for ${firstRoute.id}.`);
+      expect(routePage).toContain('## Ordered steps');
     }
   });
 
@@ -469,10 +473,10 @@ describe('docs projection', () => {
       expect(
         await readFile(resolve(docsRoot, 'generated/patterns/index.md'), 'utf8'),
       ).toContain('# Pattern Catalog');
-      // The site root `/` is now a plain chapter list: a slim header,
-      // navigation/provenance sections, and the same Part-by-Part chapter
-      // listing as `/patterns`. Same information, no curation — visitors
-      // scan one list and click straight through.
+      // The site root `/` is now task-first orientation. The full generated
+      // catalog remains at `/patterns` so first-time adopters, agent
+      // integrators, and reviewers do not have to parse every Part heading
+      // before choosing a useful entry point.
       const rootIndex = await readFile(resolve(docsRoot, 'index.md'), 'utf8');
       expect(rootIndex).toContain('title: "FPF Reference"');
       expect(rootIndex).not.toContain('pageType: home');
@@ -486,10 +490,17 @@ describe('docs projection', () => {
       expect(rootIndex).toContain('Anatoly Levenchuk');
       expect(rootIndex).toContain('https://github.com/ailev/FPF');
       expect(rootIndex).toContain('Cite this spec');
-      expect(rootIndex).toContain('## Navigate');
+      expect(rootIndex).toContain('## Choose your entry point');
+      expect(rootIndex).toContain('| New to FPF | [Start Here](/start-here)');
+      expect(rootIndex).toContain('| Connecting an agent or editor | [Connect MCP](/connect-mcp)');
+      expect(rootIndex).toContain(
+        '| Reviewing a project, PR, or design change | [Work Packets](/work-packets)',
+      );
+      expect(rootIndex).toContain('| Looking up an exact ID | [Pattern Catalog](/patterns)');
+      expect(rootIndex).toContain('## Reference shortcuts');
       expect(rootIndex).toContain('[Start here](/start-here)');
       expect(rootIndex).toContain('[Connect MCP](/connect-mcp)');
-      expect(rootIndex).toContain('[Patterns](/generated/patterns/index)');
+      expect(rootIndex).toContain('[Pattern Catalog](/patterns)');
       expect(rootIndex).toContain('[Routes](/generated/routes/index)');
       const glossaryTarget = resolveDocTarget(
         snapshot,
@@ -505,13 +516,15 @@ describe('docs projection', () => {
       expect(rootIndex).toContain(`[Change log](${changeLogTarget?.docRef.staticPath})`);
       expect(rootIndex).toContain('## Published from');
       expect(rootIndex).toContain('source hash `sha256:');
+      expect(rootIndex).toContain('<summary>Full provenance</summary>');
+      expect(rootIndex).toContain('- Source hash: `sha256:');
       expect(rootIndex).toContain('Production readiness is checked with hosted status');
-      // Chapter list — at least Part A through the last canonical Part should
-      // be present as ## headings.
-      expect(rootIndex).toMatch(/^## Part A\b/m);
-      // Every pattern in the snapshot should be reachable as a list item from
-      // the home page (same source as the catalog body).
-      expect(rootIndex).toContain('](/generated/patterns/A.2)');
+      expect(rootIndex).toContain('<details>');
+      expect(rootIndex).toContain('For MCP setup, see [Connect MCP](/connect-mcp)');
+      expect(rootIndex).not.toContain('## FPF Reference MCP — what this server does');
+      // The generated catalog belongs at `/patterns`, not on the orientation
+      // page. Exact IDs remain reachable through the explicit catalog link.
+      expect(rootIndex).not.toMatch(/^## Part A\b/m);
 
       // Pattern Catalog short-URL alias at /patterns — same content as
       // /generated/patterns/index. Carries the orientation-page back-pointer
@@ -553,7 +566,7 @@ describe('docs projection', () => {
       buildDocsProjection(alternateSnapshot).pagesByMarkdownPath['docs/index.md']?.markdown ?? '';
 
     expect(rootIndex).toContain('[Start here](/start-here)');
-    expect(rootIndex).toContain('[Patterns](/generated/patterns/index)');
+    expect(rootIndex).toContain('[Pattern Catalog](/patterns)');
     expect(rootIndex).not.toContain('[Glossary](/generated/patterns/');
     expect(rootIndex).not.toContain('[Change log](/generated/patterns/');
   });
@@ -596,17 +609,19 @@ describe('docs projection', () => {
         },
       );
 
-      // `/` now renders as a plain chapter list. The headline title, the
-      // navigation/provenance links, and at least one Part heading should be
-      // present in the built HTML.
+      // `/` now renders as task-first orientation. The headline title,
+      // persona table, navigation/provenance links, and catalog handoff should
+      // be present in the built HTML.
       const indexHtml = await readFile(resolve(outDir, 'index.html'), 'utf8');
       expect(indexHtml).toContain('FPF Reference');
       expect(indexHtml).toContain('Start here');
       expect(indexHtml).toContain('Connect MCP');
-      expect(indexHtml).toContain('Patterns');
+      expect(indexHtml).toContain('Connecting an agent or editor');
+      expect(indexHtml).toContain('Reviewing a project, PR, or design change');
+      expect(indexHtml).toContain('Pattern Catalog');
       expect(indexHtml).toContain('Glossary');
       expect(indexHtml).toContain('Published from');
-      expect(indexHtml).toContain('Part A');
+      expect(indexHtml).not.toContain('Part A –');
 
       // `/patterns` is the short-URL Pattern Catalog. Verify it lists Part A
       // Role Taxonomy and points back at the orientation page.
@@ -648,6 +663,12 @@ describe('docs projection', () => {
       expect(await readFile(resolve(outDir, 'work-packets.html'), 'utf8')).toContain(
         'Product-role feedback packet',
       );
+      expect(await readFile(resolve(outDir, 'work-packets.html'), 'utf8')).toContain(
+        'Local evaluator assist',
+      );
+      expect(await readFile(resolve(outDir, 'work-packets.html'), 'utf8')).toContain(
+        'evaluate:work',
+      );
       expect(await readFile(resolve(outDir, 'mcp-recipes.html'), 'utf8')).toContain(
         'Use MCP instead of pasted context',
       );
@@ -665,6 +686,18 @@ describe('docs projection', () => {
       );
       expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
         'https://mcp.fpf.sh/api/mcp/fpf_reference/mcp',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'First successful call',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'FPF vs MCP in one paragraph',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'not agent memory',
+      );
+      expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
+        'get_fpf_index_status',
       );
       expect(await readFile(resolve(outDir, 'connect-mcp.html'), 'utf8')).toContain(
         'https://mcp.fpf.sh/api/mcp/fpf_memory/mcp',

@@ -1,8 +1,12 @@
 # FPF Reference MCP Usage
 
+**FPF** is the upstream framework spec. **`fpf_reference`** is the MCP server name for bounded FPF lookup — not agent memory, not this repo name (`fpf-memory`). Hosted adopters use `https://mcp.fpf.sh/api/mcp/fpf_reference/mcp`; see [Connect MCP](https://fpf.sh/connect-mcp).
+
 Use the `fpf_reference` MCP server whenever the task requires grounded answers, exact FPF IDs, canonical generated docs, or deterministic retrieval provenance from the local FPF spec runtime (spec path from `FPF_SPEC_SOURCE_PATH`, default `published/current/FPF-Spec.md`).
 
 The legacy `fpf_memory` server name is compatibility-only. Do not use it in new setup snippets, final summaries, memory notes, or public-facing guidance unless the text is explicitly about the legacy alias.
+
+Operators packaging the hosted MCP surface: see [docs/vercel-mcp-packaging.md](docs/vercel-mcp-packaging.md).
 
 Public tools (deployed MCP surface):
 

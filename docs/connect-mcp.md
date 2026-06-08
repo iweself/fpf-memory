@@ -8,6 +8,24 @@ outline: deep
 
 Use this page when you want ChatGPT, Claude, an editor, or a coding CLI to retrieve bounded FPF context through the hosted MCP server.
 
+MCP origin landing (shorter mirror): [mcp.fpf.sh](https://mcp.fpf.sh/).
+
+## FPF vs MCP in one paragraph
+
+- **FPF** is the specification (patterns, routes, evidence rules).
+- **FPF Reference** projects that spec two ways: this wiki (read) and the MCP endpoint (query by ID).
+- **FPF Reference MCP** is not agent memory, not a workflow engine, and not a web page.
+
+You do not install FPF. Add one MCP URL to your client as **fpf_reference**.
+
+## Connect in three steps
+
+1. Copy the canonical endpoint below into your MCP client config.
+2. Register the server as **`fpf_reference`** (not `fpf_memory`).
+3. Run [First successful call](#first-successful-call): `get_fpf_index_status`, then one compact `query_fpf_spec`.
+
+> **Still using `fpf_memory`?** Swap the server name to **`fpf_reference`** and replace the URL with the canonical endpoint below. The legacy route is blocked during the May 2026 mitigation.
+
 ## Hosted endpoint
 
 ```txt
@@ -43,7 +61,7 @@ Public tools:
 - `read_fpf_doc`
 - `get_fpf_index_status`
 
-## Test first
+## First successful call
 
 After adding the server, ask your client to call `get_fpf_index_status`. Then run a compact route query:
 
@@ -51,7 +69,12 @@ After adding the server, ask your client to call `get_fpf_index_status`. Then ru
 Use only fpf_reference. Call query_fpf_spec with question: "Project kickoff: align a project information system with roles and adoption next steps" and mode "compact". Return the route ID, ordered IDs, acceptance check, and next move.
 ```
 
-A good response should include `route:project-alignment` in `ids`, then bounded next steps rather than a full FPF paste.
+**Success checklist**
+
+- `get_fpf_index_status` reports a loadable index.
+- The compact query returns `route:project-alignment` in `ids` with bounded next steps, not a full FPF paste.
+
+Verify the six public tools are advertised: `browse_fpf_catalog`, `search_fpf`, `ask_fpf`, `query_fpf_spec`, `read_fpf_doc`, `get_fpf_index_status`.
 
 ## ChatGPT
 

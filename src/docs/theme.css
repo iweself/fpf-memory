@@ -572,6 +572,12 @@ body:has(.rp-doc-layout__sidebar:empty) .rp-doc-layout__menu {
   white-space: nowrap;
 }
 
+.rspress-doc details :not(pre) > code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .rspress-doc > blockquote:first-of-type :not(pre) > code {
   border-color: color-mix(in srgb, hsl(var(--fpf-chip-h)) 42%, var(--fpf-rule));
   background: color-mix(in srgb, hsl(var(--fpf-chip-h)) 10%, var(--fpf-paper-2));
@@ -1162,6 +1168,7 @@ html body .rp-home-feature__card .rp-home-feature__title-wrapper.rp-home-feature
 @media (width <= 640px) {
   .rspress-doc :not(pre) > code {
     overflow-wrap: anywhere;
+    white-space: normal;
     word-break: break-word;
   }
 }
@@ -1564,4 +1571,3 @@ html body .rp-doc-layout__container:has(> .rp-doc-layout__sidebar:empty) > .rp-d
   margin-right: auto !important;
   margin-left: auto !important;
 }
-

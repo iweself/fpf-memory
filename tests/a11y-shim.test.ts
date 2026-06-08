@@ -97,6 +97,12 @@ describe('a11y shim regression checks', () => {
     expect(configSource).toContain("' · published '+rawPublishedAt");
   });
 
+  it('installs the skip link before hydration and defers React-owned patches until load', () => {
+    expect(configSource).toContain('installEarlySkipLink');
+    expect(configSource).toContain('afterHydration');
+    expect(configSource).toContain("window.addEventListener('load'");
+  });
+
   it('marks collapsed sidebar panels as `inert` so their descendants leave the tab order', () => {
     // R5-P1-003: rspress collapses sidebar groups by setting
     // `gridTemplateRows: 0fr` on the panel; descendants stay tabbable

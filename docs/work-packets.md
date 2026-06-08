@@ -60,6 +60,17 @@ Packet:
 
 Done when: every finding points at a concrete behavior, file, or missing check.
 
+### Local evaluator assist
+
+When reviewing this repo or another FPF Reference change locally, the deterministic evaluator can check the current branch or working tree against the FPF work rubric. It is evidence, not merge authority.
+
+```sh
+bun run evaluate:work
+bun run cli -- evaluate-work --target working-tree --format json
+```
+
+Use it to surface missing three-surface evidence, source/published coherence, or stale reviewer claims. It does not fetch GitHub, call an LLM, or replace concrete tests, builds, or deploy checks.
+
 ## Product-role feedback packet
 
 Goal: act as one concrete user role and turn product friction into evidence-backed adoption feedback.
