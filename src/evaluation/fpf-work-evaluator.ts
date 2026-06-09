@@ -9,12 +9,22 @@ import {
   PUBLISHED_SPEC_PATH,
 } from '../core/constants.js';
 import {
+  buildDocsProjection,
+  type PublicationManifestSummary,
+} from '../core/documents.js';
+import {
+  FIRST_SUCCESSFUL_CALL_HEADING,
+  HOSTED_MCP_ENDPOINT,
+  MCP_SERVER_NAME,
+} from '../core/public-copy.js';
+import {
   OPTIONAL_TERM_LINKS,
   resolveOptionalTermPatternId,
   type OptionalTermLinkDefinition,
   type OptionalTermLinkKey,
   type OptionalTermPatternCandidate,
 } from '../core/optional-term-links.js';
+import type { Snapshot } from '../runtime/types.js';
 import type { FpfWorkEvaluationFormat, FpfWorkEvaluationTarget } from './types.js';
 
 export type FpfRubricStatus = 'pass' | 'partial' | 'missing' | 'not_applicable';
@@ -114,6 +124,7 @@ type KnownWorkFile =
   | 'readme'
   | 'agents'
   | 'docsIndex'
+  | 'connectMcp'
   | 'ciWorkflow'
   | 'prePushHook'
   | 'packageJson'
@@ -128,6 +139,7 @@ const KNOWN_WORK_FILES: Record<KnownWorkFile, string> = {
   readme: 'README.md',
   agents: 'AGENTS.md',
   docsIndex: 'docs/index.md',
+  connectMcp: 'docs/connect-mcp.md',
   ciWorkflow: '.github/workflows/ci.yml',
   prePushHook: 'scripts/hooks/pre-push.sh',
   packageJson: 'package.json',
@@ -298,17 +310,25 @@ function scoreWorkingModel(
     ...baseEvidenceIds,
     evidence.file('readme', facts, 'README describes the working model'),
     evidence.file('docsIndex', facts, 'Wiki landing page'),
+    evidence.file('connectMcp', facts, 'Connect MCP adoption guide'),
     evidence.file('publishedManifest', facts, 'Published manifest metadata'),
   ].filter(isDefined);
   const hasHumanLanding =
     contains(facts, 'docsIndex', '# FPF Reference') &&
+    contains(facts, 'docsIndex', '## Choose your entry point') &&
     contains(facts, 'docsIndex', '## Published from');
+  const hasAdoptionGuide =
+    contains(facts, 'connectMcp', `## ${FIRST_SUCCESSFUL_CALL_HEADING}`) &&
+    contains(facts, 'connectMcp', 'FPF vs MCP in one paragraph') &&
+    contains(facts, 'connectMcp', HOSTED_MCP_ENDPOINT) &&
+    contains(facts, 'connectMcp', MCP_SERVER_NAME) &&
+    contains(facts, 'connectMcp', 'not agent memory');
   const hasRuntimeDefault = contains(facts, 'readme', PUBLISHED_SPEC_PATH);
   const hasManifestMetadata =
     contains(facts, 'publishedManifest', 'sourceHash') &&
     contains(facts, 'publishedManifest', 'publishedAt');
 
-  if (hasHumanLanding && hasRuntimeDefault && hasManifestMetadata) {
+  if (hasHumanLanding && hasAdoptionGuide && hasRuntimeDefault && hasManifestMetadata) {
     return rubricPass(
       'working-model',
       anchor,
@@ -321,10 +341,14 @@ function scoreWorkingModel(
   return rubricIssue(
     'working-model',
     anchor,
-    hasHumanLanding ? 'partial' : 'missing',
+    hasHumanLanding && hasAdoptionGuide ? 'partial' : 'missing',
     'medium',
-    'The human-facing working model is not complete enough to be the primary review surface.',
-    'Make the wiki/README show the published channel, source hash, upstream ref, and validation stance before relying on runtime evidence.',
+    hasAdoptionGuide
+      ? 'The human-facing working model is not complete enough to be the primary review surface.'
+      : 'The Connect MCP adoption guide is missing the FPF-vs-MCP explainer or first-call contract.',
+    hasAdoptionGuide
+      ? 'Make the wiki/README show the published channel, source hash, upstream ref, and validation stance before relying on runtime evidence.'
+      : 'Keep docs/connect-mcp.md aligned with src/core/public-copy.ts for endpoint, server name, and first successful call.',
     evidenceIds,
   );
 }
@@ -409,8 +433,8 @@ function scoreUnifiedTermSheet(
     evidence.file('docsIndex', facts, 'Wiki navigation surface'),
   ].filter(isDefined);
   const hasSlimNavigation =
-    contains(facts, 'docsIndex', '[Patterns](/generated/patterns/index)') &&
-    contains(facts, 'docsIndex', '[Routes](/generated/routes/index)');
+    contains(facts, 'docsIndex', '[Pattern Catalog](/patterns)') &&
+    contains(facts, 'docsIndex', '[Routes](/routes)');
   const hasTermRoutes = OPTIONAL_TERM_LINKS.every((link) =>
     containsOptionalTermLink(facts, link),
   );
@@ -555,8 +579,11 @@ function scoreSelectedPublication(
     evidence.file('packageJson', facts, 'Publication scripts'),
   ].filter(isDefined);
   const wikiSelectsEntryPoints =
-    contains(facts, 'docsIndex', '## Navigate') &&
-    contains(facts, 'docsIndex', '[Patterns]') &&
+    contains(facts, 'docsIndex', '## Choose your entry point') &&
+    contains(facts, 'docsIndex', 'New to FPF') &&
+    contains(facts, 'docsIndex', 'Connecting an agent or editor') &&
+    contains(facts, 'docsIndex', 'Reviewing a project, PR, or design change') &&
+    contains(facts, 'docsIndex', '[Pattern Catalog]') &&
     contains(facts, 'docsIndex', '[Routes]');
   const deploySelectsHostedAssets =
     contains(facts, 'ciWorkflow', 'bun run vercel:website:build') &&
@@ -780,7 +807,63 @@ function readKnownFileTexts(cwd: string): Record<KnownWorkFile, string | undefin
       existsSync(absolutePath) ? readFileSync(absolutePath, 'utf8') : undefined,
     ] as const;
   });
-  return Object.fromEntries(entries) as Record<KnownWorkFile, string | undefined>;
+  const fileTexts = Object.fromEntries(entries) as Record<KnownWorkFile, string | undefined>;
+  const projectedDocsIndex = projectDocsIndexFromPublishedSurface(fileTexts);
+  return {
+    ...fileTexts,
+    docsIndex: projectedDocsIndex ?? fileTexts.docsIndex,
+  };
+}
+
+function projectDocsIndexFromPublishedSurface(
+  fileTexts: Record<KnownWorkFile, string | undefined>,
+): string | undefined {
+  const snapshotText = fileTexts.publishedSnapshot;
+  if (!snapshotText) return undefined;
+
+  try {
+    const snapshot = JSON.parse(snapshotText) as Snapshot;
+    const manifest = parsePublicationManifestSummary(fileTexts.publishedManifest);
+    return buildDocsProjection(snapshot, manifest).pagesByMarkdownPath['docs/index.md']?.markdown;
+  } catch {
+    return undefined;
+  }
+}
+
+function parsePublicationManifestSummary(
+  manifestText: string | undefined,
+): PublicationManifestSummary | undefined {
+  if (!manifestText) return undefined;
+
+  try {
+    const parsed: unknown = JSON.parse(manifestText);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return undefined;
+    }
+    const manifest = parsed as Record<string, unknown>;
+    if (
+      typeof manifest.channel !== 'string' ||
+      typeof manifest.sourceHash !== 'string' ||
+      typeof manifest.upstreamRef !== 'string' ||
+      typeof manifest.publishedAt !== 'string'
+    ) {
+      return undefined;
+    }
+    return {
+      channel: manifest.channel,
+      sourceHash: manifest.sourceHash,
+      upstreamRef: manifest.upstreamRef,
+      publishedAt: manifest.publishedAt,
+      upstreamRepoUrl:
+        typeof manifest.upstreamRepoUrl === 'string' ? manifest.upstreamRepoUrl : undefined,
+      upstreamCommittedAt:
+        typeof manifest.upstreamCommittedAt === 'string'
+          ? manifest.upstreamCommittedAt
+          : undefined,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 function mapKnownFileExistence(
@@ -906,11 +989,14 @@ class EvidenceCollector {
     }
     const path = KNOWN_WORK_FILES[key];
     const changed = facts.changedFiles.find((file) => file.path === path);
+    const detail = key === 'docsIndex'
+      ? `projected from ${KNOWN_WORK_FILES.publishedSnapshot}`
+      : changed ? `changed as ${changed.status}` : 'present';
     return this.add({
       kind: 'file',
       label,
       path,
-      detail: changed ? `changed as ${changed.status}` : 'present',
+      detail,
     });
   }
 

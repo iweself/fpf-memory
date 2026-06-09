@@ -22,7 +22,7 @@ Goal: make a project legible enough to decide the next work move.
 
 Use:
 
-- `route:project-alignment` via [Routes](/generated/routes/index)
+- `route:project-alignment` via [Routes](/routes)
 - [A.1.1 U.BoundedContext](/generated/patterns/A.1.1)
 - [A.15 — Role-Method-Work Alignment](/generated/patterns/A.15) — use as the role / method / work stratification packet
 - [F.11 Method Quartet Harmonisation](/generated/patterns/F.11)
@@ -46,8 +46,8 @@ Use:
 
 - [E.8 Authoring conventions](/generated/patterns/E.8) for FPF pattern or specification wording changes
 - [E.19 — Pattern Quality Gates: Review & Refresh Profiles](/generated/patterns/E.19) as the pattern change-record gate
-- `route:writing-or-reviewing-patterns` via [Routes](/generated/routes/index) only when the PR changes FPF pattern or specification text
-- `route:boundary-unpacking-and-claim-decomposition` via [Routes](/generated/routes/index) for APIs, contracts, protocols, or CI/deploy gates
+- `route:writing-or-reviewing-patterns` via [Routes](/routes) only when the PR changes FPF pattern or specification text
+- `route:boundary-unpacking-and-claim-decomposition` via [Routes](/routes) for APIs, contracts, protocols, or CI/deploy gates
 - Otherwise use this packet as the review checklist and retrieve exact IDs only when a finding depends on FPF wording
 
 Packet:
@@ -60,6 +60,17 @@ Packet:
 
 Done when: every finding points at a concrete behavior, file, or missing check.
 
+### Local evaluator assist
+
+When reviewing this repo or another FPF Reference change locally, the deterministic evaluator can check the current branch or working tree against the FPF work rubric. It is evidence, not merge authority.
+
+```sh
+bun run evaluate:work
+bun run cli -- evaluate-work --target working-tree --format json
+```
+
+Use it to surface missing three-surface evidence, source/published coherence, or stale reviewer claims. It does not fetch GitHub, call an LLM, or replace concrete tests, builds, or deploy checks.
+
 ## Product-role feedback packet
 
 Goal: act as one concrete user role and turn product friction into evidence-backed adoption feedback.
@@ -67,7 +78,7 @@ Goal: act as one concrete user role and turn product friction into evidence-back
 Use:
 
 - [E.12 — Didactic Primacy & Cognitive Ergonomics](/generated/patterns/E.12) — use as the human feedback-loop packet
-- `route:project-alignment` via [Routes](/generated/routes/index)
+- `route:project-alignment` via [Routes](/routes)
 - [A.1.1 U.BoundedContext](/generated/patterns/A.1.1)
 - [A.15 — Role-Method-Work Alignment](/generated/patterns/A.15) — use as the role / method / work stratification packet
 - [A.2.2 U.Capability](/generated/patterns/A.2.2)
@@ -136,7 +147,7 @@ Use:
 
 - [MCP recipes](/mcp-recipes)
 - [Automation Playbook](/automation-playbook) when the work needs role boundaries, access rules, merge authority, or draft-only publishing packets
-- `route:project-alignment` via [Routes](/generated/routes/index)
+- `route:project-alignment` via [Routes](/routes)
 - [E.8 Authoring conventions](/generated/patterns/E.8)
 - [E.19 — Pattern Quality Gates: Review & Refresh Profiles](/generated/patterns/E.19) — use as the pattern change-record gate
 

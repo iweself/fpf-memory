@@ -8,6 +8,24 @@ outline: deep
 
 Use this page to connect ChatGPT, Claude, editors, or coding CLIs to the hosted FPF Reference MCP server so they can retrieve bounded public FPF context by stable IDs, routes, and generated docs.
 
+MCP origin landing (shorter mirror): [mcp.fpf.sh](https://mcp.fpf.sh/).
+
+## FPF vs MCP in one paragraph
+
+- **FPF** is the specification (patterns, routes, evidence rules).
+- **FPF Reference** projects that spec two ways: this wiki (read) and the MCP endpoint (query by ID).
+- **FPF Reference MCP** is not agent memory, not a workflow engine, and not a web page.
+
+You do not install FPF. Add one MCP URL to your client as **fpf_reference**.
+
+## Connect in three steps
+
+1. Copy the canonical endpoint below into your MCP client config.
+2. Register the server as **`fpf_reference`** (not `fpf_memory`).
+3. Run [First successful call](#first-successful-call): `get_fpf_index_status`, then one compact `query_fpf_spec`.
+
+> **Still using `fpf_memory`?** Swap the server name to **`fpf_reference`** and replace the URL with the canonical endpoint below. The legacy route is blocked during the May 2026 mitigation.
+
 ## Hosted endpoint
 
 ```txt

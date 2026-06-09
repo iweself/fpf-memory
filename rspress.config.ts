@@ -157,8 +157,9 @@ export default defineConfig({
     //      tab order (R5-P1-003). Set `inert` on the panel element
     //      whenever its rendered height is 0fr / 0px.
     //
-    //   The script runs at <head> evaluation (synchronous, no defer) so
-    //   the initial paint already has correct semantics.
+    //   The body-level skip link is injected as soon as `document.body`
+    //   exists. React-owned DOM mutations are deferred until after page
+    //   load so Rspress can hydrate before enhancement nodes are injected.
     `<script>(function(){
 function fixTables(root){(root||document).querySelectorAll('.rp-table-scroll-container').forEach(function(el){if(!el.hasAttribute('tabindex'))el.setAttribute('tabindex','0');});}
 function fixMobileSearch(root){(root||document).querySelectorAll('.rp-search-button--mobile').forEach(function(el){if(el.dataset.fpfA11yPatched==='1')return;el.dataset.fpfA11yPatched='1';el.setAttribute('role','button');el.setAttribute('tabindex','0');el.setAttribute('aria-label','Search');el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});});}
@@ -167,13 +168,16 @@ function fixSidebarGroups(root){(root||document).querySelectorAll('.rp-sidebar-g
 function fixSidebarInert(){var sidebar=document.querySelector('.rp-doc-layout__sidebar');if(!sidebar)return;var rect=sidebar.getBoundingClientRect();var hidden=rect.right<=0||rect.left>=window.innerWidth;if(hidden){if(!sidebar.hasAttribute('inert'))sidebar.setAttribute('inert','');}else{sidebar.removeAttribute('inert');}}
 function fixHomeFeatureCards(root){(root||document).querySelectorAll('.rp-home-feature__card--clickable').forEach(function(el){if(el.dataset.fpfA11yPatched==='1')return;el.dataset.fpfA11yPatched='1';el.setAttribute('role','link');el.setAttribute('tabindex','0');var title=el.querySelector('.rp-home-feature__title');var detail=el.querySelector('.rp-home-feature__detail');var label=[title&&title.textContent.trim(),detail&&detail.textContent.trim()].filter(Boolean).join(' — ');if(label)el.setAttribute('aria-label',label);el.style.cursor='pointer';el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});});}
 function fixNavDropdowns(root){(root||document).querySelectorAll('li.rp-nav-menu__item > .rp-nav-menu__item__container').forEach(function(trigger){if(trigger.dataset.fpfA11yPatched==='1')return;if(trigger.tagName==='A'||trigger.tagName==='BUTTON')return;var panel=trigger.nextElementSibling;if(!panel||!panel.classList||!panel.classList.contains('rp-hover-group'))return;trigger.dataset.fpfA11yPatched='1';trigger.setAttribute('role','button');trigger.setAttribute('tabindex','0');trigger.setAttribute('aria-haspopup','true');function isOpen(){return !panel.classList.contains('rp-hover-group--hidden');}function syncExpanded(){trigger.setAttribute('aria-expanded',String(isOpen()));}syncExpanded();function open(){panel.classList.remove('rp-hover-group--hidden');syncExpanded();}function close(){panel.classList.add('rp-hover-group--hidden');syncExpanded();}trigger.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '||e.key==='ArrowDown'){e.preventDefault();if(isOpen()){close();}else{open();var firstLink=panel.querySelector('a');if(firstLink)firstLink.focus();}}else if(e.key==='Escape'){close();}});panel.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();close();trigger.focus();}});var observer=new MutationObserver(syncExpanded);observer.observe(panel,{attributes:true,attributeFilter:['class']});});}
-function injectSkipLink(){if(document.getElementById('fpf-skip-link'))return;var link=document.createElement('a');link.id='fpf-skip-link';link.className='fpf-skip-link';link.href='#fpf-main-content';link.textContent='Skip to main content';if(document.body){document.body.insertBefore(link,document.body.firstChild);}var main=document.querySelector('main, .rspress-doc, .rp-doc-content');if(main){if(!main.id)main.id='fpf-main-content';if(!main.hasAttribute('tabindex'))main.setAttribute('tabindex','-1');}else{var doc=document.querySelector('article, .rspress-doc, #__rspress_root');if(doc&&!document.getElementById('fpf-main-content')){doc.id='fpf-main-content';doc.setAttribute('tabindex','-1');}}}
+function injectSkipLink(){var link=document.getElementById('fpf-skip-link');if(!link&&document.body){link=document.createElement('a');link.id='fpf-skip-link';link.className='fpf-skip-link';link.href='#fpf-main-content';link.textContent='Skip to main content';document.body.insertBefore(link,document.body.firstChild);}var main=document.querySelector('main, .rspress-doc, .rp-doc-content');if(main){if(!main.id)main.id='fpf-main-content';if(!main.hasAttribute('tabindex'))main.setAttribute('tabindex','-1');}}
+function installEarlySkipLink(){if(document.body){injectSkipLink();return;}setTimeout(installEarlySkipLink,0);}
 function fixSidebarTitles(root){(root||document).querySelectorAll('.rp-doc-layout__sidebar a.rp-link').forEach(function(a){if(a.dataset.fpfA11yPatched==='1')return;a.dataset.fpfA11yPatched='1';var label=a.textContent.replace(/\s+/g,' ').trim();if(label&&!a.hasAttribute('title'))a.setAttribute('title',label);});}
 function injectHeaderProvenance(){if(document.getElementById('fpf-header-provenance'))return;var navLeft=document.querySelector('.rp-nav__left');if(!navLeft)return;function metaContent(name){var sel='meta[name='+JSON.stringify(name)+']';var el=document.querySelector(sel);return el?el.getAttribute('content')||'':'';}var ref=metaContent('fpf-upstream-ref');var rawPublishedAt=metaContent('fpf-published-at');var rawCommittedAt=metaContent('fpf-upstream-committed-at');var rawDate=rawCommittedAt||rawPublishedAt;if(!ref&&!rawDate)return;var date=rawDate;try{var parsed=new Date(rawDate);if(!isNaN(parsed.getTime())){var y=parsed.getUTCFullYear();var m=String(parsed.getUTCMonth()+1).padStart(2,'0');var d=String(parsed.getUTCDate()).padStart(2,'0');date=y+'-'+m+'-'+d;}}catch(e){}var shortRef=ref?ref.slice(0,8):'';var label=document.createElement('span');label.className='fpf-header-provenance__label';label.textContent='as of';var hashCode=document.createElement('code');hashCode.textContent=shortRef;var dateNode=document.createTextNode(' · '+date);var span=document.createElement('span');span.id='fpf-header-provenance';span.className='fpf-header-provenance';span.title='Spec source — upstream '+ref+(rawCommittedAt?' · committed '+rawCommittedAt:'')+(rawPublishedAt?' · published '+rawPublishedAt:'');span.appendChild(label);span.appendChild(document.createTextNode(' '));span.appendChild(hashCode);span.appendChild(dateNode);navLeft.appendChild(span);}
 function applyAll(){fixTables();fixMobileSearch();fixSidebarGroups();fixSidebarInert();fixSidebarTitles();fixHomeFeatureCards();fixNavDropdowns();injectSkipLink();injectHeaderProvenance();}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',applyAll);else applyAll();
-var observer=new MutationObserver(function(mutations){var needs=false;for(var i=0;i<mutations.length;i++){if(mutations[i].addedNodes.length){needs=true;break;}}if(needs)applyAll();});
-observer.observe(document.body||document.documentElement,{childList:true,subtree:true});
+var observer;
+function afterHydration(fn){function run(){setTimeout(function(){requestAnimationFrame(function(){requestAnimationFrame(fn);});},0);}if(document.readyState==='complete')run();else window.addEventListener('load',run,{once:true});}
+function startObserver(){if(observer||!document.body)return;observer=new MutationObserver(function(mutations){var needs=false;for(var i=0;i<mutations.length;i++){if(mutations[i].addedNodes.length){needs=true;break;}}if(needs)applyAll();});observer.observe(document.body,{childList:true,subtree:true});}
+installEarlySkipLink();
+afterHydration(function(){applyAll();startObserver();});
 window.addEventListener('resize',fixSidebarInert);
 window.addEventListener('transitionend',fixSidebarInert);
 })();</script>`,
@@ -219,7 +223,8 @@ function showHelp(){if(document.getElementById(HELP_ID)){hideHelp();return;}var 
 var FLOAT_BTN_ID='fpf-keyhelp-float';
 function renderFloatingHelp(){if(document.getElementById(FLOAT_BTN_ID))return;var btn=document.createElement('button');btn.id=FLOAT_BTN_ID;btn.type='button';btn.title='Keyboard shortcuts (press ?)';btn.setAttribute('aria-label','Show keyboard shortcuts');btn.textContent='?';btn.style.cssText='position:fixed;right:20px;bottom:20px;z-index:9998;width:36px;height:36px;border-radius:50%;border:1px solid var(--rp-c-divider,#ccc);background:var(--rp-c-bg-soft,#f4f4f4);color:var(--rp-c-text-1,#111);font:600 18px/1 system-ui,-apple-system,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.12);display:grid;place-items:center;padding:0;opacity:0.85;transition:opacity 0.15s ease,transform 0.15s ease;';btn.addEventListener('mouseenter',function(){btn.style.opacity='1';btn.style.transform='translateY(-1px)';});btn.addEventListener('mouseleave',function(){btn.style.opacity='0.85';btn.style.transform='';});btn.addEventListener('click',function(e){e.preventDefault();showHelp();});document.body.appendChild(btn);}
 function ensureFloatingHelp(){renderFloatingHelp();var floatObserver=new MutationObserver(function(){if(!document.getElementById(FLOAT_BTN_ID))renderFloatingHelp();});floatObserver.observe(document.body,{childList:true});}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureFloatingHelp);else ensureFloatingHelp();
+function afterHydrationForHelp(fn){function run(){setTimeout(function(){requestAnimationFrame(function(){requestAnimationFrame(fn);});},0);}if(document.readyState==='complete')run();else window.addEventListener('load',run,{once:true});}
+afterHydrationForHelp(ensureFloatingHelp);
 var lastG=0;
 document.addEventListener('keydown',function(e){
   if(e.metaKey||e.ctrlKey||e.altKey)return;
@@ -301,9 +306,13 @@ document.addEventListener('keydown',function(e){
         link: '/work-packets',
       },
       {
-        text: 'Pattern Index',
-        link: '/patterns',
-        activeMatch: '/patterns/?($|\\?|#)',
+        text: 'Reference',
+        activeMatch: '/patterns/|/routes/|/generated/preface/',
+        items: [
+          { text: 'Pattern Catalog', link: '/patterns' },
+          { text: 'Route Catalog', link: '/routes' },
+          { text: 'Preface', link: '/generated/preface/index' },
+        ],
       },
       {
         text: 'MCP',
@@ -320,7 +329,7 @@ document.addEventListener('keydown',function(e){
       // Sidebar scope is now narrow:
       //   - `/patterns` and every `/generated/patterns/...` page get the
       //     full pattern tree.
-      //   - `/generated/routes/...` get the routes tree.
+      //   - `/routes` and `/generated/routes/...` get the routes tree.
       //   - The root `/` and authored pages (start-here, work-packets,
       //     mcp-recipes, connect-mcp, automation-playbook) get NO sidebar
       //     so the orientation surface stays focused on its own
@@ -353,13 +362,30 @@ document.addEventListener('keydown',function(e){
           ],
         },
       ],
+      '/routes': [
+        {
+          text: 'Routes',
+          items: [
+            {
+              text: 'Route Catalog',
+              link: '/routes',
+            },
+            ...navigation.routes.map((group) => ({
+              text: group.text,
+              collapsible: true,
+              collapsed: true,
+              items: group.items,
+            })),
+          ],
+        },
+      ],
       '/generated/routes/': [
         {
           text: 'Routes',
           items: [
             {
               text: 'Route Catalog',
-              link: '/generated/routes/index',
+              link: '/routes',
             },
             ...navigation.routes.map((group) => ({
               text: group.text,

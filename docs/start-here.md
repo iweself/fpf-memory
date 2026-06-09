@@ -22,12 +22,12 @@ Name the work shape first, pick the smallest matching doorway, and keep exact FP
 
 | Work | Start with | Good output |
 | --- | --- | --- |
-| Align a project or team | `route:project-alignment` via [Routes](/generated/routes/index) | Shared context, role/method/work split, first work surface |
-| Review a PR or design change | `route:writing-or-reviewing-patterns` via [Routes](/generated/routes/index) | Findings tied to IDs, constraints, risks, and tests |
+| Align a project or team | `route:project-alignment` via [Routes](/routes) | Shared context, role/method/work split, first work surface |
+| Review a PR or design change | `route:writing-or-reviewing-patterns` via [Routes](/routes) | Findings tied to IDs, constraints, risks, and tests |
 | Dogfood a product as a user role | [Product-role feedback packet](/work-packets#product-role-feedback-packet) | Replayable job, friction evidence, proposed improvement, discussion-ready feedback |
 | Write a specification | [E.8](/generated/patterns/E.8) + [E.19](/generated/patterns/E.19) | Clear pattern order, semantic change record, acceptance harness |
-| Unpack an API, contract, or promise | `route:boundary-unpacking` via [Routes](/generated/routes/index) | Atomic claims, boundary duties, evidence needs |
-| Compare options | `route:admissible-comparison-pool-selection-or-selected-set-publication` via [Routes](/generated/routes/index) | Governed shortlist or set result |
+| Unpack an API, contract, or promise | `route:boundary-unpacking` via [Routes](/routes) | Atomic claims, boundary duties, evidence needs |
+| Compare options | `route:admissible-comparison-pool-selection-or-selected-set-publication` via [Routes](/routes) | Governed shortlist or set result |
 | Use FPF inside an agent conversation | [MCP recipes](/mcp-recipes) | Compact cited context instead of a full-spec paste |
 
 ## Operating rule

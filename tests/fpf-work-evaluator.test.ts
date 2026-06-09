@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
@@ -85,9 +85,13 @@ describe('FPF work evaluator', () => {
         ...defaultFileTexts(),
         docsIndex: [
           '# FPF Reference',
-          '## Navigate',
-          '[Patterns](/generated/patterns/index)',
-          '[Routes](/generated/routes/index)',
+          '## Choose your entry point',
+          'New to FPF',
+          'Connecting an agent or editor',
+          'Reviewing a project, PR, or design change',
+          '## Reference shortcuts',
+          '[Pattern Catalog](/patterns)',
+          '[Routes](/routes)',
           '[Glossary](/generated/patterns/A.0)',
           '[Change log](/generated/patterns/renumbered-change-log)',
           '## Published from',
@@ -108,9 +112,13 @@ describe('FPF work evaluator', () => {
         ...defaultFileTexts(),
         docsIndex: [
           '# FPF Reference',
-          '## Navigate',
-          '[Patterns](/generated/patterns/index)',
-          '[Routes](/generated/routes/index)',
+          '## Choose your entry point',
+          'New to FPF',
+          'Connecting an agent or editor',
+          'Reviewing a project, PR, or design change',
+          '## Reference shortcuts',
+          '[Pattern Catalog](/patterns)',
+          '[Routes](/routes)',
           '## Published from',
         ].join('\n'),
         publishedSnapshot: '{"sourceHash":"sha256:test","patternGraph":{"nodes":{}}}',
@@ -130,9 +138,13 @@ describe('FPF work evaluator', () => {
         ...defaultFileTexts(),
         docsIndex: [
           '# FPF Reference',
-          '## Navigate',
-          '[Patterns](/generated/patterns/index)',
-          '[Routes](/generated/routes/index)',
+          '## Choose your entry point',
+          'New to FPF',
+          'Connecting an agent or editor',
+          'Reviewing a project, PR, or design change',
+          '## Reference shortcuts',
+          '[Pattern Catalog](/patterns)',
+          '[Routes](/routes)',
           '[Glossary](/generated/patterns/stale-glossary)',
           '## Published from',
         ].join('\n'),
@@ -195,6 +207,50 @@ describe('FPF work evaluator', () => {
     expect(facts.changedFiles).toEqual([{ status: 'M', path: 'README.md' }]);
     expect(facts.commitSubjects).toEqual([]);
   });
+
+  it('projects the wiki landing page from the published surface instead of stale ignored docs', async () => {
+    tempRoot = mkdtempSync(resolve(tmpdir(), 'fpf-work-evaluator-'));
+    execFileSync('git', ['init'], { cwd: tempRoot, stdio: 'ignore' });
+    execFileSync('git', ['config', 'user.email', 'test@example.com'], {
+      cwd: tempRoot,
+      stdio: 'ignore',
+    });
+    execFileSync('git', ['config', 'user.name', 'Test User'], {
+      cwd: tempRoot,
+      stdio: 'ignore',
+    });
+
+    await mkdir(resolve(tempRoot, 'published/current/fpf-index'), { recursive: true });
+    await mkdir(resolve(tempRoot, 'docs'), { recursive: true });
+    await copyFile(
+      resolve(process.cwd(), 'published/current/FPF-Spec.md'),
+      resolve(tempRoot, 'published/current/FPF-Spec.md'),
+    );
+    await copyFile(
+      resolve(process.cwd(), 'published/current/fpf-index/snapshot.json'),
+      resolve(tempRoot, 'published/current/fpf-index/snapshot.json'),
+    );
+    await copyFile(
+      resolve(process.cwd(), 'published/current/manifest.json'),
+      resolve(tempRoot, 'published/current/manifest.json'),
+    );
+    await writeFile(resolve(tempRoot, 'README.md'), 'Default runtime path: published/current/FPF-Spec.md');
+    await writeFile(resolve(tempRoot, '.gitignore'), 'docs/index.md\n');
+    await writeFile(resolve(tempRoot, 'docs/index.md'), '# STALE HOME\n## Navigate\n[Patterns](/generated/patterns/index)\n');
+    execFileSync('git', ['add', '.'], { cwd: tempRoot, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-m', 'baseline'], { cwd: tempRoot, stdio: 'ignore' });
+
+    const facts = collectFpfWorkFacts({
+      target: 'working-tree',
+      baseRef: 'origin/main',
+      cwd: tempRoot,
+      env: {},
+    });
+
+    expect(facts.fileTexts.docsIndex).toContain('## Choose your entry point');
+    expect(facts.fileTexts.docsIndex).toContain('[Pattern Catalog](/patterns)');
+    expect(facts.fileTexts.docsIndex).not.toContain('STALE HOME');
+  });
 });
 
 function makeFacts(overrides: Partial<FpfWorkFacts> = {}): FpfWorkFacts {
@@ -232,12 +288,24 @@ function defaultFileTexts(): FpfWorkFacts['fileTexts'] {
     agents: 'default published/current/FPF-Spec.md',
     docsIndex: [
       '# FPF Reference',
-      '## Navigate',
-      '[Patterns](/generated/patterns/index)',
-      '[Routes](/generated/routes/index)',
+      '## Choose your entry point',
+      'New to FPF',
+      'Connecting an agent or editor',
+      'Reviewing a project, PR, or design change',
+      '## Reference shortcuts',
+      '[Pattern Catalog](/patterns)',
+      '[Routes](/routes)',
       '[Glossary](/generated/patterns/renumbered-glossary)',
       '[Change log](/generated/patterns/renumbered-change-log)',
       '## Published from',
+    ].join('\n'),
+    connectMcp: [
+      '# Connect FPF Reference MCP',
+      '## FPF vs MCP in one paragraph',
+      'not agent memory',
+      'fpf_reference',
+      '## First successful call',
+      'https://mcp.fpf.sh/api/mcp/fpf_reference/mcp',
     ].join('\n'),
     ciWorkflow: [
       'run: bun run validate:published',

@@ -11,6 +11,11 @@ import {
   OPTIONAL_TERM_LINKS,
   resolveOptionalTermPatternId,
 } from './optional-term-links.js';
+import {
+  renderHomeMcpEndpointLine,
+  renderHomeMcpToolsMarkdown,
+  WIKI_CONNECT_MCP_URL,
+} from './public-copy.js';
 import { normalizeForLookup, unique } from './text.js';
 
 export interface GeneratedDocPage {
@@ -96,6 +101,7 @@ export function buildDocsProjection(
     buildPatternIndexPage(snapshot),
     buildPatternsAliasPage(snapshot),
     buildRouteIndexPage(snapshot),
+    buildRoutesAliasPage(snapshot),
     buildPrefaceIndexPage(snapshot),
     buildRootIndexPage(snapshot, manifest),
   ];
@@ -490,11 +496,9 @@ function buildPatternsAliasPage(snapshot: Snapshot): GeneratedDocPage {
 }
 
 /**
- * The site root (`/`) is the orientation/welcome surface. It now reads as a
- * plain chapter list: a slim header (title, intro line, three CTAs, the
- * provenance line), followed by the same Part-by-Part chapter listing as
- * `/patterns`. Same information, no curation — visitors scan one list and
- * click straight through to any pattern.
+ * The site root (`/`) is the orientation surface. Keep it task-first: new
+ * adopters, agent integrators, and reviewers should reach the smallest useful
+ * start point before opening the full generated catalog at `/patterns`.
  */
 function buildRootIndexPage(
   snapshot: Snapshot,
@@ -529,9 +533,22 @@ function renderHomeMarkdown(
     '',
     `Hosted **FPF Reference** MCP server + slim wiki projection of the **First Principles Framework (FPF)**. ${patternCount} pattern pages, ${routeCount} working routes, and the preface — addressable by stable FPF IDs, browsable here and queryable through MCP.`,
     '',
-    '## Navigate',
+    '[Adoption guide](/start-here) · [Reference catalog](/patterns)',
+    '',
+    '## Choose your entry point',
+    '',
+    '| If you are... | Start with | Good first action |',
+    '| --- | --- | --- |',
+    '| New to FPF | [Start Here](/start-here) | Pick the work shape before opening the full catalog. |',
+    '| Connecting an agent or editor | [Connect MCP](/connect-mcp) | Add `fpf_reference`, then run `get_fpf_index_status`. |',
+    '| Reviewing a project, PR, or design change | [Work Packets](/work-packets) | Use the PR/code review packet or product-role feedback packet. |',
+    '| Looking up an exact ID | [Pattern Catalog](/patterns) or [Routes](/routes) | Search an ID like `A.2.3` or a route like `route:project-alignment`. |',
+    '',
+    '## Reference shortcuts',
     '',
     renderHomeNavigateLine(snapshot),
+    '',
+    'The full generated pattern catalog lives at [Pattern Catalog](/patterns); this home page stays focused on adoption routes and task entry points.',
     '',
     '## Published from',
     '',
@@ -539,22 +556,23 @@ function renderHomeMarkdown(
     '',
     'Production readiness is checked with hosted status, MCP smoke, Q&A benchmark, and Vercel bundle-size gates.',
     '',
-    '## FPF Reference MCP — what this server does',
+    'For MCP setup, see [Connect MCP](/connect-mcp). For framework orientation, see [Start Here](/start-here).',
+    '',
+    '<details>',
+    '<summary>FPF Reference MCP — what this server does</summary>',
     '',
     'A hosted MCP endpoint that exposes the compiled FPF index to any MCP-aware client (ChatGPT, Claude, VS Code, Zed, Codex). Reads are deterministic graph traversals over named IDs, not embedding similarity — so answers cite exact patterns and routes you can audit.',
     '',
     'Six public tools:',
     '',
-    '- `browse_fpf_catalog` — paginate patterns, routes, lexemes, preface',
-    '- `search_fpf` — ranked text search across the compiled index',
-    '- `query_fpf_spec` — bounded answer with IDs, citations, constraints',
-    '- `ask_fpf` — same plus rendered markdown for chat surfaces',
-    '- `read_fpf_doc` — exact canonical page for a selector (preview + full modes)',
-    '- `get_fpf_index_status` — snapshot freshness, source hash, build time',
+    renderHomeMcpToolsMarkdown(),
     '',
-    'Endpoint: `https://mcp.fpf.sh/api/mcp/fpf_reference/mcp` · Legacy blocked during May 2026 mitigation: `https://mcp.fpf.sh/api/mcp/fpf_memory/mcp` · Status: [`mcp.fpf.sh/api/fpf/status`](https://mcp.fpf.sh/api/fpf/status) · [Quick connect →](/connect-local) · [Full setup →](/connect-mcp)',
+    renderHomeMcpEndpointLine(),
     '',
-    '## FPF — the framework this server projects',
+    '</details>',
+    '',
+    '<details>',
+    '<summary>FPF — the framework this server projects</summary>',
     '',
     '> FPF helps when raw insight is not enough: meanings, claims, alternatives, evidence, boundaries, and outputs must remain stable across contexts, time, people, tools, or AI agents.',
     '',
@@ -563,9 +581,11 @@ function renderHomeMarkdown(
     'FPF is authored by [Anatoly Levenchuk](https://github.com/ailev). The upstream publication source this runtime tracks is [`github.com/ailev/FPF`](https://github.com/ailev/FPF), specifically `FPF-Spec.md` on `main` by default. This site is a wiki projection; the MCP server above is a programmatic projection.',
     '',
     '> **Cite this spec.** If you use FPF, please cite: Levenchuk, Anatoly. *First Principles Framework (FPF).* GitHub repository: <https://github.com/ailev/FPF>',
+    '',
+    '</details>',
+    '',
+    `Full connect walkthrough: [${WIKI_CONNECT_MCP_URL}](${WIKI_CONNECT_MCP_URL}).`,
   ];
-
-  appendPatternCatalogChapters(lines, snapshot);
 
   return `${lines.join('\n')}\n`;
 }
@@ -575,8 +595,8 @@ function renderHomeNavigateLine(snapshot: Snapshot): string {
     { text: 'Start here', link: '/start-here' },
     { text: 'Quick connect', link: '/connect-local' },
     { text: 'Connect MCP', link: '/connect-mcp' },
-    { text: 'Patterns', link: '/generated/patterns/index' },
-    { text: 'Routes', link: '/generated/routes/index' },
+    { text: 'Pattern Catalog', link: '/patterns' },
+    { text: 'Routes', link: '/routes' },
   ];
 
   const orderedPatterns = sortedPatterns(snapshot);
@@ -600,6 +620,18 @@ function renderHomeProvenanceDetail(manifest?: PublicationManifestSummary): stri
   }
 
   const shortRef = manifest.upstreamRef.slice(0, 8);
+  const shortHash = shortSourceHash(manifest.sourceHash);
+  const fullHashDetails = [
+    '',
+    '<details>',
+    '<summary>Full provenance</summary>',
+    '',
+    `- Upstream ref: ${inlineCode(manifest.upstreamRef)}`,
+    `- Source hash: ${inlineCode(manifest.sourceHash)}`,
+    `- Published at: ${inlineCode(manifest.publishedAt)}`,
+    '',
+    '</details>',
+  ].join('\n');
 
   // Prefer upstream commit metadata when present: link the date to the
   // exact upstream commit and the short SHA to the same URL so the
@@ -608,12 +640,18 @@ function renderHomeProvenanceDetail(manifest?: PublicationManifestSummary): stri
     const upstreamDate = formatPublishedDate(manifest.upstreamCommittedAt);
     const commitUrl = `${manifest.upstreamRepoUrl}/commit/${manifest.upstreamRef}`;
     const repoLabel = manifest.upstreamRepoUrl.replace(/^https:\/\/github\.com\//, '');
-    return `Upstream FPF commit [${upstreamDate}](${commitUrl}) (\`${shortRef}\`) in [${repoLabel}](${manifest.upstreamRepoUrl}) · source hash \`${manifest.sourceHash}\`.`;
+    return `Upstream FPF commit [${upstreamDate}](${commitUrl}) (${inlineCode(shortRef)}) in [${repoLabel}](${manifest.upstreamRepoUrl}) · source hash ${inlineCode(shortHash)}.${fullHashDetails}`;
   }
 
   // Fallback for older snapshots without upstream commit metadata.
   const publishedAt = formatPublishedDate(manifest.publishedAt);
-  return `Published ${publishedAt} · upstream ${shortRef} · source hash \`${manifest.sourceHash}\`.`;
+  return `Published ${publishedAt} · upstream ${inlineCode(shortRef)} · source hash ${inlineCode(shortHash)}.${fullHashDetails}`;
+}
+
+function shortSourceHash(sourceHash: string): string {
+  const match = /^sha256:([0-9a-f]{8})/iu.exec(sourceHash);
+  if (match) return `sha256:${match[1]}`;
+  return sourceHash.length > 18 ? `${sourceHash.slice(0, 18)}...` : sourceHash;
 }
 
 function formatPublishedDate(value: string): string {
@@ -626,14 +664,55 @@ function formatPublishedDate(value: string): string {
 }
 
 function buildRouteIndexPage(snapshot: Snapshot): GeneratedDocPage {
+  return {
+    kind: 'index',
+    title: 'Route Catalog',
+    markdownPath: `${GENERATED_ROOT}/routes/index.md`,
+    staticPath: '/generated/routes/index',
+    markdown: renderRouteCatalogMarkdown(snapshot, {
+      title: 'Route Catalog',
+      description: 'Generated route pages from the compiler snapshot.',
+    }),
+  };
+}
+
+/**
+ * The Route Catalog at the short URL `/routes`. Same content as
+ * `/generated/routes/index`; both URLs work so existing deep-links keep
+ * resolving while the Reference nav uses the cleaner short form.
+ */
+function buildRoutesAliasPage(snapshot: Snapshot): GeneratedDocPage {
+  return {
+    kind: 'index',
+    title: 'Route Catalog',
+    markdownPath: `${DOCS_ROOT}/routes.md`,
+    staticPath: '/routes',
+    markdown: renderRouteCatalogMarkdown(snapshot, {
+      title: 'Route Catalog',
+      description: 'Generated route pages from the compiler snapshot.',
+      heading: 'Route Catalog',
+    }),
+  };
+}
+
+function renderRouteCatalogMarkdown(
+  snapshot: Snapshot,
+  options: {
+    title: string;
+    description: string;
+    heading?: string;
+  },
+): string {
   const routes = Object.values(snapshot.routeGraph.nodes);
   const lines = [
     renderFrontMatter({
-      title: 'Route Catalog',
-      description: 'Generated route pages from the compiler snapshot.',
+      title: options.title,
+      description: options.description,
       outline: false,
     }),
-    '# Route Catalog',
+    `# ${options.heading ?? options.title}`,
+    '',
+    'New here? Start at the [orientation page](/) — work packets, MCP recipes, and the right entry point per task. Use this catalog when you know the work shape but need the exact route ID or ordered steps.',
     '',
     '## What this page is',
     '',
@@ -663,13 +742,7 @@ function buildRouteIndexPage(snapshot: Snapshot): GeneratedDocPage {
     }
   }
 
-  return {
-    kind: 'index',
-    title: 'Route Catalog',
-    markdownPath: `${GENERATED_ROOT}/routes/index.md`,
-    staticPath: '/generated/routes/index',
-    markdown: `${lines.join('\n')}\n`,
-  };
+  return `${lines.join('\n')}\n`;
 }
 
 function buildPrefaceIndexPage(snapshot: Snapshot): GeneratedDocPage {
@@ -899,13 +972,19 @@ function normalizedCatalogReminder(
 }
 
 function renderRoutePage(snapshot: Snapshot, route: RouteRecord): string {
+  const routePrompt = [
+    'Use only fpf_reference.',
+    `Find the smallest useful context for ${route.id}.`,
+    'Return ordered IDs, acceptance check, risks, and one next move.',
+  ].join(' ');
+
   const lines = [
     renderFrontMatter({
       title: route.name,
       description: route.description,
     }),
     renderBreadcrumb([
-      { text: 'Routes', link: '/generated/routes/index' },
+      { text: 'Routes', link: '/routes' },
       { text: route.name },
     ]),
     '',
@@ -919,10 +998,15 @@ function renderRoutePage(snapshot: Snapshot, route: RouteRecord): string {
     '## Methodology',
     '',
     'Use the ordered steps as the first path through the framework. Treat optional steps, landing points, route surfaces, and reroutes as controls for scope, ownership, and common wrong turns. Open exact pattern pages only when the work depends on their wording.',
+    '',
+    '## Use this route when',
+    '',
   ];
 
   if (route.firstHonestBurden) {
-    lines.push(`- **First Honest Burden:** ${route.firstHonestBurden}`);
+    lines.push(`The live burden is: ${route.firstHonestBurden}`);
+  } else {
+    lines.push('Use this route when this work shape is present but the exact FPF pattern sequence is still unclear.');
   }
 
   if (route.description) {
@@ -931,6 +1015,8 @@ function renderRoutePage(snapshot: Snapshot, route: RouteRecord): string {
       autolinkCanonicalPhrases(autolinkPatternIds(snapshot, route.description)),
     );
   }
+
+  lines.push('', '## Copyable compact prompt', '', '```txt', routePrompt, '```');
 
   appendNodeIdList(lines, snapshot, 'Ordered steps', route.orderedIds, true);
   appendNodeIdList(lines, snapshot, 'Optional steps', route.optionalIds);

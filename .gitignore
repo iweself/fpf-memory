@@ -13,6 +13,7 @@ doc_build
 docs/generated/
 docs/index.md
 docs/patterns.md
+docs/routes.md
 .claude
 .agents/
 .cursor/hooks/state/

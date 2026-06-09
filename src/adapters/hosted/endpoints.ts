@@ -1,5 +1,7 @@
-export const HOSTED_MCP_ENDPOINT =
-  'https://mcp.fpf.sh/api/mcp/fpf_reference/mcp';
-
-export const LEGACY_HOSTED_MCP_ENDPOINT =
-  'https://mcp.fpf.sh/api/mcp/fpf_memory/mcp';
+export {
+  HOSTED_MCP_ENDPOINT,
+  HOSTED_MCP_STATUS_URL,
+  LEGACY_HOSTED_MCP_ENDPOINT,
+  MCP_ORIGIN_HOME_URL,
+  WIKI_CONNECT_MCP_URL,
+} from '../../core/public-copy.js';

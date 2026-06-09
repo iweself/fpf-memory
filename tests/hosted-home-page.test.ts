@@ -9,6 +9,7 @@ import {
   HOSTED_MCP_ENDPOINT,
   LEGACY_HOSTED_MCP_ENDPOINT,
 } from '../src/adapters/hosted/endpoints.js';
+import { WIKI_CONNECT_MCP_URL } from '../src/core/public-copy.js';
 
 describe('hosted home page', () => {
   it('renders connection instructions for the hosted MCP endpoint', () => {
@@ -96,9 +97,10 @@ describe('hosted home page', () => {
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
-  it('points the footer at the same-origin connect page', () => {
+  it('points the footer at the wiki connect guide', () => {
     const html = renderHostedHomePage();
     expect(html).not.toContain('venikman.github.io/fpf-memory/connect-mcp');
-    expect(html).toContain('href="/connect-mcp"');
+    expect(html).toContain(WIKI_CONNECT_MCP_URL);
+    expect(html).not.toContain('href="/connect-mcp"');
   });
 });
