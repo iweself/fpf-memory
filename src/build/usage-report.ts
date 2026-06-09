@@ -83,6 +83,7 @@ export interface UsageReportTotals {
   invalidEventCount: number;
   outOfWindowEventCount: number;
   legacyEventCount: number;
+  unknownUnresolvedEligibleEventCount: number;
   unknownUnresolvedEventCount: number;
 }
 
@@ -174,6 +175,7 @@ export async function buildUsageReportFromLines(
     invalidEventCount: 0,
     outOfWindowEventCount: 0,
     legacyEventCount: 0,
+    unknownUnresolvedEligibleEventCount: 0,
     unknownUnresolvedEventCount: 0,
   };
 
@@ -230,17 +232,21 @@ export async function buildUsageReportFromLines(
     addAll(counts.docSurfaceIds, docSurfaces);
     addAll(counts.routeIds, routes);
 
-    if (
-      event.outcome === 'ok'
-      &&
-      servedPatterns.length === 0
-      && citedPatterns.length === 0
-      && resolvedPatterns.length === 0
-      && candidatePatterns.length === 0
-      && docSurfaces.length === 0
-      && routes.length === 0
-    ) {
-      totals.unknownUnresolvedEventCount += 1;
+    if (isUnknownUnresolvedEligibleEvent(event)) {
+      totals.unknownUnresolvedEligibleEventCount += 1;
+      if (
+        event.outcome === 'ok'
+        && !hasMaterialResolutionEvidence({
+          servedPatterns,
+          citedPatterns,
+          resolvedPatterns,
+          candidatePatterns,
+          docSurfaces,
+          routes,
+        })
+      ) {
+        totals.unknownUnresolvedEventCount += 1;
+      }
     }
   }
 
@@ -256,7 +262,7 @@ export async function buildUsageReportFromLines(
   const ambiguousRateByTool = rates(toolCalls, ambiguousResults);
   const unknownUnresolvedRate = calculateRate(
     totals.unknownUnresolvedEventCount,
-    totals.validEventCount,
+    totals.unknownUnresolvedEligibleEventCount,
   );
   const triageFindings = buildTriageFindings({
     state: 'ok',
@@ -322,6 +328,7 @@ export function configErrorUsageReport(input: {
         invalidEventCount: 0,
         outOfWindowEventCount: 0,
         legacyEventCount: 0,
+        unknownUnresolvedEligibleEventCount: 0,
         unknownUnresolvedEventCount: 0,
       },
       emptyResultRateByTool: [],
@@ -342,6 +349,7 @@ export function configErrorUsageReport(input: {
         invalidEventCount: 0,
         outOfWindowEventCount: 0,
         legacyEventCount: 0,
+        unknownUnresolvedEligibleEventCount: 0,
         unknownUnresolvedEventCount: 0,
       },
       topServedPatternIds: [],
@@ -487,6 +495,7 @@ ${rankTable(report.topDocSurfaceIds)}
 - Invalid events: ${report.totals.invalidEventCount}
 - Out-of-window events: ${report.totals.outOfWindowEventCount}
 - Legacy events: ${report.totals.legacyEventCount}
+- Unknown/unresolved eligible events: ${report.totals.unknownUnresolvedEligibleEventCount}
 - Unknown/unresolved events: ${report.totals.unknownUnresolvedEventCount} (${formatPercent(report.unknownUnresolvedRate)})
 
 ### Schema Versions
@@ -718,6 +727,26 @@ function createCounts() {
   };
 }
 
+function isUnknownUnresolvedEligibleEvent(event: UsageEvent): boolean {
+  return getEventIntentCategory(event) !== 'index_health';
+}
+
+function hasMaterialResolutionEvidence(input: {
+  servedPatterns: string[];
+  citedPatterns: string[];
+  resolvedPatterns: string[];
+  candidatePatterns: string[];
+  docSurfaces: string[];
+  routes: string[];
+}): boolean {
+  return input.servedPatterns.length > 0
+    || input.citedPatterns.length > 0
+    || input.resolvedPatterns.length > 0
+    || input.candidatePatterns.length > 0
+    || input.docSurfaces.length > 0
+    || input.routes.length > 0;
+}
+
 function addAll(counts: Map<string, number>, ids: string[]): void {
   for (const id of ids) {
     increment(counts, id);
@@ -874,8 +903,11 @@ function buildTriageFindings(input: {
       findings.push(`${rate.toolName} empty-result rate is ${formatPercent(rate.rate)} (${rate.count}/${rate.calls}).`);
     }
   }
-  if (input.totals.validEventCount > 0 && input.unknownUnresolvedRate > 0.15) {
-    findings.push(`Unknown/unresolved event rate is ${formatPercent(input.unknownUnresolvedRate)} (${input.totals.unknownUnresolvedEventCount}/${input.totals.validEventCount}).`);
+  if (
+    input.totals.unknownUnresolvedEligibleEventCount > 0
+    && input.unknownUnresolvedRate > 0.15
+  ) {
+    findings.push(`Unknown/unresolved event rate is ${formatPercent(input.unknownUnresolvedRate)} (${input.totals.unknownUnresolvedEventCount}/${input.totals.unknownUnresolvedEligibleEventCount}).`);
   }
   return findings;
 }
@@ -926,6 +958,9 @@ function buildCaveats(totals: UsageReportTotals, source: UsageReportSource): str
   ];
   if (totals.legacyEventCount > 0) {
     caveats.push('Legacy events may lack served/candidate/cited separation and are not promoted into served-pattern counts.');
+  }
+  if (totals.validEventCount > totals.unknownUnresolvedEligibleEventCount) {
+    caveats.push('Index-health calls are included in usage totals but excluded from unknown/unresolved material-resolution quality.');
   }
   if (source.kind === 'vercel') {
     caveats.push('Vercel log export availability and retention can limit historical windows.');

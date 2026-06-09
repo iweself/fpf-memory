@@ -31,6 +31,7 @@ describe('usage report aggregation', () => {
       invalidEventCount: 2,
       outOfWindowEventCount: 0,
       legacyEventCount: 1,
+      unknownUnresolvedEligibleEventCount: 8,
       unknownUnresolvedEventCount: 1,
     });
 
@@ -124,6 +125,117 @@ describe('usage report aggregation', () => {
       'query_fpf_spec error rate is 50% (1/2).',
       'search_fpf empty-result rate is 50% (1/2).',
     ]);
+  });
+
+  it('excludes index-health calls from unresolved material quality breaches', async () => {
+    const lines = [
+      JSON.stringify({
+        schemaVersion: 3,
+        event: 'mcp_tool_usage',
+        time: '2026-05-31T12:00:00.000Z',
+        toolName: 'get_fpf_index_status',
+        outcome: 'ok',
+        durationMs: 5,
+        input: { intentCategory: 'index_health' },
+        output: { fresh: true, snapshotExists: true },
+        privacy: {
+          rawInputLogged: false,
+          rawQuestionLogged: false,
+          rawSelectorLogged: false,
+          rawOutputTextLogged: false,
+        },
+      }),
+      JSON.stringify({
+        schemaVersion: 3,
+        event: 'mcp_tool_usage',
+        time: '2026-05-31T12:01:00.000Z',
+        toolName: 'get_fpf_index_status',
+        outcome: 'ok',
+        durationMs: 6,
+        input: {},
+        output: { fresh: true, snapshotExists: true },
+        privacy: {
+          rawInputLogged: false,
+          rawQuestionLogged: false,
+          rawSelectorLogged: false,
+          rawOutputTextLogged: false,
+        },
+      }),
+      JSON.stringify({
+        schemaVersion: 3,
+        event: 'mcp_tool_usage',
+        time: '2026-05-31T12:02:00.000Z',
+        toolName: 'query_fpf_spec',
+        outcome: 'ok',
+        durationMs: 20,
+        input: { intentCategory: 'pattern_lookup', query: { shape: 'short' } },
+        output: {
+          status: 'ok',
+          servedIds: ['A.6'],
+          servedPatternIds: ['A.6'],
+          servedPatternIdCount: 1,
+          resolvedPatternIds: ['A.6'],
+          resolvedPatternIdCount: 1,
+        },
+        privacy: {
+          rawInputLogged: false,
+          rawQuestionLogged: false,
+          rawSelectorLogged: false,
+          rawOutputTextLogged: false,
+        },
+      }),
+      JSON.stringify({
+        schemaVersion: 3,
+        event: 'mcp_tool_usage',
+        time: '2026-05-31T12:03:00.000Z',
+        toolName: 'ask_fpf',
+        outcome: 'ok',
+        durationMs: 26,
+        input: { intentCategory: 'concept_definition', question: { shape: 'short' } },
+        output: {
+          status: 'ok',
+          servedIds: ['A.6'],
+          servedPatternIds: ['A.6'],
+          servedPatternIdCount: 1,
+          citedIds: ['A.6'],
+          citedPatternIds: ['A.6'],
+          citedPatternIdCount: 1,
+        },
+        privacy: {
+          rawInputLogged: false,
+          rawQuestionLogged: false,
+          rawSelectorLogged: false,
+          rawOutputTextLogged: false,
+        },
+      }),
+    ];
+
+    const report = await buildUsageReportFromLines({
+      lines,
+      windowLabel: '24h',
+      now: NOW,
+      source: {
+        kind: 'file',
+        description: 'Synthetic issue #202 telemetry sample',
+        logPath: 'synthetic',
+      },
+    });
+
+    expect(report.totals.validEventCount).toBe(4);
+    expect(report.totals.unknownUnresolvedEligibleEventCount).toBe(2);
+    expect(report.totals.unknownUnresolvedEventCount).toBe(0);
+    expect(report.unknownUnresolvedRate).toBe(0);
+    expect(report.operatorActionRequired).toBe(false);
+    expect(report.triageFindings).toEqual([]);
+    expect(report.topIntentCategories).toEqual([
+      { id: 'index_health', count: 2 },
+      { id: 'concept_definition', count: 1 },
+      { id: 'pattern_lookup', count: 1 },
+    ]);
+    expect(report.topServedPatternIds).toEqual([{ id: 'A.6', count: 2 }]);
+    expect(report.caveats).toContain(
+      'Index-health calls are included in usage totals but excluded from unknown/unresolved material-resolution quality.',
+    );
   });
 
   it('reports safe ask categories and input shapes without raw question text', async () => {
