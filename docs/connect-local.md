@@ -1,6 +1,6 @@
 ---
 title: "What Do I Need To Run?"
-description: "Use the hosted FPF Reference MCP server from a local MCP client. No local server required."
+description: "Use hosted FPF Reference MCP from a local client, or run/self-host it when external MCP servers are blocked."
 outline: false
 ---
 
@@ -18,6 +18,37 @@ Paste these values into the client.
 | Auth | None |
 
 If the client asks for a local command, choose its remote HTTP server option instead.
+
+## If your policy forbids external MCP servers
+
+You can run the same FPF Reference MCP runtime locally or self-host it from the source repo:
+
+```sh
+git clone https://github.com/venikman/fpf-memory.git
+cd fpf-memory
+bun install
+bun run mcp
+```
+
+Use the full local surface when you need expert inspection tools:
+
+```sh
+FPF_MCP_SURFACE=full bun run mcp
+```
+
+For clients that require an HTTP MCP URL instead of a stdio command, start the local HTTP server:
+
+```sh
+bun run start
+```
+
+Then configure the client URL as:
+
+```txt
+http://localhost:4111/api/mcp/fpf_reference/mcp
+```
+
+Set `PORT` to change the local HTTP port. For remote self-hosting, put the HTTP server behind your own HTTPS reverse proxy or deployment platform and keep the same `/api/mcp/fpf_reference/mcp` route.
 
 After saving the server, confirm the client shows these tools:
 
