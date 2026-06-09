@@ -1,6 +1,7 @@
 import {
   CLIENT_SETUP_SECTIONS,
   FIRST_SUCCESSFUL_CALL_PROMPT,
+  FPF_REFERENCE_INTERFACE_CONTRACT,
   GOOD_FIRST_PROMPT,
   GOOD_FIRST_PROMPT_FOOTER,
   HOSTED_MCP_ENDPOINT,
@@ -10,6 +11,7 @@ import {
   MCP_SERVER_NAME,
   PUBLIC_MCP_TOOLS,
   WIKI_CONNECT_MCP_URL,
+  WIKI_INTERFACE_CONTRACT_URL,
 } from '../../core/public-copy.js';
 
 export function renderHostedHomePage(): string {
@@ -254,9 +256,36 @@ export function renderHostedHomePage(): string {
       }
 
       .tools,
+      .contract,
       .prompt {
         border: 1px solid var(--line-strong);
         padding: 18px;
+      }
+
+      .contract dl {
+        display: grid;
+        grid-template-columns: minmax(120px, 0.28fr) minmax(0, 1fr);
+        gap: 10px 16px;
+        margin: 0;
+      }
+
+      .contract dt {
+        color: var(--green);
+        font-weight: 700;
+      }
+
+      .contract dd {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .contract ul {
+        margin: 0;
+        padding-left: 1.1rem;
+      }
+
+      .contract li + li {
+        margin-top: 4px;
       }
 
       .tools ul {
@@ -324,6 +353,14 @@ export function renderHostedHomePage(): string {
         .client {
           border-right: 0;
         }
+
+        .contract dl {
+          display: block;
+        }
+
+        .contract dd {
+          margin: 0 0 12px;
+        }
       }
     </style>
   </head>
@@ -373,6 +410,21 @@ export function renderHostedHomePage(): string {
         </ul>
       </section>
 
+      <h2 class="section-title">Interface Contract</h2>
+      <section class="contract" aria-label="Interface contract">
+        <dl>
+          <dt>Entity</dt>
+          <dd>${escapeHtml(FPF_REFERENCE_INTERFACE_CONTRACT.entityOfConcern)}</dd>
+          <dt>Purpose</dt>
+          <dd>${escapeHtml(FPF_REFERENCE_INTERFACE_CONTRACT.purpose)}</dd>
+          <dt>Reliance gate</dt>
+          <dd>${renderContractList(FPF_REFERENCE_INTERFACE_CONTRACT.relianceGate)}</dd>
+          <dt>Freshness</dt>
+          <dd>${renderContractList(FPF_REFERENCE_INTERFACE_CONTRACT.freshnessSemantics)}</dd>
+        </dl>
+        <p>Full card: <a href="${WIKI_INTERFACE_CONTRACT_URL}">${WIKI_INTERFACE_CONTRACT_URL}</a>.</p>
+      </section>
+
       <h2 class="section-title">First Successful Call</h2>
       <section class="prompt" aria-label="First successful call">
         <pre><code>${escapeHtml(FIRST_SUCCESSFUL_CALL_PROMPT)}</code></pre>
@@ -392,6 +444,10 @@ export function renderHostedHomePage(): string {
     </main>
   </body>
 </html>`;
+}
+
+function renderContractList(items: readonly string[]): string {
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
 }
 
 function renderClientSection(section: (typeof CLIENT_SETUP_SECTIONS)[number]): string {
