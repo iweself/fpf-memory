@@ -8,9 +8,10 @@ import {
   HOSTED_MCP_STATUS_URL,
   LEGACY_HOSTED_MCP_ENDPOINT,
   LEGACY_MCP_SERVER_NAME,
+  MCP_ORIGIN_HOME_URL,
   MCP_SERVER_NAME,
   PUBLIC_MCP_TOOLS,
-  WIKI_CONNECT_MCP_URL,
+  WIKI_BASE_URL,
   WIKI_INTERFACE_CONTRACT_URL,
 } from '../../core/public-copy.js';
 
@@ -385,7 +386,7 @@ export function renderHostedHomePage(): string {
           Connect chat clients, editors, and coding CLIs to bounded FPF lookup by stable ID — not agent memory, not a web page. Register the server as <code>${MCP_SERVER_NAME}</code> (not <code>${LEGACY_MCP_SERVER_NAME}</code>).
         </p>
         <p class="lead">
-          Full wiki setup guide: <a href="${WIKI_CONNECT_MCP_URL}">${WIKI_CONNECT_MCP_URL}</a>.
+          This is the MCP setup home. The human-readable FPF specification reference stays on <a href="${WIKI_BASE_URL}">${WIKI_BASE_URL}</a>.
         </p>
         <div class="endpoint">
           <span>Streamable HTTP endpoint</span>
@@ -413,6 +414,21 @@ export function renderHostedHomePage(): string {
       <h2 class="section-title">Client Setup</h2>
       <section class="clients" aria-label="Client setup instructions">
         ${CLIENT_SETUP_SECTIONS.map(renderClientSection).join('\n')}
+      </section>
+
+      <h2 class="section-title">Package And Self-Hosting</h2>
+      <section class="prompt" aria-label="Package and self-hosting options">
+        <p>Use the hosted endpoint above when your client allows remote HTTP MCP servers. If your policy requires local or self-hosted tooling, run the same FPF Reference MCP runtime from source.</p>
+        <pre><code>git clone https://github.com/venikman/fpf-memory.git
+cd fpf-memory
+bun install
+bun run mcp</code></pre>
+        <p>Use the full local surface only for contributor or operator work that needs expert inspection tools.</p>
+        <pre><code>FPF_MCP_SURFACE=full bun run mcp</code></pre>
+        <p>For clients that require an HTTP URL instead of a stdio command, start the local HTTP server and register its MCP route.</p>
+        <pre><code>bun run start
+
+http://localhost:4111/api/mcp/fpf_reference/mcp</code></pre>
       </section>
 
       <h2 class="section-title">Public Tools</h2>
@@ -450,7 +466,8 @@ export function renderHostedHomePage(): string {
       </section>
 
       <footer>
-        Wiki connect guide: <a href="${WIKI_CONNECT_MCP_URL}">${WIKI_CONNECT_MCP_URL}</a>.
+        MCP setup home: <a href="${MCP_ORIGIN_HOME_URL}">${MCP_ORIGIN_HOME_URL}</a>.
+        FPF reference: <a href="${WIKI_BASE_URL}">${WIKI_BASE_URL}</a>.
         Projection repo: <a href="https://github.com/venikman/fpf-memory">github.com/venikman/fpf-memory</a> · upstream FPF: <a href="https://github.com/ailev/FPF">github.com/ailev/FPF</a>.
       </footer>
     </main>

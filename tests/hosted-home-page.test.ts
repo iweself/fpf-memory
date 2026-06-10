@@ -10,6 +10,8 @@ import {
   LEGACY_HOSTED_MCP_ENDPOINT,
 } from '../src/adapters/hosted/endpoints.js';
 import {
+  MCP_ORIGIN_HOME_URL,
+  WIKI_BASE_URL,
   WIKI_CONNECT_MCP_URL,
   WIKI_INTERFACE_CONTRACT_URL,
 } from '../src/core/public-copy.js';
@@ -33,6 +35,11 @@ describe('hosted home page', () => {
     expect(html).toContain('codex mcp add fpf_reference --url');
     expect(html).toContain('claude mcp add --transport http fpf_reference');
     expect(html).toContain('pi install npm:pi-mcp-extension');
+    expect(html).toContain('Package And Self-Hosting');
+    expect(html).toContain('git clone https://github.com/venikman/fpf-memory.git');
+    expect(html).toContain('bun run mcp');
+    expect(html).toContain('FPF_MCP_SURFACE=full bun run mcp');
+    expect(html).toContain('http://localhost:4111/api/mcp/fpf_reference/mcp');
     expect(html).toContain('get_fpf_index_status');
     expect(html).toContain('query_fpf_spec');
     expect(html).toContain('read_fpf_doc');
@@ -104,10 +111,12 @@ describe('hosted home page', () => {
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
-  it('points the footer at the wiki connect guide', () => {
+  it('points the footer at the MCP setup home and FPF reference site', () => {
     const html = renderHostedHomePage();
     expect(html).not.toContain('venikman.github.io/fpf-memory/connect-mcp');
-    expect(html).toContain(WIKI_CONNECT_MCP_URL);
+    expect(html).toContain(MCP_ORIGIN_HOME_URL);
+    expect(html).toContain(WIKI_BASE_URL);
+    expect(html).not.toContain(WIKI_CONNECT_MCP_URL);
     expect(html).not.toContain('href="/connect-mcp"');
   });
 });

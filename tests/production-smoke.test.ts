@@ -6,8 +6,8 @@ import {
   type ExpectedPublication,
 } from '../src/build/production-smoke.js';
 import {
-  FIRST_SUCCESSFUL_CALL_HEADING,
-  WIKI_CONNECT_MCP_URL,
+  MCP_ORIGIN_HOME_URL,
+  WIKI_BASE_URL,
 } from '../src/core/public-copy.js';
 
 const EXPECTED: ExpectedPublication = {
@@ -101,7 +101,7 @@ describe('semantic production smoke', () => {
       mcpBaseUrl: 'https://mcp.example.test',
       expectedPublication: EXPECTED,
       fetchImpl: createSmokeFetch({
-        websiteConnectText: wikiConnectText('406 Not Acceptable'),
+        websiteConnectText: wikiConnectText(),
         mcpConnectText: mcpLandingText('406 Not Acceptable'),
       }),
     });
@@ -109,6 +109,21 @@ describe('semantic production smoke', () => {
     expect(report.ok).toBe(false);
     expect(report.summary).toContain('standalone MCP GET documentation');
     expect(report.observed.standaloneMcpGet?.status).toBe(405);
+  });
+
+  it('does not require standalone MCP GET wording on the fpf.sh bridge page', async () => {
+    const report = await runProductionSmoke({
+      websiteBaseUrl: 'https://docs.example.test',
+      mcpBaseUrl: 'https://mcp.example.test',
+      expectedPublication: EXPECTED,
+      fetchImpl: createSmokeFetch({
+        websiteConnectText: wikiConnectText(),
+        mcpConnectText: mcpLandingText('405 Method Not Allowed'),
+      }),
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.summary).not.toContain('fpf.sh connect-mcp standalone MCP GET documentation');
   });
 });
 
@@ -273,10 +288,14 @@ function websiteOrientationText(extra = ''): string {
 
 function wikiConnectText(extra = ''): string {
   return [
-    mcpLandingText(extra),
-    'FPF vs MCP',
+    '<title>Connect MCP</title>',
+    'FPF Reference',
+    'FPF is the specification',
+    MCP_ORIGIN_HOME_URL,
+    'fpf_reference',
+    'compatibility bridge',
     'not agent memory',
-    FIRST_SUCCESSFUL_CALL_HEADING,
+    extra,
   ].join(' ');
 }
 
@@ -286,7 +305,7 @@ function mcpLandingText(extra = ''): string {
     'FPF Reference',
     'https://mcp.fpf.sh/api/mcp/fpf_reference/mcp',
     'fpf_reference',
-    WIKI_CONNECT_MCP_URL,
+    WIKI_BASE_URL,
     'Legacy https://mcp.fpf.sh/api/mcp/fpf_memory/mcp is blocked during mitigation.',
     extra,
   ].join(' ');
