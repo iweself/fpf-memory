@@ -108,8 +108,13 @@ if [ "$1" = "run" ]; then
     vercel:mcp:build)
       rm -rf .vercel/output
       mkdir -p .vercel/output/functions/_mcp.func/hosted
+      mkdir -p .vercel/output/static
       printf 'export default {}\\n' > .vercel/output/functions/_mcp.func/index.mjs
       printf '{}\\n' > .vercel/output/functions/_mcp.func/hosted/manifest.json
+      printf '{}\\n' > .vercel/output/static/legacy-mcp-gone.json
+      # Finder/Explorer can drop metadata files into the output tree on
+      # developer machines; the static-leak check must not trip on them.
+      printf '\\0' > .vercel/output/static/.DS_Store
       exit 0
       ;;
   esac

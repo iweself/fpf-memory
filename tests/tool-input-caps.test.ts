@@ -74,14 +74,32 @@ describe('public MCP tool input caps', () => {
     ).toBe(false);
   });
 
-  it('getFpfIndexStatus accepts only an ignored compatibility placeholder', () => {
+  it('browseFpfCatalog accepts offset paging within bounds', () => {
+    expect(browseFpfCatalogInputSchema.safeParse({ offset: 0 }).success).toBe(true);
+    expect(browseFpfCatalogInputSchema.safeParse({ offset: 9_999 }).success).toBe(true);
+    expect(browseFpfCatalogInputSchema.safeParse({ offset: -1 }).success).toBe(false);
+    expect(browseFpfCatalogInputSchema.safeParse({ offset: 1.5 }).success).toBe(false);
+    expect(browseFpfCatalogInputSchema.safeParse({ offset: 100_001 }).success).toBe(false);
+  });
+
+  it('getFpfIndexStatus tolerates only the bounded legacy placeholder arg', () => {
     expect(getFpfIndexStatusInputSchema.safeParse({}).success).toBe(true);
+    // Legacy clients that cannot send an empty arguments object invent a
+    // placeholder argument (e.g. `random_string`); the known placeholder
+    // is accepted within the selector cap and discarded.
     expect(
       getFpfIndexStatusInputSchema.safeParse({ random_string: 'notion-placeholder' }).success,
     ).toBe(true);
-    expect(getFpfIndexStatusInputSchema.safeParse({ random_string: big(65) }).success).toBe(
-      false,
+    expect(getFpfIndexStatusInputSchema.parse({ random_string: 'notion-placeholder' })).toEqual(
+      {},
     );
+    // The input-cap policy still holds at the public schema boundary:
+    // oversized placeholders, non-string placeholders, and unknown keys
+    // are rejected rather than silently stripped.
+    expect(
+      getFpfIndexStatusInputSchema.safeParse({ random_string: 'x'.repeat(257) }).success,
+    ).toBe(false);
+    expect(getFpfIndexStatusInputSchema.safeParse({ random_string: 42 }).success).toBe(false);
     expect(getFpfIndexStatusInputSchema.safeParse({ _probe: true }).success).toBe(false);
   });
 });

@@ -125,6 +125,7 @@ export const FPF_REFERENCE_INTERFACE_CONTRACT: FpfReferenceInterfaceContract = {
   ],
   freshnessSemantics: [
     'status ok or fresh means the deployed runtime artifacts are internally consistent with the configured source.',
+    'fresh describes the snapshot the runtime is serving, which stays in memory once loaded; the artifacts map separately reports on-disk artifact presence for packaging checks.',
     'Internal consistency is not global upstream currentness.',
     'upstreamCurrentness = unknown means do not claim latest upstream FPF unless an external monitor proves it.',
   ],
@@ -144,11 +145,11 @@ export const FPF_REFERENCE_INTERFACE_CONTRACT: FpfReferenceInterfaceContract = {
   publicTools: [
     {
       name: 'browse_fpf_catalog',
-      purpose: 'Browse compiled patterns, routes, lexemes, and preface entries by part, status, kind, and limit.',
+      purpose: 'Browse compiled patterns, routes, lexemes, and preface entries by part, status, and kind, one page at a time.',
       inputSchema: 'browseFpfCatalogInputSchema',
-      inputSummary: 'part?, status?, kind?, limit?, forceRefresh?',
+      inputSummary: 'part?, status?, kind?, limit?, offset?, forceRefresh?',
       outputSchema: 'browseFpfCatalogResultSchema',
-      outputSummary: 'entries, total, filters, didYouMean?, snapshot',
+      outputSummary: 'entries, total, offset, nextOffset?, filters, didYouMean?, snapshot',
       acceptanceCue: 'Use for discovery before reading or querying exact nodes.',
     },
     {
@@ -191,7 +192,7 @@ export const FPF_REFERENCE_INTERFACE_CONTRACT: FpfReferenceInterfaceContract = {
       name: 'get_fpf_index_status',
       purpose: 'Inspect whether the runtime index exists and is fresh against the configured source.',
       inputSchema: 'getFpfIndexStatusInputSchema',
-      inputSummary: 'random_string? compatibility placeholder',
+      inputSummary: 'no parameters (bounded legacy placeholder ignored; other keys rejected)',
       outputSchema: 'runtimeStatusSchema',
       outputSummary: 'sourcePath, sourceHash?, builtAt?, snapshotExists, currentSourceHash, fresh, compilerMode, artifacts, sessionCache',
       acceptanceCue: 'Use as the first reliance gate before trust-sensitive FPF lookup.',
@@ -281,7 +282,7 @@ export function buildClientSetupSections(
     }
   }
 }`,
-      href: 'https://code.visualstudio.com/docs/copilot/customization/mcp-servers',
+      href: 'https://code.visualstudio.com/docs/agent-customization/mcp-servers',
     },
     {
       id: 'zed',
@@ -318,7 +319,7 @@ url = "${endpoint}"`,
       summary: 'Use the HTTP MCP transport and verify status with /mcp inside Claude Code.',
       body: ['Run the command, then use /mcp inside Claude Code to check connection status.'],
       code: `claude mcp add --transport http fpf_reference ${endpoint}`,
-      href: 'https://docs.claude.com/en/docs/claude-code/mcp',
+      href: 'https://code.claude.com/docs/en/mcp',
     },
     {
       id: 'pi',

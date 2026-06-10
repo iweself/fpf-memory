@@ -10,6 +10,7 @@ const MAX_SEARCH_QUERY_LENGTH = 1_000;
 const MAX_SELECTOR_LENGTH = 256;
 const MAX_FILTER_LENGTH = 64;
 const MAX_CITATION_COUNT = 50;
+const MAX_BROWSE_OFFSET = 100_000;
 
 export const answerModeSchema = z.enum(['compact', 'verbose', 'proof']);
 export const nodeKindSchema = z.enum(['pattern', 'route', 'lexeme', 'preface']);
@@ -458,18 +459,27 @@ export const askFpfInputSchema = z
   })
   .strict();
 
-export const getFpfIndexStatusInputSchema = z
-  .object({
-    random_string: z
-      .string()
-      .min(1)
-      .max(MAX_FILTER_LENGTH)
-      .optional()
-      .describe(
-        'Ignored compatibility placeholder for MCP clients that cannot send an empty arguments object.',
-      ),
-  })
-  .strict();
+// No parameters. Legacy MCP clients that cannot send an empty arguments
+// object invent a placeholder argument (historically `random_string`), so
+// that one known key is accepted — bounded by the selector cap — and
+// discarded before the strict empty object validates. Everything else
+// (unknown keys, non-string or oversized placeholders) is rejected at the
+// schema boundary, keeping the public input-cap policy intact while the
+// advertised schema stays parameterless.
+const STATUS_PLACEHOLDER_KEYS = ['random_string'] as const;
+export const getFpfIndexStatusInputSchema = z.preprocess((value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value;
+  }
+  const entries = { ...(value as Record<string, unknown>) };
+  for (const key of STATUS_PLACEHOLDER_KEYS) {
+    const placeholder = entries[key];
+    if (typeof placeholder === 'string' && placeholder.length <= MAX_SELECTOR_LENGTH) {
+      delete entries[key];
+    }
+  }
+  return entries;
+}, z.object({}).strict());
 
 export const inspectFpfNodeInputSchema = z
   .object({
@@ -563,7 +573,15 @@ export const browseFpfCatalogInputSchema = z
     part: z.string().max(MAX_FILTER_LENGTH).optional(),
     status: z.string().max(MAX_FILTER_LENGTH).optional(),
     kind: nodeKindSchema.optional(),
+    /** Page size. Defaults to 50; capped at 500. */
     limit: z.number().int().min(1).max(500).optional(),
+    /**
+     * Zero-based paging offset into the filtered catalog ordering. Walk
+     * pages by passing the previous response's `nextOffset`. Bounded well
+     * above the catalog size to refuse pathological values on the public
+     * endpoint.
+     */
+    offset: z.number().int().min(0).max(MAX_BROWSE_OFFSET).optional(),
     forceRefresh: z.boolean().optional(),
   })
   .strict();
@@ -572,6 +590,10 @@ export const browseFpfCatalogResultSchema = z
   .object({
     entries: z.array(catalogEntrySchema),
     total: z.number(),
+    /** Zero-based index of the first returned entry in the full ordering. */
+    offset: z.number(),
+    /** Offset of the next page; omitted on the last page. */
+    nextOffset: z.number().optional(),
     filters: z
       .object({
         part: z.string().optional(),
