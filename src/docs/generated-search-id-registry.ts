@@ -118,17 +118,17 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.6.2",
-      "title": "U.EffectFreeEpistemicMorphing — Effect-Free Morphisms of Epistemes",
+      "title": "U.EffectFreeEpistemicMorphing - Effect-Free Morphisms of Epistemes",
       "staticPath": "/generated/patterns/A.6.2"
     },
     {
       "id": "A.6.3",
-      "title": "U.EpistemicViewing — describedEntity-Preserving Morphism",
+      "title": "U.EpistemicViewing - EntityOfConcern-Preserving Morphism",
       "staticPath": "/generated/patterns/A.6.3"
     },
     {
       "id": "A.6.3.CR",
-      "title": "ConservativeRetextualization - same-described-entity textual re-expression",
+      "title": "ConservativeRetextualization - entityOfConcernRef-preserving textual re-expression",
       "staticPath": "/generated/patterns/A.6.3.CR"
     },
     {
@@ -138,12 +138,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.6.3.RT",
-      "title": "RepresentationTransduction - same-described-entity representation-scheme transition",
+      "title": "RepresentationTransduction - entityOfConcernRef-preserving representation-scheme transition",
       "staticPath": "/generated/patterns/A.6.3.RT"
     },
     {
       "id": "A.6.4",
-      "title": "U.EpistemicRetargeting — describedEntity-Retargeting Morphism",
+      "title": "U.EpistemicRetargeting - EntityOfConcern-Retargeting Morphism",
       "staticPath": "/generated/patterns/A.6.4"
     },
     {
@@ -195,6 +195,11 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "id": "A.6.H",
       "title": "Wholeness Language Unpacking (RPR-WHOLE)",
       "staticPath": "/generated/patterns/A.6.H"
+    },
+    {
+      "id": "A.6.M",
+      "title": "Module Relation Repair",
+      "staticPath": "/generated/patterns/A.6.M"
     },
     {
       "id": "A.6.P",
@@ -335,6 +340,11 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "id": "A.19.SelectorMechanism",
       "title": "Unified Selection Kernel (SelectorMechanism)",
       "staticPath": "/generated/patterns/A.19.SelectorMechanism"
+    },
+    {
+      "id": "A.19.SPR",
+      "title": "State-Family Precision Restoration",
+      "staticPath": "/generated/patterns/A.19.SPR"
     },
     {
       "id": "A.19.UINDM",
@@ -538,7 +548,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.2.1",
-      "title": "U.Episteme — Epistemes and their slot graph",
+      "title": "U.Episteme - Epistemes and their slot graph",
       "staticPath": "/generated/patterns/C.2.1"
     },
     {
@@ -585,6 +595,11 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "id": "C.2.P",
       "title": "Epistemic Precision Restoration",
       "staticPath": "/generated/patterns/C.2.P"
+    },
+    {
+      "id": "C.2.P.DR",
+      "title": "Declarative Representation Precision Restoration",
+      "staticPath": "/generated/patterns/C.2.P.DR"
     },
     {
       "id": "C.3",
@@ -788,13 +803,18 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.29",
-      "title": "Mathematical Lens Adequacy (MLA)",
+      "title": "Mathematical Lens Use",
       "staticPath": "/generated/patterns/C.29"
     },
     {
       "id": "C.30",
-      "title": "Architecture Description Adequacy (ADA)",
+      "title": "Grounded Architecture and Selected-Structure Adequacy",
       "staticPath": "/generated/patterns/C.30"
+    },
+    {
+      "id": "C.30.AD",
+      "title": "Architecture Description Adequacy",
+      "staticPath": "/generated/patterns/C.30.AD"
     },
     {
       "id": "C.30.ASV",
@@ -815,6 +835,26 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "id": "C.30.P",
       "title": "Architecture and Structure Precision Restoration",
       "staticPath": "/generated/patterns/C.30.P"
+    },
+    {
+      "id": "C.30.STRAT",
+      "title": "Stratification Wording Precision Restoration",
+      "staticPath": "/generated/patterns/C.30.STRAT"
+    },
+    {
+      "id": "C.31",
+      "title": "Modularity and Reusable Structure Characteristics",
+      "staticPath": "/generated/patterns/C.31"
+    },
+    {
+      "id": "C.31.ASAP",
+      "title": "Architecture Scale-Amenability Preference",
+      "staticPath": "/generated/patterns/C.31.ASAP"
+    },
+    {
+      "id": "C.31.RSA",
+      "title": "Reusable Structure Accounting",
+      "staticPath": "/generated/patterns/C.31.RSA"
     },
     {
       "id": "D.1",
@@ -988,7 +1028,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.10.D2",
-      "title": "Intension–Description–Specification Discipline (I/D/S)",
+      "title": "EntityOfConcern, Description Episteme, and Specification-Use Discipline",
       "staticPath": "/generated/patterns/E.10.D2"
     },
     {
@@ -1008,7 +1048,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.13",
-      "title": "Pragmatic Utility & Value Alignment",
+      "title": "Pragmatic Utility and Value Alignment",
       "staticPath": "/generated/patterns/E.13"
     },
     {
@@ -1033,7 +1073,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.17.0",
-      "title": "U.MultiViewDescribing — Viewpoints, Views & Correspondences",
+      "title": "U.MultiViewDescribing - Viewpoints, Views & Correspondences",
       "staticPath": "/generated/patterns/E.17.0"
     },
     {
@@ -1043,7 +1083,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.17.2",
-      "title": "TEVB — Typical Engineering Viewpoints Bundle",
+      "title": "TEVB - Typical Engineering Viewpoints Bundle",
       "staticPath": "/generated/patterns/E.17.2"
     },
     {
@@ -1058,7 +1098,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.17.AUD.OOTD",
-      "title": "PublicationUnit Stability Discipline and PublicationUnit Primary Described-Entity Discipline",
+      "title": "PublicationUnit Stability Discipline and PublicationUnit Primary EntityOfConcern Discipline",
       "staticPath": "/generated/patterns/E.17.AUD.OOTD"
     },
     {
@@ -1068,13 +1108,18 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.17.ID.CR",
-      "title": "ComparativeReading — bounded comparative reading over comparative review units",
+      "title": "ComparativeReviewUnit - bounded comparison over comparative review units",
       "staticPath": "/generated/patterns/E.17.ID.CR"
     },
     {
       "id": "E.18",
       "title": "Transduction Graph Architecture (E.TGA)",
       "staticPath": "/generated/patterns/E.18"
+    },
+    {
+      "id": "E.18.1",
+      "title": "Principles-to-Work Transduction Path",
+      "staticPath": "/generated/patterns/E.18.1"
     },
     {
       "id": "E.19",
@@ -1093,13 +1138,18 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.22",
-      "title": "Improvement-Oriented Quality-Read Question Framing",
+      "title": "Improvement-Oriented Quality Evaluation Question Framing",
       "staticPath": "/generated/patterns/E.22"
     },
     {
       "id": "E.23",
       "title": "Quality Improvement Loop Method",
       "staticPath": "/generated/patterns/E.23"
+    },
+    {
+      "id": "E.24",
+      "title": "U.Ontic and Ontic Introduction Discipline",
+      "staticPath": "/generated/patterns/E.24"
     },
     {
       "id": "F.0.1",
@@ -1202,6 +1252,11 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/F.18"
     },
     {
+      "id": "F.19",
+      "title": "Ontology-First Plain Technical Rewriting",
+      "staticPath": "/generated/patterns/F.19"
+    },
+    {
       "id": "G.0",
       "title": "CG-Spec — Frame Standard & Comparability Governance",
       "staticPath": "/generated/patterns/G.0"
@@ -1293,7 +1348,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "I.2",
-      "title": "Detailed Walk-throughs",
+      "title": "Expanded Entry Disambiguation Cases",
       "staticPath": "/generated/patterns/I.2"
     },
     {
@@ -1322,11 +1377,6 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/J.3"
     },
     {
-      "id": "J.4",
-      "title": "First Practical Entry Neighborhood Index",
-      "staticPath": "/generated/patterns/J.4"
-    },
-    {
       "id": "K.1",
       "title": "Mandatory Replacement of Measurement Terms",
       "staticPath": "/generated/patterns/K.1"
@@ -1342,121 +1392,5 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/K.3"
     }
   ],
-  "routes": [
-    {
-      "slug": "admissible-comparison-candidate-pool-policy-selection-and-selected-set-publication",
-      "title": "Admissible comparison, candidate-pool policy, selection, and selected-set publication",
-      "staticPath": "/generated/routes/route_admissible-comparison-candidate-pool-policy-selection-and-selected-set-publication"
-    },
-    {
-      "slug": "admissible-comparison-pool-selection-or-selected-set-publication",
-      "title": "admissible comparison, pool, selection, or selected-set publication",
-      "staticPath": "/generated/routes/route_admissible-comparison-pool-selection-or-selected-set-publication"
-    },
-    {
-      "slug": "architecture-vs-diagram-module-model",
-      "title": "Architecture vs diagram/module/model",
-      "staticPath": "/generated/routes/route_architecture-vs-diagram-module-model"
-    },
-    {
-      "slug": "boundary-unpacking",
-      "title": "boundary unpacking",
-      "staticPath": "/generated/routes/route_boundary-unpacking"
-    },
-    {
-      "slug": "boundary-unpacking-and-claim-decomposition",
-      "title": "Boundary unpacking and claim decomposition",
-      "staticPath": "/generated/routes/route_boundary-unpacking-and-claim-decomposition"
-    },
-    {
-      "slug": "causal-use-and-counterfactual-support-repair",
-      "title": "Causal-use and counterfactual-support repair",
-      "staticPath": "/generated/routes/route_causal-use-and-counterfactual-support-repair"
-    },
-    {
-      "slug": "drr-decision-adequacy-before-authoring",
-      "title": "DRR decision adequacy before authoring",
-      "staticPath": "/generated/routes/route_drr-decision-adequacy-before-authoring"
-    },
-    {
-      "slug": "evaluation-characteristicspace-fpf-pattern-publication-form",
-      "title": "Evaluation CharacteristicSpace FPF pattern publication form",
-      "staticPath": "/generated/routes/route_evaluation-characteristicspace-fpf-pattern-publication-form"
-    },
-    {
-      "slug": "fpf-level-pillar-adequacy-and-whole-fpf-improvement",
-      "title": "FPF-level Pillar adequacy and whole-FPF improvement",
-      "staticPath": "/generated/routes/route_fpf-level-pillar-adequacy-and-whole-fpf-improvement"
-    },
-    {
-      "slug": "generator-sota-or-portfolio-scaffold",
-      "title": "Generator, SoTA, or portfolio scaffold",
-      "staticPath": "/generated/routes/route_generator-sota-or-portfolio-scaffold"
-    },
-    {
-      "slug": "object-under-improvement-evaluation-setup-before-improvement",
-      "title": "Object-under-improvement evaluation setup before improvement",
-      "staticPath": "/generated/routes/route_object-under-improvement-evaluation-setup-before-improvement"
-    },
-    {
-      "slug": "partly-said-cue-and-language-state-discovery",
-      "title": "partly-said cue and language-state discovery",
-      "staticPath": "/generated/routes/route_partly-said-cue-and-language-state-discovery"
-    },
-    {
-      "slug": "pattern-quality-stop-repair-and-non-scalar-improvement",
-      "title": "Pattern-quality stop, repair, and non-scalar improvement",
-      "staticPath": "/generated/routes/route_pattern-quality-stop-repair-and-non-scalar-improvement"
-    },
-    {
-      "slug": "project-alignment",
-      "title": "project alignment",
-      "staticPath": "/generated/routes/route_project-alignment"
-    },
-    {
-      "slug": "quality-read-question-framing-before-review-or-improvement",
-      "title": "Quality-read question framing before review or improvement",
-      "staticPath": "/generated/routes/route_quality-read-question-framing-before-review-or-improvement"
-    },
-    {
-      "slug": "repeated-quality-improvement-loop",
-      "title": "Repeated quality-improvement loop",
-      "staticPath": "/generated/routes/route_repeated-quality-improvement-loop"
-    },
-    {
-      "slug": "reusable-generator-sota-or-portfolio-kit",
-      "title": "reusable generator, SoTA, or portfolio kit",
-      "staticPath": "/generated/routes/route_reusable-generator-sota-or-portfolio-kit"
-    },
-    {
-      "slug": "same-entity-rewrite-explanation-and-comparative-interpretation",
-      "title": "Same-entity rewrite, explanation, and comparative interpretation",
-      "staticPath": "/generated/routes/route_same-entity-rewrite-explanation-and-comparative-interpretation"
-    },
-    {
-      "slug": "same-entity-rewrite-explanation-representation-change-repair-or-bounded-comparative-reading",
-      "title": "same-entity rewrite, explanation, representation change, repair, or bounded comparative reading",
-      "staticPath": "/generated/routes/route_same-entity-rewrite-explanation-representation-change-repair-or-bounded-comparative-reading"
-    },
-    {
-      "slug": "temporal-claim-adequacy-under-effort-window-and-resistance",
-      "title": "Temporal claim adequacy under effort, window, and resistance",
-      "staticPath": "/generated/routes/route_temporal-claim-adequacy-under-effort-window-and-resistance"
-    },
-    {
-      "slug": "why",
-      "title": "why",
-      "staticPath": "/generated/routes/route_why"
-    },
-    {
-      "slug": "wording-use-precision-restoration",
-      "title": "Wording-use precision restoration",
-      "staticPath": "/generated/routes/route_wording-use-precision-restoration"
-    },
-    {
-      "slug": "writing-or-reviewing-patterns",
-      "title": "writing or reviewing patterns",
-      "staticPath": "/generated/routes/route_writing-or-reviewing-patterns"
-    }
-  ]
+  "routes": []
 };
