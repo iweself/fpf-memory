@@ -8,37 +8,57 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
   "patterns": [
     {
       "id": "A.0",
-      "title": "Onboarding Glossary (NQD & E/E‑LOG)",
+      "title": "Generative Search Onboarding Glossary (NQD & E/E‑LOG)",
       "staticPath": "/generated/patterns/A.0"
     },
     {
       "id": "A.1",
-      "title": "Holon Ontic Foundation (U.Holon and Admitted Holon Kinds)",
+      "title": "Recognize a Whole with Parts (U.Holon and Admitted Holon Kinds)",
       "staticPath": "/generated/patterns/A.1"
     },
     {
       "id": "A.1.1",
-      "title": "U.BoundedContext Semantic Frame",
+      "title": "Bounded Model-Use Structure: Applicability, Use and Expression Coherence (DDD Bounded Context)",
       "staticPath": "/generated/patterns/A.1.1"
     },
     {
+      "id": "A.1.CSD",
+      "title": "Discovering Systems That May Bear Consequences",
+      "staticPath": "/generated/patterns/A.1.CSD"
+    },
+    {
+      "id": "A.1.RI",
+      "title": "Reidentifying an Object across Observations",
+      "staticPath": "/generated/patterns/A.1.RI"
+    },
+    {
+      "id": "A.1.SCR",
+      "title": "Finding the Acting or Changed System",
+      "staticPath": "/generated/patterns/A.1.SCR"
+    },
+    {
+      "id": "A.1.STM",
+      "title": "Find the First Unsupported Project Dependency (System-Thinking Long Mantra)",
+      "staticPath": "/generated/patterns/A.1.STM"
+    },
+    {
       "id": "A.2",
-      "title": "Role Taxonomy",
+      "title": "System-Role Kinds and Assignments",
       "staticPath": "/generated/patterns/A.2"
     },
     {
       "id": "A.2.1",
-      "title": "U.RoleAssignment: Contextual Role Assignment",
+      "title": "U.SystemRoleAssignment - Contextual System-Role Assignment",
       "staticPath": "/generated/patterns/A.2.1"
     },
     {
       "id": "A.2.2",
-      "title": "U.Capability: System Ability Envelope and Measures",
+      "title": "System Capability: Conditions, Measures and Fit",
       "staticPath": "/generated/patterns/A.2.2"
     },
     {
       "id": "A.2.3",
-      "title": "U.PromiseContent (Promise Content)",
+      "title": "U.PromiseContent — Promised Outcomes and Acceptance Criteria",
       "staticPath": "/generated/patterns/A.2.3"
     },
     {
@@ -48,38 +68,83 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.2.5",
-      "title": "RoleStateRelation@BoundedContext - Role State Space and Enactable-State Admission",
+      "title": "SystemRoleAssignmentStateRelation - Assignment-State Recognition for Work Admission",
       "staticPath": "/generated/patterns/A.2.5"
     },
     {
       "id": "A.2.6",
-      "title": "Unified Scope Mechanism (USM): Context Slices & Scopes",
+      "title": "Unified Scope Mechanism (USM): Test Scope Membership and Combine Scopes",
       "staticPath": "/generated/patterns/A.2.6"
     },
     {
       "id": "A.2.7",
-      "title": "RoleRelationStructure@BoundedContext - Context-Local Role Relations and Representation-Lens Boundary",
+      "title": "SystemRoleKindRelationStructure - Relations among System-Role Kinds",
       "staticPath": "/generated/patterns/A.2.7"
     },
     {
       "id": "A.2.8",
-      "title": "U.Commitment (Deontic Commitment Object)",
+      "title": "U.Commitment — Individual Duties to Act or Refrain",
       "staticPath": "/generated/patterns/A.2.8"
     },
     {
+      "id": "A.2.8.PER",
+      "title": "Granted Permission, Exercise, and Non-Prohibition",
+      "staticPath": "/generated/patterns/A.2.8.PER"
+    },
+    {
       "id": "A.2.9",
-      "title": "U.SpeechAct (Communicative Work Object)",
+      "title": "U.SpeechAct — Communicative Work and Its Intended Use",
       "staticPath": "/generated/patterns/A.2.9"
     },
     {
       "id": "A.3",
-      "title": "Transformer Constitution (Quartet)",
+      "title": "Transformer Quartet: Distinguish Work, Performer, Method and Method Description",
       "staticPath": "/generated/patterns/A.3"
     },
     {
       "id": "A.3.1",
-      "title": "U.Method: Context-Defined Way of Doing",
+      "title": "U.Method: Reusable Way of Doing with Explicit Applicability",
       "staticPath": "/generated/patterns/A.3.1"
+    },
+    {
+      "id": "A.3.1.CC",
+      "title": "Check the Coherence of a Method Claim",
+      "staticPath": "/generated/patterns/A.3.1.CC"
+    },
+    {
+      "id": "A.3.1.DR",
+      "title": "Recover Method Contributions from Documentary Sources",
+      "staticPath": "/generated/patterns/A.3.1.DR"
+    },
+    {
+      "id": "A.3.1.FT",
+      "title": "Qualify Method Fit and Transfer",
+      "staticPath": "/generated/patterns/A.3.1.FT"
+    },
+    {
+      "id": "A.3.1.MI",
+      "title": "Introduce a Method into Practice and Decide What to Keep or Change",
+      "staticPath": "/generated/patterns/A.3.1.MI"
+    },
+    {
+      "id": "A.3.1.MR",
+      "title": "Candidate-Method Recovery from Work Evidence",
+      "staticPath": "/generated/patterns/A.3.1.MR"
+    },
+    {
+      "id": "A.3.1.MV",
+      "title": "Construct and Maintain a Method Variant",
+      "staticPath": "/generated/patterns/A.3.1.MV"
+    },
+    {
+      "id": "A.3.1.QM",
+      "title": "Qualify a Method for Its Intended Contribution",
+      "staticPath": "/generated/patterns/A.3.1.QM"
+    },
+    {
+      "id": "A.3.1.WT",
+      "title": "Design and Interpret a Method Work Trial",
+      "staticPath": "/generated/patterns/A.3.1.WT"
     },
     {
       "id": "A.3.2",
@@ -87,63 +152,83 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/A.3.2"
     },
     {
+      "id": "A.3.2.DE",
+      "title": "Describe a Method for Its Intended Use",
+      "staticPath": "/generated/patterns/A.3.2.DE"
+    },
+    {
       "id": "A.3.3",
       "title": "U.Dynamics: State-Space and Transition-Law Episteme",
       "staticPath": "/generated/patterns/A.3.3"
     },
     {
+      "id": "A.3.3.CC",
+      "title": "Construct a Configuration Description under Constraints",
+      "staticPath": "/generated/patterns/A.3.3.CC"
+    },
+    {
+      "id": "A.3.3.PI",
+      "title": "Retain the Information Needed for Prediction",
+      "staticPath": "/generated/patterns/A.3.3.PI"
+    },
+    {
+      "id": "A.3.3.TR",
+      "title": "Construct a Rule for State Change",
+      "staticPath": "/generated/patterns/A.3.3.TR"
+    },
+    {
       "id": "A.3.4",
-      "title": "U.Transformation: Bounded Change Under Conditions",
+      "title": "U.Transformation: Actual Bounded Change Under Conditions",
       "staticPath": "/generated/patterns/A.3.4"
     },
     {
       "id": "A.3.4.P",
-      "title": "Transformation Ontic Precision Restoration",
+      "title": "Transformation Wording Repair: Recover Objects and Claims",
       "staticPath": "/generated/patterns/A.3.4.P"
     },
     {
       "id": "A.4",
-      "title": "Temporal Duality & Open-Ended Evolution Principle",
+      "title": "Compare a System's Intended Design with Its Operating Conditions",
       "staticPath": "/generated/patterns/A.4"
     },
     {
       "id": "A.5",
-      "title": "Open-Ended Kernel & Extension Layering",
+      "title": "Open-Ended FPF Kernel and Extension Layering",
       "staticPath": "/generated/patterns/A.5"
     },
     {
       "id": "A.6",
-      "title": "Signature Stack & Boundary Discipline",
+      "title": "Signature Stack: Classify and Place Boundary Claims",
       "staticPath": "/generated/patterns/A.6"
     },
     {
       "id": "A.6.0",
-      "title": "U.Signature - Universal, law-governed declaration for a SubjectKind over a RangedValueKind",
+      "title": "U.Signature - Reusable Law-Governed Declaration Episteme",
       "staticPath": "/generated/patterns/A.6.0"
     },
     {
       "id": "A.6.1",
-      "title": "U.Mechanism - Law-governed application to a SubjectKind over a RangedValueKind",
+      "title": "U.Mechanism - Reusable Law-Governed Operation Declaration",
       "staticPath": "/generated/patterns/A.6.1"
     },
     {
       "id": "A.6.2",
-      "title": "U.EffectFreeEpistemicMorphing — Effect‑free morphisms of epistemes",
+      "title": "Effect-Free Episteme Morphing: Laws for Mathematical Relations Between Epistemes",
       "staticPath": "/generated/patterns/A.6.2"
     },
     {
       "id": "A.6.3",
-      "title": "U.EpistemicViewing — EntityOfConcern-preserving morphism",
+      "title": "Episteme viewing - EntityOfConcern-preserving episteme construction",
       "staticPath": "/generated/patterns/A.6.3"
     },
     {
       "id": "A.6.3.CR",
-      "title": "ConservativeRetextualization - entityOfConcernRef-preserving textual re-expression",
+      "title": "ConservativeRetextualization: EntityOfConcern-Preserving Textual Re-Expression",
       "staticPath": "/generated/patterns/A.6.3.CR"
     },
     {
       "id": "A.6.3.CSC",
-      "title": "Controlled Semantic Coarsening",
+      "title": "Controlled Semantic Coarsening: Shorten an Account for a Bounded Use",
       "staticPath": "/generated/patterns/A.6.3.CSC"
     },
     {
@@ -153,42 +238,42 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.6.3.RT",
-      "title": "Representation-Scheme Transition: EntityOfConcern-Preserving Representation-Scheme Transition",
+      "title": "Representation-Scheme Transition: Change Representation of the Same EntityOfConcern",
       "staticPath": "/generated/patterns/A.6.3.RT"
     },
     {
+      "id": "A.6.3.RT.OE",
+      "title": "Construct an Operative Expression",
+      "staticPath": "/generated/patterns/A.6.3.RT.OE"
+    },
+    {
       "id": "A.6.4",
-      "title": "U.EpistemicRetargeting — EntityOfConcern retargeting morphism",
+      "title": "EntityOfConcern Retargeting: Judge a Bounded Use Across Different Entities",
       "staticPath": "/generated/patterns/A.6.4"
     },
     {
       "id": "A.6.5",
-      "title": "U.RelationSlotDiscipline - SlotKind, ValueKind, RefKind, and slot-operation discipline",
+      "title": "Relation-Declaration Slot Discipline - SlotKind, ValueKind, RefKind, and participant-designation discipline",
       "staticPath": "/generated/patterns/A.6.5"
     },
     {
       "id": "A.6.6",
-      "title": "Base Declaration Discipline - Kind-explicit, scoped, witnessed base declaration discipline (with base-change lexicon)",
+      "title": "Base Declaration Discipline: Say Exactly What Something Depends On",
       "staticPath": "/generated/patterns/A.6.6"
     },
     {
       "id": "A.6.7",
-      "title": "MechSuiteDescription — Description of a set of distinct mechanisms",
+      "title": "MechSuiteDescription — Shared Conditions for Joint Use of Distinct Mechanisms",
       "staticPath": "/generated/patterns/A.6.7"
     },
     {
-      "id": "A.6.8",
-      "title": "Service Polysemy Unpacking (RPR-SERV)",
-      "staticPath": "/generated/patterns/A.6.8"
-    },
-    {
       "id": "A.6.9",
-      "title": "Cross-Context Sameness Disambiguation - Repairing cross-context \"same / equivalent / align\" via explicit Bridges (RPR-XCTX)",
+      "title": "Cross-Context Sameness Disambiguation - Restoring the concrete claim behind \"same / equivalent / align\" (RPR-XCTX)",
       "staticPath": "/generated/patterns/A.6.9"
     },
     {
       "id": "A.6.A",
-      "title": "Action-Invitation Precision Restoration (ACT-INV)",
+      "title": "Affordance and Action-Invitation Precision Restoration (ACT-INV)",
       "staticPath": "/generated/patterns/A.6.A"
     },
     {
@@ -213,17 +298,32 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.6.M",
-      "title": "Module Relation Repair",
+      "title": "Module and Interface Claim Repair",
       "staticPath": "/generated/patterns/A.6.M"
     },
     {
       "id": "A.6.P",
-      "title": "Relational Precision Restoration (RPR) — Kind‑Explicit Qualified Relation Discipline",
+      "title": "Relational Precision Restoration — Recovering Direct Relations from Under-Specified Claims",
       "staticPath": "/generated/patterns/A.6.P"
     },
     {
+      "id": "A.6.P.RI",
+      "title": "Recover Agent-Relative References for Action",
+      "staticPath": "/generated/patterns/A.6.P.RI"
+    },
+    {
+      "id": "A.6.P.WMR",
+      "title": "Exact Relation Recovery for Method and Work Claims",
+      "staticPath": "/generated/patterns/A.6.P.WMR"
+    },
+    {
+      "id": "A.6.REL",
+      "title": "Relation Obtaining and Individuation: Distinguish Occurrences When Needed",
+      "staticPath": "/generated/patterns/A.6.REL"
+    },
+    {
       "id": "A.6.RSIG",
-      "title": "Recognition Signatures for Descriptions",
+      "title": "Recognition Signatures: Find the Defining Episteme for a Description",
       "staticPath": "/generated/patterns/A.6.RSIG"
     },
     {
@@ -233,28 +333,43 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.6.S",
-      "title": "U.SignatureEngineeringPair - Signature engineering via a ConstructorSignature and a TargetSignature",
+      "title": "TargetSignature and optional ConstructorSignature - demand-driven signature engineering",
       "staticPath": "/generated/patterns/A.6.S"
     },
     {
       "id": "A.7",
-      "title": "Strict Distinction (Clarity Lattice)",
+      "title": "Strict Distinction: Repair Conflations of FPF Objects (Clarity Lattice)",
       "staticPath": "/generated/patterns/A.7"
     },
     {
+      "id": "A.7.1",
+      "title": "Consequence-Guided Ontological Problem Solving",
+      "staticPath": "/generated/patterns/A.7.1"
+    },
+    {
+      "id": "A.7.2",
+      "title": "FPF Ontology-Premise Reconciliation",
+      "staticPath": "/generated/patterns/A.7.2"
+    },
+    {
+      "id": "A.7.CP",
+      "title": "Constructive-Premise Compact and Reasoning-Basis Use",
+      "staticPath": "/generated/patterns/A.7.CP"
+    },
+    {
       "id": "A.8",
-      "title": "Universal Core Principle",
+      "title": "Universal Core Principle: Test a U-Kind Across Domains",
       "staticPath": "/generated/patterns/A.8"
     },
     {
       "id": "A.9",
-      "title": "Cross-Scale Consistency (C-3)",
+      "title": "Choose and Check an Aggregation Law for the Intended Result",
       "staticPath": "/generated/patterns/A.9"
     },
     {
-      "id": "A.10",
-      "title": "Evidence Graph Referring (C-4)",
-      "staticPath": "/generated/patterns/A.10"
+      "id": "A.10.1",
+      "title": "Revalidate Affected Uses When a Relied-on Source Changes",
+      "staticPath": "/generated/patterns/A.10.1"
     },
     {
       "id": "A.11",
@@ -262,8 +377,13 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/A.11"
     },
     {
+      "id": "A.11.OP",
+      "title": "Decision-Relevant Least Action and Operational Parsimony: Test a Proposed Requirement",
+      "staticPath": "/generated/patterns/A.11.OP"
+    },
+    {
       "id": "A.12",
-      "title": "Acting-Side Externalization and Reflexive Split",
+      "title": "Acting-Side Externalization and Reflexive Split: Identify Who Acts on What",
       "staticPath": "/generated/patterns/A.12"
     },
     {
@@ -278,7 +398,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.15",
-      "title": "Role-Method-Work Alignment (Contextual Enactment)",
+      "title": "System-Role–Method–Work Alignment",
       "staticPath": "/generated/patterns/A.15"
     },
     {
@@ -288,17 +408,17 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.15.2",
-      "title": "U.WorkPlan: The Schedule of Intent",
+      "title": "U.WorkPlan: Plan Content for Coordinating Future Work",
       "staticPath": "/generated/patterns/A.15.2"
     },
     {
       "id": "A.15.3",
-      "title": "SlotFillingsPlanItem — Planned Slot-Fillings Baseline (WorkPlanning PlanItem)",
+      "title": "SlotFillingsPlanItem: Plan a Value for an Existing Declaration Member",
       "staticPath": "/generated/patterns/A.15.3"
     },
     {
       "id": "A.15.4",
-      "title": "Work-Relevant Source Restoration",
+      "title": "Work-Relevant Appearance-Based Reliance Repair",
       "staticPath": "/generated/patterns/A.15.4"
     },
     {
@@ -307,28 +427,63 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/A.15.5"
     },
     {
+      "id": "A.15.6",
+      "title": "Recover What Project, Process, or Case Wording Refers To",
+      "staticPath": "/generated/patterns/A.15.6"
+    },
+    {
+      "id": "A.15.7",
+      "title": "Situation-Responsive Work Steering and Next-Action Selection",
+      "staticPath": "/generated/patterns/A.15.7"
+    },
+    {
+      "id": "A.15.8",
+      "title": "Work-Performance Configuration and Recovery Testing",
+      "staticPath": "/generated/patterns/A.15.8"
+    },
+    {
+      "id": "A.15.8.MS",
+      "title": "Configure Methodological Support for Work",
+      "staticPath": "/generated/patterns/A.15.8.MS"
+    },
+    {
+      "id": "A.15.9",
+      "title": "Use or Request a Bounded Result from Another Practice",
+      "staticPath": "/generated/patterns/A.15.9"
+    },
+    {
+      "id": "A.15.10",
+      "title": "Resume Interrupted Work",
+      "staticPath": "/generated/patterns/A.15.10"
+    },
+    {
+      "id": "A.15.11",
+      "title": "Make Applicable Methods Noticeable in Work",
+      "staticPath": "/generated/patterns/A.15.11"
+    },
+    {
       "id": "A.16",
-      "title": "Language-State Move Coordination",
+      "title": "Language-State Moves: Choose the Next Publication and Use of a Cue or Claim",
       "staticPath": "/generated/patterns/A.16"
     },
     {
       "id": "A.16.0",
-      "title": "U.LanguageStateMoveTrajectory - Optional trajectory-account normal form over the language-state U.CharacteristicSpace",
+      "title": "Keep an Episteme's Language-State and Publication History Recoverable",
       "staticPath": "/generated/patterns/A.16.0"
     },
     {
       "id": "A.16.1",
-      "title": "U.PreArticulationCuePack",
+      "title": "PreArticulationCuePack: Preserve an Early Cue Before Choosing Its Use",
       "staticPath": "/generated/patterns/A.16.1"
     },
     {
       "id": "A.16.2",
-      "title": "Reopen / SketchBackoff / Respecify",
+      "title": "Reopen, SketchBackoff, Respecify, or Retire a Language-State Publication",
       "staticPath": "/generated/patterns/A.16.2"
     },
     {
       "id": "A.17",
-      "title": "A.CHR-NORM — Canonical “Characteristic” & rename (Dimension/Axis → Characteristic)",
+      "title": "Canonical “Characteristic” (A.CHR-NORM): Name What Is Measured",
       "staticPath": "/generated/patterns/A.17"
     },
     {
@@ -338,27 +493,27 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.19",
-      "title": "CharacteristicSpace & Dynamics Hook (A.CHR‑SPACE)",
+      "title": "CharacteristicSpace: Coordinates, State Predicates and Dynamics Hook (A.CHR‑SPACE)",
       "staticPath": "/generated/patterns/A.19"
     },
     {
       "id": "A.19.CHR",
-      "title": "CHRMechanismSuite — CHR mechanism-suite anchor (suite obligations + P2W planned baseline)",
+      "title": "CHRMechanismSuite: Shared Rules for Characterization and Selection",
       "staticPath": "/generated/patterns/A.19.CHR"
     },
     {
       "id": "A.19.CN",
-      "title": "CN-frame (comparability & normalization)",
+      "title": "CN-frame: Specify and Maintain Comparability and Normalization",
       "staticPath": "/generated/patterns/A.19.CN"
     },
     {
       "id": "A.19.CPM",
-      "title": "Unified Comparison Mechanism (CPM)",
+      "title": "Compare Admitted Profiles under a Declared Comparator (CPM)",
       "staticPath": "/generated/patterns/A.19.CPM"
     },
     {
       "id": "A.19.ECS",
-      "title": "Evaluation CharacteristicSpace Construction",
+      "title": "Evaluation CharacteristicSpace Construction: Define What Counts as Better",
       "staticPath": "/generated/patterns/A.19.ECS"
     },
     {
@@ -368,12 +523,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.19.SPR",
-      "title": "State-Family Precision Restoration",
+      "title": "Repair State and Status Wording",
       "staticPath": "/generated/patterns/A.19.SPR"
     },
     {
       "id": "A.19.UINDM",
-      "title": "Unified Indicatorization Mechanism (UINDM)",
+      "title": "Indicatorization (UINDM): Select Indicators Under a Declared Policy",
       "staticPath": "/generated/patterns/A.19.UINDM"
     },
     {
@@ -383,7 +538,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "A.19.UNM",
-      "title": "Unified Normalization Mechanism (UNM)",
+      "title": "Normalize Coordinate Values under Declared Invariants (UNM)",
       "staticPath": "/generated/patterns/A.19.UNM"
     },
     {
@@ -392,19 +547,14 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/A.19.USCM"
     },
     {
-      "id": "A.20",
-      "title": "Flow Constraint Validity — Eulerian",
-      "staticPath": "/generated/patterns/A.20"
-    },
-    {
-      "id": "A.21",
-      "title": "GateProfilization: OperationalGate(profile) (GateFit core)",
-      "staticPath": "/generated/patterns/A.21"
-    },
-    {
       "id": "A.22",
       "title": "Structure and Structural Views (STRUCT-CAL)",
       "staticPath": "/generated/patterns/A.22"
+    },
+    {
+      "id": "A.22.CGUS",
+      "title": "Which Continuations Are Available? — Constraint-Governed Unfolding Structure (CGUS)",
+      "staticPath": "/generated/patterns/A.22.CGUS"
     },
     {
       "id": "B.1",
@@ -418,17 +568,17 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "B.1.2",
-      "title": "System Aggregation and Holon Delimitation",
+      "title": "Coordinate Decisions About System Aggregation and Delimitation",
       "staticPath": "/generated/patterns/B.1.2"
     },
     {
       "id": "B.1.3",
-      "title": "Γ_epist — Knowledge-Specific Aggregation",
+      "title": "Knowledge Aggregation (Γ_epist): Synthesis and Target-Scheme Compilation",
       "staticPath": "/generated/patterns/B.1.3"
     },
     {
       "id": "B.1.4",
-      "title": "Contextual and Temporal Aggregation",
+      "title": "Specify Order-Sensitive or Temporal Aggregation (Γctx, Γtime)",
       "staticPath": "/generated/patterns/B.1.4"
     },
     {
@@ -437,18 +587,33 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/B.1.5"
     },
     {
+      "id": "B.1.5.CM",
+      "title": "Construct and Qualify a Composite Method",
+      "staticPath": "/generated/patterns/B.1.5.CM"
+    },
+    {
+      "id": "B.1.5.EW",
+      "title": "Recover How Constituent Actions Enact Encompassing Work",
+      "staticPath": "/generated/patterns/B.1.5.EW"
+    },
+    {
+      "id": "B.1.5.RS",
+      "title": "Evaluate a Constituent Method Replacement in Its Encompassing Uses",
+      "staticPath": "/generated/patterns/B.1.5.RS"
+    },
+    {
       "id": "B.1.6",
       "title": "Work-Resource Aggregation",
       "staticPath": "/generated/patterns/B.1.6"
     },
     {
       "id": "B.2",
-      "title": "Meta-Holon Transition - Whole Reidentification",
+      "title": "Meta-Holon Transition — Whole Reidentification",
       "staticPath": "/generated/patterns/B.2"
     },
     {
       "id": "B.2.2",
-      "title": "Meta-System Transition - System Specialization of MHT",
+      "title": "Meta-System Transition: Test the Proposed New Whole as a System",
       "staticPath": "/generated/patterns/B.2.2"
     },
     {
@@ -458,7 +623,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "B.2.4",
-      "title": "Capability and Functioning Whole Reidentification",
+      "title": "Do Capability or Functioning Changes Require Whole Reidentification?",
       "staticPath": "/generated/patterns/B.2.4"
     },
     {
@@ -468,13 +633,8 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "B.2.P",
-      "title": "Emergence and MHT Precision Restoration",
+      "title": "Clarify Emergence and Meta-Holon Transition (MHT) Claims",
       "staticPath": "/generated/patterns/B.2.P"
-    },
-    {
-      "id": "B.3",
-      "title": "Trust & Assurance Calculus (F–G–R with Congruence)",
-      "staticPath": "/generated/patterns/B.3"
     },
     {
       "id": "B.3.3",
@@ -483,67 +643,137 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "B.3.4",
-      "title": "Evidence Decay & Epistemic Debt",
+      "title": "Can Earlier Evidence Still Support This Use? — Evidence Decay and Epistemic Debt",
       "staticPath": "/generated/patterns/B.3.4"
     },
     {
       "id": "B.3.5",
-      "title": "Working-Model Relations & Grounding (CT2R-LOG)",
+      "title": "Assurance Grounding for Working-Model Relation Claims (CT2R-LOG)",
       "staticPath": "/generated/patterns/B.3.5"
     },
     {
       "id": "B.4",
-      "title": "Canonical Evolution Loop",
+      "title": "Coordinate Repeated Adaptation (Canonical Evolution Loop)",
       "staticPath": "/generated/patterns/B.4"
     },
     {
       "id": "B.4.1",
-      "title": "Observe -> Notice -> Stabilize -> Route",
+      "title": "Publish Candidate Routes for a Stabilized Cue (RoutedCueSet)",
       "staticPath": "/generated/patterns/B.4.1"
     },
     {
       "id": "B.5",
-      "title": "Canonical Reasoning Cycle",
+      "title": "Choose the Next Reasoning Contribution (Canonical Reasoning Cycle)",
       "staticPath": "/generated/patterns/B.5"
     },
     {
       "id": "B.5.1",
-      "title": "Explore → Shape → Evidence → Operate",
+      "title": "Coordinate Development States: Explore → Shape → Evidence → Operate",
       "staticPath": "/generated/patterns/B.5.1"
     },
     {
       "id": "B.5.2",
-      "title": "Abductive Loop",
+      "title": "Generate and Compare Candidate Explanations (Abductive Loop)",
       "staticPath": "/generated/patterns/B.5.2"
     },
     {
       "id": "B.5.2.0",
-      "title": "U.AbductivePrompt",
+      "title": "Question Form for Entering Abduction (U.AbductivePrompt)",
       "staticPath": "/generated/patterns/B.5.2.0"
     },
     {
       "id": "B.5.2.1",
-      "title": "Creative Abduction with NQD",
+      "title": "Instrument Abductive Hypothesis Generation with Novelty–Quality–Diversity (NQD)",
       "staticPath": "/generated/patterns/B.5.2.1"
     },
     {
       "id": "B.5.3",
-      "title": "Domain-Concept Bridge",
+      "title": "Interpret Domain Vocabulary for an FPF Claim (Domain-Concept Bridge)",
       "staticPath": "/generated/patterns/B.5.3"
     },
     {
-      "id": "C.1",
-      "title": "Physical System State, Conservation, and Resource-Flow Calculus (Sys-CAL)",
-      "staticPath": "/generated/patterns/C.1"
+      "id": "B.5.4",
+      "title": "Recognize a Reusable Concept in a Concrete Situation",
+      "staticPath": "/generated/patterns/B.5.4"
+    },
+    {
+      "id": "B.5.EA",
+      "title": "Articulate a Working Distinction from Experience",
+      "staticPath": "/generated/patterns/B.5.EA"
+    },
+    {
+      "id": "B.5.FM",
+      "title": "Construct a First Model for the Working Question",
+      "staticPath": "/generated/patterns/B.5.FM"
+    },
+    {
+      "id": "B.5.MPC",
+      "title": "Connect Physical, Mathematical and Computational Reasoning",
+      "staticPath": "/generated/patterns/B.5.MPC"
+    },
+    {
+      "id": "B.5.MPC.R",
+      "title": "Repair a Physical-Mathematical-Computational Connection",
+      "staticPath": "/generated/patterns/B.5.MPC.R"
+    },
+    {
+      "id": "B.5.PI",
+      "title": "Initiate Inquiry from Ongoing Work",
+      "staticPath": "/generated/patterns/B.5.PI"
+    },
+    {
+      "id": "B.5.QD",
+      "title": "Develop a New Question from a Result or Construction",
+      "staticPath": "/generated/patterns/B.5.QD"
+    },
+    {
+      "id": "B.5.QD.CF",
+      "title": "Reformulate a Problem by Examining Its Conflicting Assumptions",
+      "staticPath": "/generated/patterns/B.5.QD.CF"
+    },
+    {
+      "id": "B.5.RA",
+      "title": "Recover an Argument for Its Next Use",
+      "staticPath": "/generated/patterns/B.5.RA"
+    },
+    {
+      "id": "B.5.RC",
+      "title": "Recover a Construction from Its Description",
+      "staticPath": "/generated/patterns/B.5.RC"
+    },
+    {
+      "id": "B.5.RR",
+      "title": "Revise Reasoning After a Premise or Question Changes",
+      "staticPath": "/generated/patterns/B.5.RR"
+    },
+    {
+      "id": "B.5.SD",
+      "title": "Construct a Useful Answer through Substantive Discussion",
+      "staticPath": "/generated/patterns/B.5.SD"
+    },
+    {
+      "id": "B.5.TC",
+      "title": "Compare Theoretical Accounts for a Working Question",
+      "staticPath": "/generated/patterns/B.5.TC"
+    },
+    {
+      "id": "B.5.TU",
+      "title": "Construct a Working Use of an Unfamiliar Theory",
+      "staticPath": "/generated/patterns/B.5.TU"
+    },
+    {
+      "id": "B.5.WN",
+      "title": "Develop Lines of Thought with Working Notes",
+      "staticPath": "/generated/patterns/B.5.WN"
     },
     {
       "id": "C.2",
-      "title": "KD‑CAL",
+      "title": "Epistemic holon composition (KD-CAL)",
       "staticPath": "/generated/patterns/C.2"
     },
     {
       "id": "C.2.1",
-      "title": "U.Episteme - Epistemes and their slot relation",
+      "title": "U.Episteme: Constitution, Empirical Grounding, and Edition Relations",
       "staticPath": "/generated/patterns/C.2.1"
     },
     {
@@ -558,23 +788,28 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.2.4",
-      "title": "U.ArticulationExplicitness",
+      "title": "U.ArticulationExplicitness — How Explicit Is an Episteme's Meaning for Its Use?",
       "staticPath": "/generated/patterns/C.2.4"
     },
     {
       "id": "C.2.5",
-      "title": "U.LanguageStateClosureDegree",
+      "title": "U.LanguageStateClosureDegree — How Fixed Is the Current Candidate Space?",
       "staticPath": "/generated/patterns/C.2.5"
     },
     {
       "id": "C.2.6",
-      "title": "U.LanguageStateAnchoringMode",
+      "title": "U.LanguageStateAnchoringMode — How Is the Episteme Anchored?",
       "staticPath": "/generated/patterns/C.2.6"
     },
     {
       "id": "C.2.7",
-      "title": "U.LanguageStateRepresentationFactorBundle",
+      "title": "U.LanguageStateRepresentationFactorBundle — How Is the Representation Organized?",
       "staticPath": "/generated/patterns/C.2.7"
+    },
+    {
+      "id": "C.2.8",
+      "title": "U.ExtractableStructuralInformation — Structure This Reader Can Recover",
+      "staticPath": "/generated/patterns/C.2.8"
     },
     {
       "id": "C.2.2a",
@@ -588,12 +823,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.2.P",
-      "title": "Epistemic Precision Restoration",
+      "title": "Clarify Episteme, Publication, and Source Wording (Epistemic Precision Restoration)",
       "staticPath": "/generated/patterns/C.2.P"
     },
     {
       "id": "C.2.P.DR",
-      "title": "Declarative Representation Precision Restoration",
+      "title": "Repair Claims Based on Declarative Form Alone (Declarative Representation Precision Restoration)",
       "staticPath": "/generated/patterns/C.2.P.DR"
     },
     {
@@ -603,22 +838,22 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.3.1",
-      "title": "U.Kind and U.SubkindOf Core",
+      "title": "Kind Identity and Subkind Relations (U.Kind and U.SubkindOf)",
       "staticPath": "/generated/patterns/C.3.1"
     },
     {
       "id": "C.3.2",
-      "title": "KindSignature (+F) & Extension/MemberOf",
+      "title": "Kind Intent, Membership Judgment, and Extension",
       "staticPath": "/generated/patterns/C.3.2"
     },
     {
       "id": "C.3.3",
-      "title": "KindBridge & CL^k — Cross‑context Mapping of Kinds",
+      "title": "KindBridge and CL^k — Correspondence between Distinct Kinds",
       "staticPath": "/generated/patterns/C.3.3"
     },
     {
       "id": "C.3.4",
-      "title": "RoleMask — Contextual Adaptation of Kinds (without cloning)",
+      "title": "KindUseAdaptationDeclaration — Tailor the Use of an Existing Kind",
       "staticPath": "/generated/patterns/C.3.4"
     },
     {
@@ -652,6 +887,26 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/C.11"
     },
     {
+      "id": "C.11.CRC",
+      "title": "Configuration-Relative Contribution Comparison",
+      "staticPath": "/generated/patterns/C.11.CRC"
+    },
+    {
+      "id": "C.11.DBR",
+      "title": "Reconsider a Decision When Its Relied-on Basis Changes",
+      "staticPath": "/generated/patterns/C.11.DBR"
+    },
+    {
+      "id": "C.11.DUA",
+      "title": "Make Advice and Evidence Demands Worth Their Burden",
+      "staticPath": "/generated/patterns/C.11.DUA"
+    },
+    {
+      "id": "C.11.MV",
+      "title": "Compare the Worth of a Method Option",
+      "staticPath": "/generated/patterns/C.11.MV"
+    },
+    {
       "id": "C.13",
       "title": "Constructional Mereology (Compose‑CAL)",
       "staticPath": "/generated/patterns/C.13"
@@ -662,13 +917,18 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/C.14"
     },
     {
-      "id": "C.16",
-      "title": "Measurement & Metrics Characterization (MM‑CHR)",
-      "staticPath": "/generated/patterns/C.16"
+      "id": "C.16.IR",
+      "title": "Determine What a Measurement Indication Can Resolve",
+      "staticPath": "/generated/patterns/C.16.IR"
+    },
+    {
+      "id": "C.16.MR",
+      "title": "Construct a Measurement Relation",
+      "staticPath": "/generated/patterns/C.16.MR"
     },
     {
       "id": "C.16.P",
-      "title": "Characteristic and Scale Precision Restoration",
+      "title": "Restore Precision to Characteristic and Scale Wording",
       "staticPath": "/generated/patterns/C.16.P"
     },
     {
@@ -677,13 +937,18 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/C.16.Q"
     },
     {
+      "id": "C.16.RM",
+      "title": "Repair a Measurement Model or Arrangement",
+      "staticPath": "/generated/patterns/C.16.RM"
+    },
+    {
       "id": "C.17",
-      "title": "Creativity‑CHR — Characterising Generative Novelty & Value",
+      "title": "Characterising Generative Novelty and Value",
       "staticPath": "/generated/patterns/C.17"
     },
     {
       "id": "C.18",
-      "title": "NQD‑CAL — Open‑Ended Search Calculus",
+      "title": "Open-Ended Search Archive and Front Stewardship",
       "staticPath": "/generated/patterns/C.18"
     },
     {
@@ -693,7 +958,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.19",
-      "title": "Explore–Exploit Governor (E/E‑LOG)",
+      "title": "Explore-Exploit Live-Pool Governor",
       "staticPath": "/generated/patterns/C.19"
     },
     {
@@ -702,19 +967,19 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/C.19.1"
     },
     {
+      "id": "C.19.2",
+      "title": "Use-Bounded Apparatus Application",
+      "staticPath": "/generated/patterns/C.19.2"
+    },
+    {
       "id": "C.20",
-      "title": "Composition of U.Discipline (Discipline‑CAL)",
+      "title": "Composition of U.Discipline (Discipline-CAL)",
       "staticPath": "/generated/patterns/C.20"
     },
     {
       "id": "C.21",
-      "title": "Discipline‑CHR - Field Health & Structure",
+      "title": "Field Health & Structure (Discipline-CHR)",
       "staticPath": "/generated/patterns/C.21"
-    },
-    {
-      "id": "C.22",
-      "title": "Problem Typing & TaskSignature Assignment (Problem-CHR)",
-      "staticPath": "/generated/patterns/C.22"
     },
     {
       "id": "C.22.1",
@@ -723,28 +988,28 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.22.2",
-      "title": "ProblemCard@Context",
+      "title": "ProblemCard",
       "staticPath": "/generated/patterns/C.22.2"
     },
     {
+      "id": "C.22.PFR",
+      "title": "Problematic-For Relation",
+      "staticPath": "/generated/patterns/C.22.PFR"
+    },
+    {
       "id": "C.23",
-      "title": "Method‑SoS‑LOG — MethodFamily Evidence & Maturity",
+      "title": "MethodFamily Evidence & Maturity (Method‑SoS‑LOG)",
       "staticPath": "/generated/patterns/C.23"
     },
     {
       "id": "C.24",
-      "title": "Agentic Tool-Use and Call Planning (C.Agent-Tools-CAL)",
+      "title": "Plan Tool or Service Calls for a Fixed Action (C.Agent-Tools-CAL)",
       "staticPath": "/generated/patterns/C.24"
     },
     {
       "id": "C.25",
-      "title": "Q-Bundle: Authoring \"-ilities\" as Structured Quality Bundles",
+      "title": "Q-Bundle: Express a Quality Claim as One Characteristic or a Structured Bundle",
       "staticPath": "/generated/patterns/C.25"
-    },
-    {
-      "id": "C.26",
-      "title": "Quantum-Like Modeling Lens",
-      "staticPath": "/generated/patterns/C.26"
     },
     {
       "id": "C.26.1",
@@ -757,29 +1022,39 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/C.26.2"
     },
     {
-      "id": "C.26.3",
-      "title": "Viability-Envelope Boundary Regulation",
-      "staticPath": "/generated/patterns/C.26.3"
-    },
-    {
       "id": "C.27",
-      "title": "Temporal Claim Adequacy: State Readings, Temporal Trends, and Intervention-Sensitive Temporal Change",
+      "title": "Temporal Claim Adequacy: State Readings, Temporal Trends, and Intervention-Sensitive Change",
       "staticPath": "/generated/patterns/C.27"
     },
     {
-      "id": "C.27.TA",
-      "title": "Temporal Aspect: Time Windows, Rhythm, Cadence, and Currentness",
-      "staticPath": "/generated/patterns/C.27.TA"
+      "id": "C.28.CM",
+      "title": "Construct and Challenge a Causal Model",
+      "staticPath": "/generated/patterns/C.28.CM"
     },
     {
-      "id": "C.28",
-      "title": "CausalUse-CAL: Causal-Use Questions, Causality-Ladder Rungs, Identification and Realizability",
-      "staticPath": "/generated/patterns/C.28"
+      "id": "C.28.MR",
+      "title": "Derive an Intervention Consequence by Mechanism Replacement",
+      "staticPath": "/generated/patterns/C.28.MR"
     },
     {
-      "id": "C.29",
-      "title": "Mathematical Lens Use",
-      "staticPath": "/generated/patterns/C.29"
+      "id": "C.29.1",
+      "title": "Mathematical Result Transfer",
+      "staticPath": "/generated/patterns/C.29.1"
+    },
+    {
+      "id": "C.29.2",
+      "title": "Computational Formulation",
+      "staticPath": "/generated/patterns/C.29.2"
+    },
+    {
+      "id": "C.29.3",
+      "title": "Computational Realization",
+      "staticPath": "/generated/patterns/C.29.3"
+    },
+    {
+      "id": "C.29.BB",
+      "title": "Construct a Balance across a Boundary",
+      "staticPath": "/generated/patterns/C.29.BB"
     },
     {
       "id": "C.30",
@@ -813,12 +1088,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.30.P",
-      "title": "Architecture and Structure Precision Restoration",
+      "title": "Clarify Architecture and Structure Wording (Precision Restoration)",
       "staticPath": "/generated/patterns/C.30.P"
     },
     {
       "id": "C.30.STRAT",
-      "title": "Stratification Wording Precision Restoration",
+      "title": "Clarify Stratification and Architecture Source Labels",
       "staticPath": "/generated/patterns/C.30.STRAT"
     },
     {
@@ -828,7 +1103,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.31.ASAP",
-      "title": "Architecture Scale-Amenability Preference",
+      "title": "Which Architecture Is Preferable Under Scale? (Scale Amenability)",
       "staticPath": "/generated/patterns/C.31.ASAP"
     },
     {
@@ -848,7 +1123,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.32.ACS",
-      "title": "Architecture Characteristic Criteria Set for Improvement Cycles",
+      "title": "Architecture Characteristic Criteria Set",
       "staticPath": "/generated/patterns/C.32.ACS"
     },
     {
@@ -863,7 +1138,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.32.CONWAY",
-      "title": "Transformer and Transformed Architecture Correspondence",
+      "title": "Architecture-Influence and Transformed-Architecture Correspondence",
       "staticPath": "/generated/patterns/C.32.CONWAY"
     },
     {
@@ -873,17 +1148,27 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.32.HCS",
-      "title": "Holon-Family Architecture Characteristic Starter Packs",
+      "title": "Architecture-Bearing Family Characteristic Starter Packs",
       "staticPath": "/generated/patterns/C.32.HCS"
     },
     {
       "id": "C.32.MLAO",
-      "title": "Multilevel Architecture Residual Optimization",
+      "title": "Architecture Candidates to Reduce Cross-Scope Residuals",
       "staticPath": "/generated/patterns/C.32.MLAO"
     },
     {
+      "id": "C.32.MWA",
+      "title": "Synthesize an Architecture Account of Methods and Their Use",
+      "staticPath": "/generated/patterns/C.32.MWA"
+    },
+    {
+      "id": "C.32.MWA.PP",
+      "title": "Construct and Compare Method Performance and Provision Arrangements",
+      "staticPath": "/generated/patterns/C.32.MWA.PP"
+    },
+    {
       "id": "C.32.P2S",
-      "title": "Problem-to-Structure Architecturing Transformation Flow",
+      "title": "Problem-to-Structure Architecturing Unfolding",
       "staticPath": "/generated/patterns/C.32.P2S"
     },
     {
@@ -893,17 +1178,17 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "C.33",
-      "title": "Structural Information Adequacy for Architecture Capture and Source Return",
+      "title": "Assess Structural Information for Architecture Use",
       "staticPath": "/generated/patterns/C.33"
     },
     {
       "id": "C.34",
-      "title": "Structural Correspondence, Equivalence, and Morphism Adequacy",
+      "title": "Assess Structural Correspondence for Architecture Use (Equivalence and Morphisms)",
       "staticPath": "/generated/patterns/C.34"
     },
     {
       "id": "C.35",
-      "title": "Structural Synthesis and Discovery Adequacy",
+      "title": "Assess Generated or Discovered Results for Architecture Use",
       "staticPath": "/generated/patterns/C.35"
     },
     {
@@ -912,23 +1197,188 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/C.36"
     },
     {
+      "id": "C.36.MC",
+      "title": "Qualify and Develop a Method Culture",
+      "staticPath": "/generated/patterns/C.36.MC"
+    },
+    {
       "id": "C.36.P",
-      "title": "Cultural-Evolution Wording-Use Precision Restoration",
+      "title": "Clarify Cultural-Evolution Wording for a Claim or Action",
       "staticPath": "/generated/patterns/C.36.P"
     },
     {
+      "id": "C.36.RP",
+      "title": "Sustain and Renew Shared Ways of Working",
+      "staticPath": "/generated/patterns/C.36.RP"
+    },
+    {
+      "id": "C.37",
+      "title": "Select and Use Representations for One Action",
+      "staticPath": "/generated/patterns/C.37"
+    },
+    {
+      "id": "C.37.CF",
+      "title": "Compare Content and Form Changes",
+      "staticPath": "/generated/patterns/C.37.CF"
+    },
+    {
+      "id": "C.37.MP",
+      "title": "Maintain a Method Representation Profile",
+      "staticPath": "/generated/patterns/C.37.MP"
+    },
+    {
+      "id": "C.38",
+      "title": "Construct Comparable Ways to Obtain One Result",
+      "staticPath": "/generated/patterns/C.38"
+    },
+    {
+      "id": "C.39",
+      "title": "Find and Develop a Way to Obtain a Result",
+      "staticPath": "/generated/patterns/C.39"
+    },
+    {
+      "id": "C.39.MC",
+      "title": "Continue Method Development from Changed Conditions",
+      "staticPath": "/generated/patterns/C.39.MC"
+    },
+    {
+      "id": "C.39.MF",
+      "title": "Choose and Reopen a Method Development Focus",
+      "staticPath": "/generated/patterns/C.39.MF"
+    },
+    {
+      "id": "C.39.RO",
+      "title": "Turn a Construction into a Reusable Operation",
+      "staticPath": "/generated/patterns/C.39.RO"
+    },
+    {
+      "id": "C.39.RP",
+      "title": "Organize a Repertoire for Method Development",
+      "staticPath": "/generated/patterns/C.39.RP"
+    },
+    {
+      "id": "C.39.RQ",
+      "title": "Construct Situated Method Requirements",
+      "staticPath": "/generated/patterns/C.39.RQ"
+    },
+    {
+      "id": "C.40",
+      "title": "Develop Branching Search from Reusable Material",
+      "staticPath": "/generated/patterns/C.40"
+    },
+    {
+      "id": "C.40.CD",
+      "title": "Develop Problems and Ways of Solving Them Together",
+      "staticPath": "/generated/patterns/C.40.CD"
+    },
+    {
+      "id": "C.40.CU",
+      "title": "Develop a Useful and Reproducible Use of a Construct",
+      "staticPath": "/generated/patterns/C.40.CU"
+    },
+    {
+      "id": "C.40.DC",
+      "title": "Construct Directions with Support Configurations",
+      "staticPath": "/generated/patterns/C.40.DC"
+    },
+    {
+      "id": "C.40.JD",
+      "title": "Develop a Way, Its Holder and Its Provision Together",
+      "staticPath": "/generated/patterns/C.40.JD"
+    },
+    {
+      "id": "C.40.JF",
+      "title": "Qualify Dependencies and Joint Reachability",
+      "staticPath": "/generated/patterns/C.40.JF"
+    },
+    {
+      "id": "C.40.NP",
+      "title": "Continue from a Result to New Attainable Problems",
+      "staticPath": "/generated/patterns/C.40.NP"
+    },
+    {
+      "id": "C.40.NU",
+      "title": "Search Neighboring Uses and Means",
+      "staticPath": "/generated/patterns/C.40.NU"
+    },
+    {
+      "id": "C.40.OC",
+      "title": "Characterize a Subject for a Possible Change",
+      "staticPath": "/generated/patterns/C.40.OC"
+    },
+    {
+      "id": "C.40.OCN",
+      "title": "Construct a Bounded Opportunity",
+      "staticPath": "/generated/patterns/C.40.OCN"
+    },
+    {
+      "id": "C.40.OD",
+      "title": "Construct and Continue Open-Ended Development",
+      "staticPath": "/generated/patterns/C.40.OD"
+    },
+    {
+      "id": "C.40.OI",
+      "title": "Bound an Opportunity Inquiry",
+      "staticPath": "/generated/patterns/C.40.OI"
+    },
+    {
+      "id": "C.40.OP",
+      "title": "Maintain Opportunities and Stepping Stones",
+      "staticPath": "/generated/patterns/C.40.OP"
+    },
+    {
+      "id": "C.40.PC",
+      "title": "Construct a Worthwhile Problem and Proposed Contribution",
+      "staticPath": "/generated/patterns/C.40.PC"
+    },
+    {
+      "id": "C.40.RQ",
+      "title": "Requalify Changed Opportunities",
+      "staticPath": "/generated/patterns/C.40.RQ"
+    },
+    {
+      "id": "C.41",
+      "title": "Select Checklist Questions for a Work Result",
+      "staticPath": "/generated/patterns/C.41"
+    },
+    {
+      "id": "C.41.OF",
+      "title": "Fit a Checklist to Its Occasion of Use",
+      "staticPath": "/generated/patterns/C.41.OF"
+    },
+    {
+      "id": "C.41.QC",
+      "title": "Qualify Checklist Criteria and Checking Means",
+      "staticPath": "/generated/patterns/C.41.QC"
+    },
+    {
+      "id": "C.41.SR",
+      "title": "Reconcile Checklist Results Across Shared Work",
+      "staticPath": "/generated/patterns/C.41.SR"
+    },
+    {
+      "id": "C.41.TF",
+      "title": "Construct a Checklist Template That Preserves Its Questions",
+      "staticPath": "/generated/patterns/C.41.TF"
+    },
+    {
+      "id": "C.41.UA",
+      "title": "Use a Checklist to Answer Questions and Act on the Results",
+      "staticPath": "/generated/patterns/C.41.UA"
+    },
+    {
       "id": "D.1",
-      "title": "Ethical Value Plurality and FPF Boundary",
+      "title": "Clarify an Ethical Claim's Value Basis (Value Plurality)",
       "staticPath": "/generated/patterns/D.1"
     },
     {
       "id": "D.2",
-      "title": "Multilevel Ethics For System-Holon Work",
+      "title": "Recognize Ethical Concerns Across Levels and Scopes (Multilevel Ethics)",
       "staticPath": "/generated/patterns/D.2"
     },
     {
       "id": "D.3",
-      "title": "Interlevel Ethical Conflict Structure",
+      "title": "Describe an Ethical Conflict Across Levels or Scopes",
       "staticPath": "/generated/patterns/D.3"
     },
     {
@@ -948,43 +1398,53 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.2",
-      "title": "The Eleven Pillars",
+      "title": "FPF's Eleven Pillars and Bitter-Lesson Preference (BLP)",
       "staticPath": "/generated/patterns/E.2"
     },
     {
       "id": "E.2.DA",
-      "title": "FPF Pillar-Adequacy Evaluation CharacteristicSpace",
+      "title": "Evaluate How FPF Realizes Its Pillars (Pillar-Adequacy CharacteristicSpace)",
       "staticPath": "/generated/patterns/E.2.DA"
     },
     {
       "id": "E.3",
-      "title": "Principle Taxonomy & Precedence Model",
+      "title": "Principle Taxonomy, Precedence and Agent Autonomy Profiles (ABL)",
       "staticPath": "/generated/patterns/E.3"
     },
     {
       "id": "E.4",
-      "title": "FPF Ecosystem Family Architecture",
+      "title": "FPF Ecosystem Architecture: Framework Families, Products and DPF Suites",
       "staticPath": "/generated/patterns/E.4"
     },
     {
+      "id": "E.4.CM",
+      "title": "Develop Connected Methods as Framework Contributions",
+      "staticPath": "/generated/patterns/E.4.CM"
+    },
+    {
       "id": "E.4.DPF",
-      "title": "Domain Principle Framework Authoring and Publication-or-Access Carrier Assembly",
+      "title": "Domain and Local Principle Frameworks: Whether and How to Author and Publish",
       "staticPath": "/generated/patterns/E.4.DPF"
     },
     {
       "id": "E.4.DPF.DA",
-      "title": "Domain Principle Framework Package-Adequacy Evaluation CharacteristicSpace",
+      "title": "Evaluate a DPF or LPF Package for Its Declared Use (Package-Adequacy CharacteristicSpace)",
       "staticPath": "/generated/patterns/E.4.DPF.DA"
     },
     {
       "id": "E.4.FPF",
-      "title": "First Principles Framework Form and Publication-or-Access Carrier Assembly",
+      "title": "FPF Edition Assembly: Publication Forms, Carriers and Access Routes",
       "staticPath": "/generated/patterns/E.4.FPF"
     },
     {
       "id": "E.4.PFAD",
       "title": "Principle-Framework Architecture Decision",
       "staticPath": "/generated/patterns/E.4.PFAD"
+    },
+    {
+      "id": "E.4.PFIP",
+      "title": "Principle-Framework Publication Integration and Preservation",
+      "staticPath": "/generated/patterns/E.4.PFIP"
     },
     {
       "id": "E.4.PFR",
@@ -1008,7 +1468,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.5.3",
-      "title": "Unidirectional Dependency",
+      "title": "Unidirectional Dependency between FPF Families",
       "staticPath": "/generated/patterns/E.5.3"
     },
     {
@@ -1018,12 +1478,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.6",
-      "title": "Didactic Architecture of the Spec",
+      "title": "Didactic Architecture of the FPF Specification",
       "staticPath": "/generated/patterns/E.6"
     },
     {
       "id": "E.7",
-      "title": "Archetypal Grounding Principle",
+      "title": "Archetypal Grounding: Explain Rules of FPF Architectural Patterns through Cases",
       "staticPath": "/generated/patterns/E.7"
     },
     {
@@ -1033,17 +1493,22 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.8.ECSPF",
-      "title": "Evaluation CharacteristicSpace FPF Pattern Publication Form",
+      "title": "Author an FPF Pattern from an Accepted Evaluation CharacteristicSpace Specification",
       "staticPath": "/generated/patterns/E.8.ECSPF"
     },
     {
+      "id": "E.8.ML",
+      "title": "Construct a Pattern Language for Connected Methods",
+      "staticPath": "/generated/patterns/E.8.ML"
+    },
+    {
       "id": "E.9",
-      "title": "Design-Rationale Record (DRR) Method",
+      "title": "Design-Rationale Record (DRR) for FPF Content Decisions",
       "staticPath": "/generated/patterns/E.9"
     },
     {
       "id": "E.9.DA",
-      "title": "DRR Decision-Adequacy Evaluation CharacteristicSpace",
+      "title": "Evaluate a DRR for Its Declared Authoring Use (Decision-Adequacy CharacteristicSpace)",
       "staticPath": "/generated/patterns/E.9.DA"
     },
     {
@@ -1058,7 +1523,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.10.D1",
-      "title": "Lexical Discipline for “Context” (D.CTX)",
+      "title": "Recovering What “Context” Means in Use",
       "staticPath": "/generated/patterns/E.10.D1"
     },
     {
@@ -1067,8 +1532,23 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/E.10.D2"
     },
     {
+      "id": "E.10.DEV",
+      "title": "Recovering What Development or Evolution Means in the Current Claim",
+      "staticPath": "/generated/patterns/E.10.DEV"
+    },
+    {
+      "id": "E.10.INT",
+      "title": "Recovering What Interest or Curiosity Means Here",
+      "staticPath": "/generated/patterns/E.10.INT"
+    },
+    {
+      "id": "E.10.LRN",
+      "title": "Recovering What “Learning” Means in the Current Claim",
+      "staticPath": "/generated/patterns/E.10.LRN"
+    },
+    {
       "id": "E.10.MOVE",
-      "title": "Move and Readiness Wording Precision Restoration",
+      "title": "Move, Readiness and Trajectory Wording Precision Restoration",
       "staticPath": "/generated/patterns/E.10.MOVE"
     },
     {
@@ -1077,13 +1557,33 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/E.10.P"
     },
     {
+      "id": "E.10.ROLE",
+      "title": "Recovering What “Role” Means in the Current Claim",
+      "staticPath": "/generated/patterns/E.10.ROLE"
+    },
+    {
       "id": "E.11",
       "title": "First-Practical Entry and Pattern-Use Discoverability Discipline",
       "staticPath": "/generated/patterns/E.11"
     },
     {
+      "id": "E.11.DSG",
+      "title": "Architectural Reference",
+      "staticPath": "/generated/patterns/E.11.DSG"
+    },
+    {
+      "id": "E.11.PFP",
+      "title": "Framework Publication Form Profile for Markdown",
+      "staticPath": "/generated/patterns/E.11.PFP"
+    },
+    {
+      "id": "E.11.PUA",
+      "title": "Pattern Use in a Working Situation and First Useful Result",
+      "staticPath": "/generated/patterns/E.11.PUA"
+    },
+    {
       "id": "E.11.PUR",
-      "title": "Pattern-Use Recommendation and Pattern-Use Sequence",
+      "title": "Pattern-Use Applicability, Recommendation, and Coordination",
       "staticPath": "/generated/patterns/E.11.PUR"
     },
     {
@@ -1093,17 +1593,17 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.13",
-      "title": "Pragmatic Utility and Value Alignment",
+      "title": "Pragmatic Utility and Proxy-to-Value Alignment",
       "staticPath": "/generated/patterns/E.13"
     },
     {
       "id": "E.14",
-      "title": "Human-Centric Working-Model",
+      "title": "Human-Centric Working-Model: Readable Claims and Recoverable Assurance",
       "staticPath": "/generated/patterns/E.14"
     },
     {
       "id": "E.15",
-      "title": "Lexical Authoring & Evolution Protocol (LEX-AUTH)",
+      "title": "Pattern Change, Edition Continuity, and Impact Analysis",
       "staticPath": "/generated/patterns/E.15"
     },
     {
@@ -1118,17 +1618,17 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.17.0",
-      "title": "U.MultiViewDescribing - Viewpoints, Views & Correspondences",
+      "title": "Viewpoint and View Recognition for Multi-View Describing",
       "staticPath": "/generated/patterns/E.17.0"
     },
     {
       "id": "E.17.1",
-      "title": "U.ViewpointBundleLibrary — Reusable Viewpoint Bundles",
+      "title": "Viewpoint Bundle Library — Reusable Viewpoint Reference Bundles",
       "staticPath": "/generated/patterns/E.17.1"
     },
     {
       "id": "E.17.2",
-      "title": "TEVB - Typical Engineering Viewpoints Bundle",
+      "title": "TEVB — Project-local Typical Engineering Viewpoint Bundle Template for Holons",
       "staticPath": "/generated/patterns/E.17.2"
     },
     {
@@ -1143,17 +1643,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.17.AUD.OOTD",
-      "title": "PublicationUnit Stability Discipline and PublicationUnit Primary EntityOfConcern Discipline",
+      "title": "PublicationUnit Primary-Subject Discipline",
       "staticPath": "/generated/patterns/E.17.AUD.OOTD"
     },
     {
-      "id": "E.17.EFP",
-      "title": "ExplanationFaithfulnessProfile — explanation-use discipline over existing MVPK faces",
-      "staticPath": "/generated/patterns/E.17.EFP"
-    },
-    {
       "id": "E.17.ID.CR",
-      "title": "ComparativeReviewUnit - bounded comparison over comparative review units",
+      "title": "Compare Sources Within a Shared Review Frame (ComparativeReviewUnit)",
       "staticPath": "/generated/patterns/E.17.ID.CR"
     },
     {
@@ -1163,7 +1658,7 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "E.18.1",
-      "title": "Principles-to-Work Carry-Through",
+      "title": "P2W Problem-to-Work Carry-Through",
       "staticPath": "/generated/patterns/E.18.1"
     },
     {
@@ -1172,13 +1667,23 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/E.18.2"
     },
     {
+      "id": "E.18.3",
+      "title": "Constraint-Governed Transformation-Flow Unfolding Structure",
+      "staticPath": "/generated/patterns/E.18.3"
+    },
+    {
+      "id": "E.18.NET",
+      "title": "Network of Transformation-Flow Structures",
+      "staticPath": "/generated/patterns/E.18.NET"
+    },
+    {
       "id": "E.19",
       "title": "Pattern Quality Gates: Review and Refresh Profiles",
       "staticPath": "/generated/patterns/E.19"
     },
     {
       "id": "E.20",
-      "title": "Mechanism Introduction Protocol (MIP)",
+      "title": "Mechanism Introduction Protocol: Introduce or Revise FPF Mechanisms (MIP)",
       "staticPath": "/generated/patterns/E.20"
     },
     {
@@ -1197,93 +1702,118 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/E.23"
     },
     {
+      "id": "E.23.CAE",
+      "title": "Capability Access and Expression Differential Probe",
+      "staticPath": "/generated/patterns/E.23.CAE"
+    },
+    {
+      "id": "E.23.CDI",
+      "title": "Developing Capability for a Named Work Family",
+      "staticPath": "/generated/patterns/E.23.CDI"
+    },
+    {
       "id": "E.24",
       "title": "U.Ontic and Ontic Introduction Discipline",
       "staticPath": "/generated/patterns/E.24"
     },
     {
       "id": "E.24.CD",
-      "title": "Ontic Candidate Detection",
+      "title": "Ontic Candidate Detection and First-Use Disposition",
       "staticPath": "/generated/patterns/E.24.CD"
     },
     {
       "id": "E.24.PUB",
-      "title": "Ontic Description and Publication Discipline",
+      "title": "Episteme Publication: Availability, Form and Carrier",
       "staticPath": "/generated/patterns/E.24.PUB"
     },
     {
       "id": "E.24.UK",
-      "title": "U-kind Governance and Ontic Settlement Coupling",
+      "title": "U-kind Admission and Ontic Settlement",
       "staticPath": "/generated/patterns/E.24.UK"
     },
     {
       "id": "F.0.1",
-      "title": "Contextual Lexicon Principles",
+      "title": "Source-Local Meaning Recovery",
       "staticPath": "/generated/patterns/F.0.1"
     },
     {
+      "id": "F.0.2",
+      "title": "Semantic Synthesis across Source Ontologies",
+      "staticPath": "/generated/patterns/F.0.2"
+    },
+    {
+      "id": "F.0.2.MA",
+      "title": "Synthesize and Allocate Method Contributions",
+      "staticPath": "/generated/patterns/F.0.2.MA"
+    },
+    {
+      "id": "F.0.2.RC",
+      "title": "Test Constructive Coverage and Refresh Dependent Explanations",
+      "staticPath": "/generated/patterns/F.0.2.RC"
+    },
+    {
       "id": "F.1",
-      "title": "Domain‑Family Landscape Survey",
+      "title": "Find and Select Sources for a Current Question",
       "staticPath": "/generated/patterns/F.1"
     },
     {
       "id": "F.2",
-      "title": "Term Harvesting & Normalisation",
+      "title": "Source-Local Term Harvesting & Normalisation",
       "staticPath": "/generated/patterns/F.2"
     },
     {
       "id": "F.3",
-      "title": "Intra‑Context Sense Clustering",
+      "title": "Source-Local Sense Clustering",
       "staticPath": "/generated/patterns/F.3"
     },
     {
       "id": "F.4",
-      "title": "Role Description (RCS + RoleStateGraph + Checklists)",
+      "title": "SystemRoleKindDescription — Describing an Exact System-Role Kind",
       "staticPath": "/generated/patterns/F.4"
     },
     {
       "id": "F.5",
-      "title": "Naming Discipline for U-kind Names and RoleDescription Labels",
+      "title": "Name U-kinds, Local System-Role Kinds and SystemRoleKindDescriptions",
       "staticPath": "/generated/patterns/F.5"
     },
     {
       "id": "F.6",
-      "title": "Role Assignment & Enactment Cycle (Six-Step)",
+      "title": "SystemRoleAssignment and Performed-Work Attribution Check",
       "staticPath": "/generated/patterns/F.6"
     },
     {
       "id": "F.7",
-      "title": "Concept‑Set Table Construction",
+      "title": "Display Source-Local Comparisons in a Concept-Set Table",
       "staticPath": "/generated/patterns/F.7"
     },
     {
       "id": "F.8",
-      "title": "Mint-or-Reuse Decision",
+      "title": "Mint-or-Reuse Decision for a Name",
       "staticPath": "/generated/patterns/F.8"
     },
     {
       "id": "F.9",
-      "title": "Alignment and Bridge across Contexts",
+      "title": "Relate Local Meanings across Contexts (Alignment and Bridge)",
       "staticPath": "/generated/patterns/F.9"
     },
     {
       "id": "F.9.1",
-      "title": "Bridge Stance Overlay",
+      "title": "Bridge Stance Note — Clarify a Bounded Use",
       "staticPath": "/generated/patterns/F.9.1"
     },
     {
       "id": "F.10",
-      "title": "Status Families Mapping (Evidence • Standard • Requirement)",
+      "title": "Apply and Interpret Evidence, Standard and Requirement Statuses",
       "staticPath": "/generated/patterns/F.10"
     },
     {
       "id": "F.11",
-      "title": "Method Quartet Harmonisation",
+      "title": "Distinguish Method, MethodDescription, Work and Outputs",
       "staticPath": "/generated/patterns/F.11"
     },
     {
       "id": "F.12",
-      "title": "Service Acceptance Binding",
+      "title": "Evaluate Promise Fulfilment from Work Evidence (Service Acceptance)",
       "staticPath": "/generated/patterns/F.12"
     },
     {
@@ -1293,22 +1823,22 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "F.14",
-      "title": "Anti‑Explosion Control (Roles & Statuses)",
+      "title": "Anti-Explosion Control for System-Role and Status Name Families",
       "staticPath": "/generated/patterns/F.14"
     },
     {
       "id": "F.15",
-      "title": "Static and Regression Conformance Harness for Unification",
+      "title": "Static and Regression Conformance Harness for Naming and Semantic Unification",
       "staticPath": "/generated/patterns/F.15"
     },
     {
       "id": "F.16",
-      "title": "Worked‑Example Template (Cross‑Domain)",
+      "title": "Worked-Example Template (Cross-Domain)",
       "staticPath": "/generated/patterns/F.16"
     },
     {
       "id": "F.17",
-      "title": "Unified Term Sheet",
+      "title": "Make a Settled Naming Decision Recoverable for Reuse (Unified Term Sheet)",
       "staticPath": "/generated/patterns/F.17"
     },
     {
@@ -1322,18 +1852,93 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
       "staticPath": "/generated/patterns/F.19"
     },
     {
+      "id": "A.6.RCD",
+      "title": "no direct relation closes the named use, and a substrate-admitted compound claim, repeated predicate semantics, or relation-kind question is current",
+      "staticPath": "/generated/patterns/A.6.RCD"
+    },
+    {
+      "id": "A.10",
+      "title": "A descriptive claim-bound evidence-provenance account, the direct relations and currentness facts it cites, and its RelianceDisposition for the attempted use.",
+      "staticPath": "/generated/patterns/A.10"
+    },
+    {
+      "id": "A.15.PROD",
+      "title": "production-work participation, entity-identity inception, or production completion is explicitly the current question",
+      "staticPath": "/generated/patterns/A.15.PROD"
+    },
+    {
+      "id": "A.20",
+      "title": "ConstraintValidityResult with its evaluation state, outcome when present, and witnessOrReason, PathId or PathSliceId when applicable, window, sentinel, and pins when those fields are needed for the claim.",
+      "staticPath": "/generated/patterns/A.20"
+    },
+    {
+      "id": "A.21",
+      "title": "GateDecisionResult, gateRef, profileApplicationRef, DecisionLogRef, gate profile, gate version, scope, window, and replay or freshness pins.",
+      "staticPath": "/generated/patterns/A.21"
+    },
+    {
+      "id": "B.3",
+      "title": "Typed assurance claim, no-assurance-use disposition, or rejected or downgraded assurance claim.",
+      "staticPath": "/generated/patterns/B.3"
+    },
+    {
+      "id": "C.1",
+      "title": "Sys‑CAL (planned)",
+      "staticPath": "/generated/patterns/C.1"
+    },
+    {
+      "id": "C.16",
+      "title": "exact measurement result when relied on",
+      "staticPath": "/generated/patterns/C.16"
+    },
+    {
+      "id": "C.22",
+      "title": "Problem-side record, ProblemProfile, and TaskSignature are being related.",
+      "staticPath": "/generated/patterns/C.22"
+    },
+    {
+      "id": "C.26",
+      "title": "only that a residual QL cue remains after ordinary patterns",
+      "staticPath": "/generated/patterns/C.26"
+    },
+    {
+      "id": "C.26.3",
+      "title": "exact envelope-regulation episteme or ClaimAddress used by a braking, recovery, cadence or stabilization claim",
+      "staticPath": "/generated/patterns/C.26.3"
+    },
+    {
+      "id": "C.27.TA",
+      "title": "exact positive temporal-aspect episteme or ClaimAddress",
+      "staticPath": "/generated/patterns/C.27.TA"
+    },
+    {
+      "id": "C.28",
+      "title": "exact causal-use result when temporal wording is used causally",
+      "staticPath": "/generated/patterns/C.28"
+    },
+    {
+      "id": "C.29",
+      "title": "A mathematical representation preserves, coarsens, or retargets the EntityOfConcern or the problem-side representation.",
+      "staticPath": "/generated/patterns/C.29"
+    },
+    {
+      "id": "E.17.EFP",
+      "title": "Explanation class, source-finding relation, and faithfulness relation over the selected source U.Episteme, with the exact EpistemePublicationRelation occurrence named separately when availability is material.",
+      "staticPath": "/generated/patterns/E.17.EFP"
+    },
+    {
       "id": "G.0",
-      "title": "CG-Spec — Frame Standard & Comparability Governance",
+      "title": "Define Admissible Comparison and Aggregation for a Frame (CG-Spec)",
       "staticPath": "/generated/patterns/G.0"
     },
     {
       "id": "G.1",
-      "title": "CG-Frame-Ready Generator",
+      "title": "Author a Reusable CG-Frame Generator and Selector Kit",
       "staticPath": "/generated/patterns/G.1"
     },
     {
       "id": "G.2",
-      "title": "SoTA Harvester & Synthesis",
+      "title": "Harvest and Synthesize SoTA for a CG-Frame",
       "staticPath": "/generated/patterns/G.2"
     },
     {
@@ -1348,12 +1953,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "G.5",
-      "title": "Multi‑Method Dispatcher & MethodFamily Registry",
+      "title": "Method-Family Registry, Dispatch and Selected-Set Result Declaration",
       "staticPath": "/generated/patterns/G.5"
     },
     {
       "id": "G.6",
-      "title": "Evidence Graph & Provenance Ledger",
+      "title": "Evidence Graph and Provenance Ledger: Citable Evidence-Provenance Paths",
       "staticPath": "/generated/patterns/G.6"
     },
     {
@@ -1363,12 +1968,12 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "G.8",
-      "title": "SoS-LOG Bundles & Maturity Ladders",
+      "title": "Package Method-Family Admissibility Rules and Maturity Ladders (SoS-LOG)",
       "staticPath": "/generated/patterns/G.8"
     },
     {
       "id": "G.9",
-      "title": "Parity / Benchmark Harness",
+      "title": "dynamic comparison question",
       "staticPath": "/generated/patterns/G.9"
     },
     {
@@ -1378,23 +1983,18 @@ export const SEARCH_ID_REGISTRY: SearchIdRegistry = {
     },
     {
       "id": "G.11",
-      "title": "Telemetry-Driven Refresh & Decay Orchestrator",
+      "title": "Decide Whether and How to Refresh SoTA Packs and Related Results (Telemetry and Decay)",
       "staticPath": "/generated/patterns/G.11"
     },
     {
       "id": "G.12",
-      "title": "DHC Dashboards — Discipline-Health Time-Series (admissible telemetry, generation-first)",
+      "title": "DHC Dashboards (Discipline-Health Time Series and Views)",
       "staticPath": "/generated/patterns/G.12"
     },
     {
       "id": "G.13",
       "title": "External Interop Hooks for SoTA Discipline Packs (conceptual; normative when used)",
       "staticPath": "/generated/patterns/G.13"
-    },
-    {
-      "id": "I.2",
-      "title": "Expanded Entry Disambiguation Cases",
-      "staticPath": "/generated/patterns/I.2"
     }
   ],
   "routes": [
